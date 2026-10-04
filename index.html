@@ -1,0 +1,981 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CLE Gate Finder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: airport-signage header bar, control panel beside a pan/zoom terminal map (stacks on phones). */
+:root {
+  --bg: #e9eef0;
+  --surface: #ffffff;
+  --ink: #15222b;
+  --muted: #566672;
+  --line: #ccd6dc;
+  --apron: #dde4e7;
+  --apron-mark: #c9d3d8;
+  --bldg: #fbfcfc;
+  --bldg-edge: #9fb0ba;
+  --road: #b8c3c9;
+  --sign: #1c252b;
+  --sign-fg: #f5c518;
+  --route: #f2b705;
+  --route-case: #1c252b;
+  --conA: #5f7480;
+  --conB: #2367b0;
+  --conC: #7448ad;
+  --c-food: #d4701c;
+  --c-coffee: #8c5a36;
+  --c-bar: #b23c78;
+  --c-shop: #cc3338;
+  --c-play: #2f8a43;
+  --c-service: #1a8580;
+  --c-rest: #3a5670;
+  --ok: #2f8a43;
+  --warn: #b7791f;
+  --no: #b33a3a;
+  --font-display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1418; --surface: #161f25; --ink: #e4ebef; --muted: #93a3ad; --line: #2a3740;
+    --apron: #121a1f; --apron-mark: #1d272e; --bldg: #22303a; --bldg-edge: #4a5d69; --road: #2c3942;
+    --sign: #070b0d; --sign-fg: #f5c518; --route: #f5c518; --route-case: #000000;
+    --conA: #8ea3af; --conB: #5b9be0; --conC: #a57ddb;
+    --c-food: #ef8f3c; --c-coffee: #c08a62; --c-bar: #e06aa6; --c-shop: #ee5f63; --c-play: #5cbf6e; --c-service: #3fbab3; --c-rest: #7fa2c4;
+    --ok: #5cbf6e; --warn: #e0a84a; --no: #ee6b6b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1418; --surface: #161f25; --ink: #e4ebef; --muted: #93a3ad; --line: #2a3740;
+  --apron: #121a1f; --apron-mark: #1d272e; --bldg: #22303a; --bldg-edge: #4a5d69; --road: #2c3942;
+  --sign: #070b0d; --sign-fg: #f5c518; --route: #f5c518; --route-case: #000000;
+  --conA: #8ea3af; --conB: #5b9be0; --conC: #a57ddb;
+  --c-food: #ef8f3c; --c-coffee: #c08a62; --c-bar: #e06aa6; --c-shop: #ee5f63; --c-play: #5cbf6e; --c-service: #3fbab3; --c-rest: #7fa2c4;
+  --ok: #5cbf6e; --warn: #e0a84a; --no: #ee6b6b;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.45 var(--font-body);
+  display: flex; flex-direction: column;
+}
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--route); outline-offset: 2px; }
+
+/* Signage header */
+.sign {
+  background: var(--sign); color: #fff;
+  padding: 10px 16px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+.sign h1 {
+  margin: 0; font: 700 1.7rem/1 var(--font-display); letter-spacing: .02em;
+  color: var(--sign-fg); text-transform: uppercase;
+}
+.sign .sub { font-size: .85rem; color: #b9c4ca; }
+.sign .codes { margin-left: auto; display: flex; gap: 6px; }
+.roundel {
+  width: 26px; height: 26px; border-radius: 50%; display: inline-grid; place-items: center;
+  font: 700 1rem/1 var(--font-display); color: #fff; border: 0; cursor: pointer;
+}
+.roundel.A { background: var(--conA); } .roundel.B { background: var(--conB); } .roundel.C { background: var(--conC); }
+
+/* Main layout */
+main {
+  flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(300px, 370px) 1fr;
+  gap: 16px; padding: 16px;
+}
+.panel {
+  min-width: 0; min-height: 0; display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+}
+.tabs { display: flex; border-bottom: 1px solid var(--line); }
+.tabs button {
+  flex: 1; background: none; border: 0; padding: 11px 6px; cursor: pointer;
+  font: 600 1.05rem/1 var(--font-display); letter-spacing: .04em; text-transform: uppercase; color: var(--muted);
+  border-bottom: 3px solid transparent;
+}
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--route); }
+.tabpane { padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; min-height: 0; flex: 1; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label, .eyebrow { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+select, input[type="search"], input[type="number"] {
+  width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg);
+}
+.ft { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
+.swap { width: 40px; height: 38px; border: 1px solid var(--line); background: var(--bg); border-radius: 6px; cursor: pointer; }
+
+.summary {
+  display: flex; align-items: baseline; gap: 12px; padding: 10px 12px; border-radius: 8px;
+  background: var(--sign); color: #fff;
+}
+.summary .big { font: 700 2rem/1 var(--font-display); color: var(--sign-fg); font-variant-numeric: tabular-nums; }
+.summary .meta { font-size: .85rem; color: #c3cdd2; }
+ol.steps { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0; }
+ol.steps li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; padding: 7px 0; border-bottom: 1px dashed var(--line); }
+ol.steps li:last-child { border-bottom: 0; }
+ol.steps .dot { width: 12px; height: 12px; margin: 5px 5px 0; border-radius: 50%; border: 3px solid var(--route); background: var(--surface); }
+ol.steps li.end .dot { background: var(--route); }
+ol.steps .note { display: block; color: var(--muted); font-size: .85rem; }
+
+.btn {
+  border: 1px solid var(--line); background: var(--bg); border-radius: 6px; padding: 7px 12px; cursor: pointer;
+  font-weight: 700; font-size: .88rem;
+}
+.btn.primary { background: var(--sign); color: var(--sign-fg); border-color: var(--sign); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+.airline {
+  display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center;
+  padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); cursor: pointer; text-align: left; width: 100%;
+}
+.airline:hover { border-color: var(--muted); }
+.airline .name { font-weight: 700; }
+.airline .gates { font: 500 .8rem var(--font-mono); color: var(--muted); }
+.note-box { font-size: .82rem; color: var(--muted); border-left: 3px solid var(--line); padding-left: 10px; }
+
+/* Kill-time list */
+.kt-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.range-wrap { display: flex; align-items: center; gap: 10px; }
+.range-wrap input { flex: 1; accent-color: var(--route); }
+.range-wrap output { font: 700 1.4rem/1 var(--font-display); min-width: 3.4em; text-align: right; font-variant-numeric: tabular-nums; }
+.ideas { display: flex; flex-direction: column; gap: 6px; }
+.idea {
+  display: grid; grid-template-columns: 10px 1fr auto; gap: 10px; align-items: center; text-align: left;
+  padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); cursor: pointer; width: 100%;
+}
+.idea:hover { border-color: var(--muted); }
+.idea .sw { width: 10px; height: 10px; border-radius: 50%; }
+.idea .t { font-weight: 700; display: block; }
+.idea .s { font-size: .8rem; color: var(--muted); }
+.pill { font: 700 .72rem/1 var(--font-body); padding: 4px 7px; border-radius: 99px; text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
+.pill.ok { color: var(--ok); border: 1.5px solid var(--ok); }
+.pill.warn { color: var(--warn); border: 1.5px solid var(--warn); }
+.pill.no { color: var(--no); border: 1.5px solid var(--no); }
+
+/* Map */
+.mapwrap {
+  position: relative; min-width: 0; min-height: 0; border-radius: 10px; overflow: hidden;
+  border: 1px solid var(--line); background: var(--apron);
+}
+.toolbar {
+  position: absolute; top: 10px; left: 10px; right: 10px; z-index: 3;
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start; pointer-events: none;
+}
+.toolbar > * { pointer-events: auto; }
+.search { position: relative; width: min(300px, 100%); }
+.search input { background: var(--surface); box-shadow: 0 1px 4px rgb(0 0 0 / .12); padding-left: 32px; }
+.search svg { position: absolute; left: 9px; top: 10px; width: 16px; height: 16px; stroke: var(--muted); fill: none; stroke-width: 2; }
+.results {
+  position: absolute; top: 42px; left: 0; right: 0; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 8px; overflow: hidden; box-shadow: 0 6px 18px rgb(0 0 0 / .18); max-height: 320px; overflow-y: auto;
+}
+.results button { display: flex; gap: 8px; align-items: center; width: 100%; text-align: left; padding: 8px 10px; background: none; border: 0; cursor: pointer; }
+.results button:hover, .results button.active { background: var(--bg); }
+.results .k { font-size: .75rem; color: var(--muted); margin-left: auto; }
+.chips { display: flex; gap: 5px; flex-wrap: wrap; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 99px;
+  border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-size: .8rem; font-weight: 700;
+  box-shadow: 0 1px 3px rgb(0 0 0 / .08);
+}
+.chip .sw { width: 9px; height: 9px; border-radius: 50%; }
+.chip[aria-pressed="false"] { opacity: .5; }
+.chip[aria-pressed="false"] .sw { background: transparent !important; outline: 1.5px solid var(--muted); }
+
+.zoom { position: absolute; right: 10px; bottom: 10px; z-index: 3; display: flex; flex-direction: column; gap: 4px; }
+.zoom button {
+  width: 38px; height: 38px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); cursor: pointer;
+  font: 700 1.15rem/1 var(--font-display); box-shadow: 0 1px 3px rgb(0 0 0 / .1);
+}
+.hint { position: absolute; left: 10px; bottom: 10px; z-index: 2; font-size: .75rem; color: var(--muted); background: var(--surface); padding: 3px 8px; border-radius: 4px; opacity: .9; }
+
+.card {
+  position: absolute; left: 10px; bottom: 10px; z-index: 4; width: min(340px, calc(100% - 70px));
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / .2); display: flex; flex-direction: column; gap: 8px;
+}
+.card h2 { margin: 0; font: 700 1.45rem/1.05 var(--font-display); text-wrap: balance; padding-right: 26px; }
+.card .x { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border: 0; background: none; cursor: pointer; font-size: 1.2rem; color: var(--muted); }
+.card .where { font-size: .85rem; color: var(--muted); }
+.tagrow { display: flex; gap: 5px; flex-wrap: wrap; }
+.tag { font-size: .78rem; padding: 2px 7px; border-radius: 4px; background: var(--bg); border: 1px solid var(--line); }
+
+svg#map { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+svg#map.dragging { cursor: grabbing; }
+.apron { fill: var(--apron); }
+.apron-mark { stroke: var(--apron-mark); }
+.bldg { fill: var(--bldg); stroke: var(--bldg-edge); }
+.bldg-stroke { stroke: var(--bldg-edge); fill: none; }
+.bldg-fill { stroke: var(--bldg); fill: none; }
+.road { stroke: var(--road); fill: none; }
+.walk { stroke: var(--apron-mark); fill: none; stroke-dasharray: 2 3; }
+.con-letter { font: 700 30px var(--font-display); fill: #fff; text-anchor: middle; dominant-baseline: central; }
+.con-disc.A { fill: var(--conA); } .con-disc.B { fill: var(--conB); } .con-disc.C { fill: var(--conC); }
+.map-lbl { font: 600 9px var(--font-display); fill: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+.gate rect { stroke: var(--bldg); stroke-width: .8; }
+.gate.A rect { fill: var(--conA); } .gate.B rect { fill: var(--conB); } .gate.C rect { fill: var(--conC); }
+.gate text { font: 600 6.4px var(--font-mono); fill: #fff; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.mk { cursor: pointer; }
+.amen circle, .amen rect { stroke: var(--bldg); stroke-width: .9; }
+.amen text, .place text { font: 700 5.6px var(--font-body); fill: var(--ink); paint-order: stroke; stroke: var(--bldg); stroke-width: 2px; stroke-linejoin: round; pointer-events: none; }
+.amen text { display: none; }
+#map[data-z="3"] .amen text { display: block; }
+.place circle { fill: var(--sign); stroke: var(--sign-fg); stroke-width: 1.2; }
+.place text { font-size: 6.4px; }
+[data-cat="food"] .sym { fill: var(--c-food); } [data-cat="coffee"] .sym { fill: var(--c-coffee); }
+[data-cat="bar"] .sym { fill: var(--c-bar); } [data-cat="shop"] .sym { fill: var(--c-shop); }
+[data-cat="play"] .sym { fill: var(--c-play); } [data-cat="service"] .sym { fill: var(--c-service); }
+[data-cat="rest"] .sym { fill: var(--c-rest); }
+.sw.food { background: var(--c-food); } .sw.coffee { background: var(--c-coffee); } .sw.bar { background: var(--c-bar); }
+.sw.shop { background: var(--c-shop); } .sw.play { background: var(--c-play); } .sw.service { background: var(--c-service); } .sw.rest { background: var(--c-rest); }
+#map.hide-food .amen[data-cat="food"], #map.hide-coffee .amen[data-cat="coffee"], #map.hide-bar .amen[data-cat="bar"],
+#map.hide-shop .amen[data-cat="shop"], #map.hide-play .amen[data-cat="play"], #map.hide-service .amen[data-cat="service"],
+#map.hide-rest .amen[data-cat="rest"] { display: none; }
+#map.focusing .mk:not(.hl) { opacity: .28; }
+.mk.sel .ring { display: block; }
+.ring { display: none; fill: none; stroke: var(--route); stroke-width: 2.2; }
+.route-case { stroke: var(--route-case); fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.route { stroke: var(--route); fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 10 7; animation: march 1.1s linear infinite; }
+@keyframes march { to { stroke-dashoffset: -17; } }
+@media (prefers-reduced-motion: reduce) { .route { animation: none; } }
+.compass text { font: 700 9px var(--font-display); fill: var(--muted); text-anchor: middle; }
+.compass path { fill: var(--muted); }
+
+footer { padding: 0 16px 12px; font-size: .75rem; color: var(--muted); }
+
+@media (max-width: 820px) {
+  body { height: auto; }
+  html, body { height: auto; }
+  main { grid-template-columns: 1fr; flex: none; }
+  .mapwrap { order: -1; height: 64svh; min-height: 380px; }
+  .panel { overflow: visible; }
+  .tabpane { overflow: visible; }
+  .sign .codes { margin-left: 0; }
+  .hint { display: none; }
+}
+</style>
+</head>
+<body>
+<header class="sign">
+  <h1>CLE Gate Finder</h1>
+  <span class="sub">Cleveland Hopkins International · Concourses A, B, C</span>
+  <div class="codes" aria-label="Jump to concourse">
+    <button class="roundel A" data-zoom="A" title="Zoom to Concourse A">A</button>
+    <button class="roundel B" data-zoom="B" title="Zoom to Concourse B">B</button>
+    <button class="roundel C" data-zoom="C" title="Zoom to Concourse C">C</button>
+  </div>
+</header>
+
+<main>
+  <section class="panel" aria-label="Trip tools">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-dir" aria-selected="true" aria-controls="pane-dir">Directions</button>
+      <button role="tab" id="tab-kill" aria-selected="false" aria-controls="pane-kill">Pass the time</button>
+      <button role="tab" id="tab-air" aria-selected="false" aria-controls="pane-air">Airlines</button>
+    </div>
+
+    <div class="tabpane" id="pane-dir" role="tabpanel" aria-labelledby="tab-dir">
+      <div class="ft">
+        <div class="field"><label for="from">From</label><select id="from"></select></div>
+        <button class="swap" id="swap" title="Swap start and destination" aria-label="Swap start and destination">⇅</button>
+      </div>
+      <div class="field"><label for="to">To</label><select id="to"></select></div>
+      <div class="summary" id="sum"></div>
+      <ol class="steps" id="steps"></ol>
+      <p class="note-box">Walking times assume about 75 m per minute. Allow 15–30 minutes for the TSA checkpoint at busy times.</p>
+    </div>
+
+    <div class="tabpane" id="pane-kill" role="tabpanel" aria-labelledby="tab-kill" hidden>
+      <div class="kt-row">
+        <div class="field"><label for="ktGate">My gate</label><select id="ktGate"></select></div>
+        <div class="field"><label for="ktCat">Show</label>
+          <select id="ktCat">
+            <option value="all">Everything</option>
+            <option value="food">Food</option>
+            <option value="coffee">Coffee &amp; treats</option>
+            <option value="bar">Bars</option>
+            <option value="shop">Shops</option>
+            <option value="play">Play &amp; relax</option>
+            <option value="service">Services</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="ktMin">Boarding starts in</label>
+        <div class="range-wrap"><input type="range" id="ktMin" min="10" max="150" step="5" value="55"><output id="ktOut" for="ktMin">55 min</output></div>
+      </div>
+      <div class="row">
+        <button class="btn primary" id="surprise">Surprise me</button>
+        <span class="note-box" style="border:0;padding:0">Keeps a 10-minute buffer before boarding.</span>
+      </div>
+      <div class="ideas" id="ideas"></div>
+    </div>
+
+    <div class="tabpane" id="pane-air" role="tabpanel" aria-labelledby="tab-air" hidden>
+      <p class="note-box" style="margin:0">Tap an airline to light up its gates. All three concourses connect past security, so you can walk between them without screening again.</p>
+      <div class="ideas" id="airlines"></div>
+      <p class="note-box" style="margin:0">International arrivals clear U.S. Customs on the ramp level near gate A5. Concourse D has been closed since 2014. Gate assignments change; check your boarding pass and the departure screens.</p>
+    </div>
+  </section>
+
+  <section class="mapwrap" aria-label="Terminal map">
+    <div class="toolbar">
+      <div class="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+        <input type="search" id="q" placeholder="Search gates, airlines, food…" autocomplete="off" aria-label="Search the map">
+        <div class="results" id="results" hidden></div>
+      </div>
+      <div class="chips" id="chips"></div>
+    </div>
+    <svg id="map" viewBox="0 0 860 540" preserveAspectRatio="xMidYMid meet" data-z="1" role="img" aria-label="Map of Cleveland Hopkins terminal and concourses">
+      <defs>
+        <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
+          <path d="M24 0H0V24" class="apron-mark" fill="none" stroke-width=".6"/>
+        </pattern>
+      </defs>
+      <rect x="-2000" y="-2000" width="5000" height="5000" class="apron"/>
+      <rect x="-2000" y="-2000" width="5000" height="5000" fill="url(#grid)"/>
+      <g id="world"></g>
+    </svg>
+    <div class="zoom">
+      <button id="zin" aria-label="Zoom in">+</button>
+      <button id="zout" aria-label="Zoom out">−</button>
+      <button id="zfit" aria-label="Show whole airport" title="Show whole airport">⤢</button>
+    </div>
+    <div class="hint" id="hint">Scroll or pinch to zoom · drag to pan · tap a marker</div>
+    <div class="card" id="card" hidden></div>
+  </section>
+</main>
+<footer>Layout and amenities based on the airport's published terminal directory. Not an official airport map.</footer>
+
+<script>
+(() => {
+const NS = 'http://www.w3.org/2000/svg';
+const $ = s => document.querySelector(s);
+const VB = { w: 860, h: 540 };
+const M_PER_UNIT = 1.6, M_PER_MIN = 75;
+
+// ---------- Walkway graph (map units) ----------
+const V = {
+  chk:  [525, 388, 'TSA security checkpoint'],
+  hub:  [525, 352, 'Main terminal, past security'],
+  fc:   [455, 340, 'Main terminal food court'],
+  c0:   [412, 331, 'Concourse C'],
+  c1:   [330, 320], c2: [282, 302], c3: [150, 186],
+  c4:   [118, 160, 'Concourse C rotunda'],
+  crot: [80, 135],
+  b0:   [524, 326, 'Concourse B'], b1: [530, 250], b2: [540, 118],
+  a0:   [602, 372, 'Concourse A'], a1: [700, 386], a2: [818, 406],
+  tix:  [462, 404, 'Ticketing (upper level)'],
+  bag:  [500, 440, 'Baggage claim (lower level)'],
+  rta:  [492, 490, 'RTA Red Line to downtown'],
+  gtc:  [598, 492, 'Ground Transportation Center'],
+  taxi: [396, 426, 'Taxi stand'],
+  rent: [664, 476, 'Rental car shuttle'],
+  hotel:[672, 506, 'Hotel & parking shuttles'],
+};
+const EDGES = [
+  ['chk','hub','S'], ['hub','fc','M'], ['fc','c0','M'], ['c0','c1','C'], ['c1','c2','C'], ['c2','c3','C'], ['c3','c4','C'], ['c4','crot','R'],
+  ['hub','b0','M'], ['b0','b1','B'], ['b1','b2','B'], ['hub','a0','M'], ['a0','a1','A'], ['a1','a2','A'],
+  ['tix','chk','L'], ['tix','bag','L'], ['bag','rta','L'], ['bag','gtc','L'], ['bag','taxi','L'], ['gtc','rent','L'], ['gtc','hotel','L'],
+];
+const SPINES = { A: ['a0','a1','a2'], B: ['b0','b1','b2'], C: ['c0','c1','c2','c3','c4'] };
+const ROT = { x: 80, y: 135, r: 50 };
+
+const CATS = {
+  food:    { label: 'Food', dwell: 20 },
+  coffee:  { label: 'Coffee & treats', dwell: 8 },
+  bar:     { label: 'Bars', dwell: 30 },
+  shop:    { label: 'Shops', dwell: 10 },
+  play:    { label: 'Play & relax', dwell: 15 },
+  service: { label: 'Services', dwell: 10 },
+  rest:    { label: 'Restrooms', dwell: 5 },
+};
+
+const AIRLINES = [
+  { name: 'Frontier', con: 'A', note: 'Domestic and international' },
+  { name: 'Spirit', con: 'A' },
+  { name: 'Avelo', con: 'A' },
+  { name: 'Delta', con: 'B' },
+  { name: 'Southwest', con: 'B' },
+  { name: 'United', con: 'C' },
+  { name: 'American', con: 'C' },
+  { name: 'Air Canada', con: 'C', note: 'Toronto' },
+  { name: 'Aer Lingus', con: 'C', note: 'Dublin' },
+  { name: 'Alaska', con: 'C' },
+  { name: 'JetBlue', con: 'C' },
+];
+const CON_RANGE = { A: 'A1–A14', B: 'B1–B11', C: 'C2–C29' };
+
+// [id, t along spine, side]  side +1 = left of travel direction
+const GATE_DEF = {
+  A: [['A1',.15,-1],['A2',.2,1],['A3',.3,-1],['A5',.47,-1],['A6',.38,1],['A7',.63,-1],['A8',.55,1],['A9',.78,-1],['A10',.7,1],['A11',.92,-1],['A12',.85,1],['A14',1,0]],
+  B: [['B1',.17,-1],['B2',.1,1],['B3',.42,-1],['B4',.36,1],['B5',.6,-1],['B6',.55,1],['B7',.7,1],['B8',.84,1],['B9',.86,-1],['B10',1,.7],['B11',1,-.7]],
+  C: [['C2',.05,1],['C3',.17,1],['C4',.2,-1],['C5',.31,1],['C6',.34,-1],['C7',.46,1],['C8',.49,-1],['C9',.6,1],['C10',.63,-1],['C11',.75,1],['C14',.82,-1]],
+};
+const ROT_GATES = [['C17',-55],['C18',-75],['C19',-95],['C20',-115],['C21',-138],['C22',-162],['C23',172],['C24',150],['C25',130],['C26',111],['C27',93],['C29',70]];
+
+// Amenities from the airport's directory: [name, category, nearest gate or [x,y,zone], dwell?, note?]
+const AMEN = [
+  ['800 Degrees Wood Fired Kitchen','food','A1'], ["Sammy's Beach Bar & Grill",'bar','A1'], ['Starbucks','coffee','A1'],
+  ['Hudson','shop','A1'], ['Ohio Lottery','play','A1',5], ['Restrooms','rest','A1'], ['FuelRod phone charging','service','A1',5],
+  ['First Class Seats massage chairs','play','A2',15], ['Illy Coffee vending','coffee','A5',4], ['Hudson','shop','A5'],
+  ['Shop All Pharmacy vending','service','A5',4], ["Panini's Bar & Grill",'bar','A6'], ['Ohio Lottery','play','A6',5],
+  ['Restrooms','rest','A6'], ["Farmer's Fridge vending",'food','A8',4],
+  ["Mother's Room",'service','B1',20], ["Farmer's Fridge vending",'food','B1',4], ['The Club CLE lounge','play','B1',45,'Day passes sold at the door'],
+  ['Vino Volo','bar','B2'], ['Restrooms','rest','B2'], ['FuelRod phone charging','service','B2',5], ['Ohio Lottery','play','B3',5],
+  ['Hudson News Euro Café','coffee','B4'], ['Inca Tea Café','coffee','B4'], ['Hudson','shop','B4'], ['Cleveland Shines shoe shine','service','B4',15],
+  ['Quaker Steak & Lube','bar','B5'], ["Auntie Anne's",'coffee','B6',6], ['Cinnabon','coffee','B6',6], ["Menchie's Frozen Yogurt",'coffee','B6'],
+  ['Subway','food','B6',12], ['FuelRod phone charging','service','B7',5], ['Restrooms','rest','B8'],
+  ['InMotion electronics','shop','C2'], ['TUMI','shop','C2'], ['La Boutique','shop','C2'], ['Jamba','coffee','C2',6],
+  ['Aircuts & Day Spa','service','C2',30], ['Cleveland Shines shoe shine','service','C2',15], ['Hudson','shop','C2'], ['Restrooms','rest','C2'],
+  ['LEGO vending','play','C3',5], ["Farmer's Fridge vending",'food','C3',4], ['FuelRod phone charging','service','C3',5],
+  ['First Class Seats massage chairs','play','C4',15], ['Bar Symon','bar','C6'], ['Ohio Lottery','play','C6',5],
+  ['Petit Gourmet','food','C7',15], ['Restrooms','rest','C7'], ['Hudson','shop','C8'], ['Destination Cleveland vending','play','C9',5,'Local souvenirs'],
+  ['Inca Tea Café','coffee','C10'], ['First Class Seats massage chairs','play','C10',15], ['Caramel & Licorice & Taffy vending','coffee','C11',4],
+  ['Great Lakes Brewing Co.','bar','C14',30,"Cleveland's craft brewery"], ['Shop All Pharmacy vending','service','C14',4], ['FuelRod phone charging','service','C14',5],
+  ["Farmer's Fridge vending",'food','C17',4], ['First Class Seats massage chairs','play','C17',15], ['Restrooms','rest','C18'],
+  ['Starbucks','coffee','C22'], ['Cantina Taqueria & Tequila Bar','bar','C24'], ['Hudson','shop','C26'], ['Ohio Lottery','play','C27',5],
+  ['Potbelly Sandwich Shop','food','C29',15],
+  ["Bruegger's Bagels",'food',[430,344,'M'],12], ['Shake Shack','food',[444,350,'M']], ['Chick-fil-A','food',[459,354,'M'],15],
+  ['Currito Burritos','food',[474,350,'M'],15], ["Dunkin' (open 24 hrs)",'coffee',[438,330,'M']], ['The Pub','bar',[470,332,'M']],
+  ['Embers Fire & Ice Bar','bar',[503,340,'M']], ["Auntie Anne's",'coffee',[512,332,'M'],6], ['Cinnabon','coffee',[516,364,'M'],6],
+  ['Sunglass Hut','shop',[490,345,'M']], ['Johnston & Murphy','shop',[495,360,'M']], ['Hudson Booksellers','shop',[560,350,'M'],15],
+  ['Rock & Roll Hall of Fame store','play',[548,338,'M'],15,'Cleveland music souvenirs'], ['Ohio Game Day Sports','shop',[545,364,'M']],
+  ['Kids Works','play',[568,366,'M'],15,'Toys and games'], ['Service animal relief area','service',[586,366,'M'],10], ['Restrooms','rest',[582,356,'M']],
+  ['Information desk','service',[448,412,'L'],5], ["Farmer's Fridge vending",'food',[476,398,'L'],4], ['Illy Coffee vending','coffee',[470,412,'L'],4],
+  ['Welcome Center','service',[520,450,'L'],5], ['Hudson Aero Mart','shop',[484,450,'L']], ['SIM card vending','service',[512,432,'L'],5],
+];
+
+// ---------- Geometry helpers ----------
+const P = id => ({ x: V[id][0], y: V[id][1] });
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+function polyLen(pts) { let L = 0; for (let i = 1; i < pts.length; i++) L += dist(pts[i-1], pts[i]); return L; }
+function along(ids, t, side, off = 18) {
+  const pts = ids.map(P), L = polyLen(pts);
+  let target = Math.min(t, 1) * L, i = 1;
+  for (; i < pts.length; i++) { const d = dist(pts[i-1], pts[i]); if (target <= d || i === pts.length - 1) break; target -= d; }
+  const a = pts[i-1], b = pts[i], d = dist(a, b), u = Math.min(target / d, 1);
+  const dx = (b.x - a.x) / d, dy = (b.y - a.y) / d;
+  const px = dy, py = -dx;               // left of travel direction
+  const ahead = t >= 1 ? 14 : 0;
+  return { x: a.x + dx * (d * u + ahead) + px * side * off, y: a.y + dy * (d * u + ahead) + py * side * off };
+}
+const polar = (deg, r) => ({ x: ROT.x + r * Math.cos(deg * Math.PI / 180), y: ROT.y + r * Math.sin(deg * Math.PI / 180) });
+
+// ---------- Build items ----------
+const ITEMS = {};   // id -> {id, kind, name, x, y, zone, ...}
+const gateInfo = {};
+for (const con of 'ABC') for (const [g, t, s] of GATE_DEF[con]) {
+  const p = along(SPINES[con], t, s);
+  gateInfo[g] = { con, t, s };
+  ITEMS['g:' + g] = { id: 'g:' + g, kind: 'gate', name: 'Gate ' + g, code: g, con, zone: con, ...p };
+}
+for (const [g, deg] of ROT_GATES) {
+  const p = polar(deg, ROT.r + 12);
+  gateInfo[g] = { con: 'C', deg };
+  ITEMS['g:' + g] = { id: 'g:' + g, kind: 'gate', name: 'Gate ' + g, code: g, con: 'C', zone: 'R', ...p };
+}
+for (const id of ['chk','tix','bag','rta','gtc','taxi','rent','hotel']) {
+  ITEMS['v:' + id] = { id: 'v:' + id, kind: 'place', name: V[id][2], node: id, zone: 'L', ...P(id) };
+}
+const perGate = {};
+AMEN.forEach(([name, cat, at, dwell, note], i) => {
+  const it = { id: 'm:' + i, kind: 'amen', name, cat, dwell: dwell ?? CATS[cat].dwell, note };
+  if (Array.isArray(at)) { Object.assign(it, { x: at[0], y: at[1], zone: at[2], near: at[2] === 'L' ? 'Landside, before security' : 'Main terminal' }); }
+  else {
+    const gi = gateInfo[at], k = perGate[at] = (perGate[at] ?? -1) + 1;
+    const shift = (k % 2 ? -1 : 1) * Math.ceil(k / 2);
+    it.gate = at; it.near = 'Near gate ' + at;
+    if (gi.deg !== undefined) { Object.assign(it, polar(gi.deg + shift * 9 + 4, ROT.r - 16), { zone: 'R' }); }
+    else {
+      const side = gi.s === 0 ? 0.5 : Math.sign(gi.s);
+      Object.assign(it, along(SPINES[gi.con], Math.min(gi.t, .985) + shift * 0.022 - 0.008, side, 6), { zone: gi.con });
+    }
+  }
+  ITEMS[it.id] = it;
+});
+
+// ---------- Graph with every item attached to its nearest walkway ----------
+const G = {};   // node -> [{to, w}]
+const NODE = {}; // node -> {x,y}
+const addNode = (id, p) => { NODE[id] = p; G[id] = G[id] || []; };
+const link = (a, b) => { const w = dist(NODE[a], NODE[b]); G[a].push({ to: b, w }); G[b].push({ to: a, w }); };
+for (const id in V) addNode(id, P(id));
+const onEdge = EDGES.map(() => []);
+function project(p, a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy;
+  const u = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / L2));
+  return { u, x: a.x + dx * u, y: a.y + dy * u };
+}
+for (const it of Object.values(ITEMS)) {
+  if (it.kind === 'place') continue;
+  addNode(it.id, { x: it.x, y: it.y });
+  if (it.zone === 'R') { link(it.id, 'crot'); continue; }
+  let best = null;
+  EDGES.forEach(([a, b, z], ei) => {
+    if (z !== it.zone) return;
+    const pr = project(it, P(a), P(b)), d = dist(pr, it);
+    if (!best || d < best.d) best = { d, ei, pr };
+  });
+  const pid = 'p:' + it.id;
+  addNode(pid, { x: best.pr.x, y: best.pr.y });
+  onEdge[best.ei].push({ u: best.pr.u, id: pid });
+  link(it.id, pid);
+}
+EDGES.forEach(([a, b], ei) => {
+  const chain = [a, ...onEdge[ei].sort((p, q) => p.u - q.u).map(p => p.id), b];
+  for (let i = 1; i < chain.length; i++) link(chain[i-1], chain[i]);
+});
+const nodeOf = it => it.kind === 'place' ? it.node : it.id;
+
+function dijkstra(src) {
+  const D = { [src]: 0 }, prev = {}, done = new Set();
+  const ids = Object.keys(G);
+  while (true) {
+    let u = null, best = Infinity;
+    for (const id of ids) if (!done.has(id) && D[id] !== undefined && D[id] < best) { best = D[id]; u = id; }
+    if (u === null) break;
+    done.add(u);
+    for (const { to, w } of G[u]) if (!done.has(to) && (D[to] === undefined || D[u] + w < D[to])) { D[to] = D[u] + w; prev[to] = u; }
+  }
+  return { D, prev };
+}
+const dCache = {};
+const fromSrc = id => dCache[id] || (dCache[id] = dijkstra(id));
+function route(aItem, bItem) {
+  const s = nodeOf(aItem), t = nodeOf(bItem), { D, prev } = fromSrc(s);
+  const path = [t]; while (path[0] !== s) path.unshift(prev[path[0]]);
+  return { path, units: D[t] };
+}
+const meters = u => Math.round(u * M_PER_UNIT / 10) * 10;
+const minutes = u => Math.max(1, Math.round(u * M_PER_UNIT / M_PER_MIN));
+
+// ---------- Draw ----------
+const svg = $('#map'), world = $('#world');
+const el = (tag, attrs = {}, parent = world) => {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  parent.appendChild(n); return n;
+};
+const ptsStr = ids => ids.map(id => V[id][0] + ',' + V[id][1]).join(' ');
+
+// roads and curbs
+el('path', { d: 'M330 470 C 420 520, 560 535, 720 470', class: 'road', 'stroke-width': 14, 'stroke-linecap': 'round' });
+el('path', { d: 'M360 440 C 440 470, 560 470, 690 440', class: 'road', 'stroke-width': 8, 'stroke-linecap': 'round', opacity: .7 });
+el('path', { d: 'M720 470 L 850 520', class: 'road', 'stroke-width': 14, 'stroke-linecap': 'round' });
+// main terminal body
+el('path', { d: 'M392 340 L 500 318 L 612 352 L 642 386 L 642 424 L 592 458 L 520 468 L 448 444 L 392 410 Z', class: 'bldg', 'stroke-width': 1.4 });
+// concourse bodies: outline stroke then fill stroke
+for (const con of 'ABC') {
+  el('polyline', { points: ptsStr(SPINES[con]), class: 'bldg-stroke', 'stroke-width': 25, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
+}
+el('circle', { cx: ROT.x, cy: ROT.y, r: ROT.r + 3, fill: 'var(--bldg-edge)' });
+for (const con of 'ABC') {
+  el('polyline', { points: ptsStr(SPINES[con]), class: 'bldg-fill', 'stroke-width': 22.4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
+}
+el('circle', { cx: ROT.x, cy: ROT.y, r: ROT.r + 1.6, class: 'bldg', stroke: 'none' });
+el('path', { d: 'M394 341 L 500 319 L 611 353 L 641 387 L 641 423 L 592 457 L 520 467 L 448 443 L 393 409 Z', class: 'bldg', stroke: 'none' });
+// walkway centerlines
+el('polyline', { points: ptsStr(['c0','c1','c2','c3','c4','crot']), class: 'walk', 'stroke-width': 1 });
+el('polyline', { points: ptsStr(SPINES.B), class: 'walk', 'stroke-width': 1 });
+el('polyline', { points: ptsStr(['hub','a0','a1','a2']), class: 'walk', 'stroke-width': 1 });
+el('polyline', { points: ptsStr(['c0','fc','hub','b0']), class: 'walk', 'stroke-width': 1 });
+// security line across the terminal
+el('line', { x1: 470, y1: 372, x2: 590, y2: 378, stroke: 'var(--route)', 'stroke-width': 2, 'stroke-dasharray': '4 3', opacity: .8 });
+el('text', { x: 600, y: 384, class: 'map-lbl' }).textContent = 'Security';
+// area labels
+const lbl = (x, y, t, anchor = 'middle') => { const n = el('text', { x, y, class: 'map-lbl', 'text-anchor': anchor }); n.textContent = t; };
+lbl(455, 326, 'Food court'); lbl(565, 426, 'Main terminal'); lbl(745, 488, 'Terminal drive', 'start');
+lbl(80, 210, 'Rotunda');
+// concourse roundels
+for (const [con, x, y] of [['A', 680, 345], ['B', 575, 285], ['C', 330, 280]]) {
+  const g = el('g', { transform: `translate(${x} ${y})`, class: 'roundel-g', style: 'cursor:pointer', 'data-con': con });
+  el('circle', { r: 15, class: 'con-disc ' + con }, g);
+  el('text', { class: 'con-letter', y: 1 }, g).textContent = con;
+}
+// compass: Concourse A is the airport's north end
+const comp = el('g', { class: 'compass', transform: 'translate(815 40)' });
+el('circle', { r: 16, fill: 'none', stroke: 'var(--muted)', 'stroke-width': .8 }, comp);
+el('path', { d: 'M0 -12 L 4 2 L 0 0 L -4 2 Z', transform: 'rotate(90)' }, comp);
+el('text', { x: 24, y: 3 }, comp).textContent = 'N';
+
+// route layer
+const routeCase = el('polyline', { class: 'route-case', 'stroke-width': 9, 'vector-effect': 'non-scaling-stroke', points: '' });
+const routeLine = el('polyline', { class: 'route', 'stroke-width': 5, 'vector-effect': 'non-scaling-stroke', points: '' });
+
+// markers
+const markers = [];
+const layerAmen = el('g', {}), layerGates = el('g', {}), layerPlaces = el('g', {});
+for (const it of Object.values(ITEMS)) {
+  let g;
+  if (it.kind === 'gate') {
+    g = el('g', { class: `mk gate ${it.con}`, 'data-id': it.id }, layerGates);
+    const w = it.code.length > 2 ? 17 : 14;
+    el('rect', { class: 'ring', x: -w/2 - 3, y: -8.5, width: w + 6, height: 17, rx: 4 }, g);
+    el('rect', { x: -w/2, y: -5.5, width: w, height: 11, rx: 2.2 }, g);
+    el('text', { y: .4 }, g).textContent = it.code;
+  } else if (it.kind === 'amen') {
+    g = el('g', { class: 'mk amen', 'data-id': it.id, 'data-cat': it.cat }, layerAmen);
+    el('circle', { class: 'ring', r: 7 }, g);
+    if (it.cat === 'rest') el('rect', { class: 'sym', x: -3.6, y: -3.6, width: 7.2, height: 7.2, rx: 1.4 }, g);
+    else el('circle', { class: 'sym', r: 3.6 }, g);
+    el('text', { x: 6, y: 2 }, g).textContent = it.name;
+  } else {
+    g = el('g', { class: 'mk place', 'data-id': it.id }, layerPlaces);
+    el('circle', { class: 'ring', r: 8.5 }, g);
+    el('circle', { r: 4.5 }, g);
+    el('text', { x: 7, y: 2.2 }, g).textContent = it.name;
+  }
+  g.dataset.x = it.x; g.dataset.y = it.y;
+  it.el = g; markers.push(g);
+}
+
+// ---------- Pan / zoom ----------
+const view = { k: 1, x: 0, y: 0 };
+function apply() {
+  world.setAttribute('transform', `translate(${view.x} ${view.y}) scale(${view.k})`);
+  const s = 1 / Math.pow(view.k, 0.62);
+  for (const m of markers) m.setAttribute('transform', `translate(${m.dataset.x} ${m.dataset.y}) scale(${s})`);
+  svg.dataset.z = view.k >= 2.4 ? 3 : view.k >= 1.5 ? 2 : 1;
+}
+const clampK = k => Math.max(0.8, Math.min(9, k));
+function zoomAt(px, py, f) {
+  const nk = clampK(view.k * f), r = nk / view.k;
+  view.x = px - (px - view.x) * r; view.y = py - (py - view.y) * r; view.k = nk; apply();
+}
+function toSvg(cx, cy) {
+  const pt = svg.createSVGPoint(); pt.x = cx; pt.y = cy;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let anim = null;
+function animateTo(target) {
+  cancelAnimationFrame(anim);
+  if (reduced) { Object.assign(view, target); apply(); return; }
+  const from = { ...view }, t0 = performance.now(), dur = 450;
+  const step = now => {
+    const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+    view.k = from.k + (target.k - from.k) * e; view.x = from.x + (target.x - from.x) * e; view.y = from.y + (target.y - from.y) * e;
+    apply(); if (p < 1) anim = requestAnimationFrame(step);
+  };
+  anim = requestAnimationFrame(step);
+}
+function fitBox(x0, y0, x1, y1, pad = 40, maxK = 4) {
+  const w = Math.max(x1 - x0, 40) + pad * 2, h = Math.max(y1 - y0, 40) + pad * 2;
+  const k = Math.max(0.8, Math.min(maxK, VB.w / w, VB.h / h));
+  animateTo({ k, x: VB.w / 2 - k * (x0 + x1) / 2, y: VB.h / 2 - k * (y0 + y1) / 2 });
+}
+function fitItems(list, pad, maxK) {
+  const xs = list.map(i => i.x), ys = list.map(i => i.y);
+  fitBox(Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys), pad, maxK);
+}
+const fitAll = () => fitBox(20, 60, 840, 510, 10);
+const fitCon = con => fitItems(Object.values(ITEMS).filter(i => i.kind === 'gate' && i.con === con), 30, 4);
+
+svg.addEventListener('wheel', e => {
+  e.preventDefault();
+  const p = toSvg(e.clientX, e.clientY);
+  zoomAt(p.x, p.y, Math.exp(-e.deltaY * (e.deltaMode ? 0.05 : 0.0018)));
+}, { passive: false });
+
+const ptrs = new Map();
+let moved = 0, downTarget = null, pinch = null;
+svg.addEventListener('pointerdown', e => {
+  svg.setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (ptrs.size === 1) { moved = 0; downTarget = e.target.closest('[data-id], [data-con]'); }
+  else downTarget = null;
+  pinch = null; svg.classList.add('dragging'); cancelAnimationFrame(anim);
+});
+svg.addEventListener('pointermove', e => {
+  if (!ptrs.has(e.pointerId)) return;
+  const prevP = ptrs.get(e.pointerId), scale = svg.getScreenCTM().a;
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (ptrs.size === 1) {
+    const dx = e.clientX - prevP.x, dy = e.clientY - prevP.y;
+    moved += Math.abs(dx) + Math.abs(dy);
+    view.x += dx / scale; view.y += dy / scale; apply();
+  } else if (ptrs.size === 2) {
+    const [a, b] = [...ptrs.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y), mid = toSvg((a.x + b.x) / 2, (a.y + b.y) / 2);
+    if (pinch) { zoomAt(mid.x, mid.y, d / pinch.d); view.x += mid.x - pinch.mid.x; view.y += mid.y - pinch.mid.y; apply(); }
+    pinch = { d, mid: toSvg((a.x + b.x) / 2, (a.y + b.y) / 2) };
+    moved = 99;
+  }
+});
+const endPtr = e => {
+  if (!ptrs.has(e.pointerId)) return;
+  ptrs.delete(e.pointerId); pinch = null;
+  if (!ptrs.size) {
+    svg.classList.remove('dragging');
+    if (moved < 6 && downTarget) {
+      if (downTarget.dataset.con) fitCon(downTarget.dataset.con);
+      else select(ITEMS[downTarget.dataset.id], true);
+    } else if (moved < 6 && e.type === 'pointerup') { clearSelection(); }
+  }
+};
+svg.addEventListener('pointerup', endPtr);
+svg.addEventListener('pointercancel', endPtr);
+$('#zin').onclick = () => zoomAt(VB.w / 2, VB.h / 2, 1.5);
+$('#zout').onclick = () => zoomAt(VB.w / 2, VB.h / 2, 1 / 1.5);
+$('#zfit').onclick = fitAll;
+document.querySelectorAll('[data-zoom]').forEach(b => b.onclick = () => fitCon(b.dataset.zoom));
+
+// ---------- Category chips ----------
+const chips = $('#chips');
+for (const [cat, c] of Object.entries(CATS)) {
+  const b = document.createElement('button');
+  b.className = 'chip'; b.setAttribute('aria-pressed', 'true');
+  b.innerHTML = `<span class="sw ${cat}"></span>${c.label}`;
+  b.onclick = () => {
+    const on = b.getAttribute('aria-pressed') === 'true';
+    b.setAttribute('aria-pressed', String(!on)); svg.classList.toggle('hide-' + cat, on);
+  };
+  chips.appendChild(b);
+}
+
+// ---------- Selection card ----------
+const card = $('#card');
+let selected = null;
+function clearSelection() {
+  if (selected) selected.el.classList.remove('sel');
+  selected = null; card.hidden = true;
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function nearbyNames(it, n = 5) {
+  return Object.values(ITEMS)
+    .filter(o => o.kind === 'amen' && o.cat !== 'rest' && o !== it && dist(o, it) < 34)
+    .sort((a, b) => dist(a, it) - dist(b, it))
+    .map(o => o.name).filter((v, i, a) => a.indexOf(v) === i).slice(0, n);
+}
+function select(it, fromMap) {
+  if (!it) return;
+  if (selected) selected.el.classList.remove('sel');
+  selected = it; it.el.classList.add('sel');
+  let html = `<button class="x" aria-label="Close">×</button>`;
+  if (it.kind === 'gate') {
+    const al = AIRLINES.filter(a => a.con === it.con).map(a => `<span class="tag">${esc(a.name)}</span>`).join('');
+    html += `<span class="eyebrow">Concourse ${it.con}</span><h2>${it.name}</h2>
+      <div class="where">Airlines that use Concourse ${it.con}:</div><div class="tagrow">${al}</div>`;
+  } else if (it.kind === 'amen') {
+    html += `<span class="eyebrow">${CATS[it.cat].label}</span><h2>${esc(it.name)}</h2>
+      <div class="where">${esc(it.near)}${it.note ? ' · ' + esc(it.note) : ''}</div>`;
+  } else {
+    html += `<span class="eyebrow">${it.node === 'chk' ? 'Main terminal' : 'Arrive & depart'}</span><h2>${esc(it.name)}</h2>`;
+  }
+  const near = it.kind !== 'place' ? nearbyNames(it) : [];
+  if (near.length) html += `<div class="where">Nearby: ${near.map(esc).join(', ')}</div>`;
+  const { units } = route(ITEMS['v:chk'], it);
+  if (it.zone !== 'L' && it.id !== 'v:chk') html += `<div class="where">${minutes(units)} min walk from security (${meters(units)} m)</div>`;
+  html += `<div class="row"><button class="btn primary" data-act="to">Directions here</button><button class="btn" data-act="from">Start from here</button></div>`;
+  card.innerHTML = html; card.hidden = false;
+  card.querySelector('.x').onclick = clearSelection;
+  card.querySelector('[data-act="to"]').onclick = () => { setTab('dir'); $('#to').value = it.id; if ($('#from').value === it.id) $('#from').value = 'v:chk'; updateRoute(true); };
+  card.querySelector('[data-act="from"]').onclick = () => { setTab('dir'); $('#from').value = it.id; if ($('#to').value === it.id) $('#to').value = 'v:chk'; updateRoute(true); };
+  if (!fromMap) fitItems([it], 60, 3.2);
+}
+
+// ---------- Directions ----------
+function buildOptions(sel, includeLandside = true) {
+  sel.innerHTML = '';
+  const group = (label, list) => {
+    if (!list.length) return;
+    const og = document.createElement('optgroup'); og.label = label;
+    for (const it of list) { const o = document.createElement('option'); o.value = it.id; o.textContent = it.label || it.name; og.appendChild(o); }
+    sel.appendChild(og);
+  };
+  const all = Object.values(ITEMS);
+  if (includeLandside) group('Arrive & depart', all.filter(i => i.kind === 'place'));
+  const gnum = g => +g.code.slice(1);
+  for (const con of 'ABC') group(`Concourse ${con} gates`, all.filter(i => i.kind === 'gate' && i.con === con).sort((a, b) => gnum(a) - gnum(b)));
+  for (const [cat, c] of Object.entries(CATS)) {
+    const list = all.filter(i => i.kind === 'amen' && i.cat === cat && (includeLandside || i.zone !== 'L'))
+      .map(i => ({ ...i, label: `${i.name} · ${i.gate ? i.gate : i.zone === 'L' ? 'landside' : 'main terminal'}` }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+    group(c.label, list);
+  }
+}
+buildOptions($('#from')); buildOptions($('#to'));
+$('#from').value = 'v:chk'; $('#to').value = 'g:C22';
+
+function describe(path, a, b) {
+  const steps = [{ t: a.name, n: 'Start' }];
+  const crossesSecurity = path.some((n, i) => i && ((n === 'chk' && path[i-1] === 'hub') || (n === 'hub' && path[i-1] === 'chk')));
+  let lastLabel = a.kind === 'place' ? a.node : null;
+  const passed = [];
+  for (let i = 1; i < path.length - 1; i++) {
+    const n = path[i];
+    if (V[n] && V[n][2] && n !== lastLabel) {
+      let note = '';
+      if (n === 'chk' && crossesSecurity) note = path.indexOf('hub') > i ? 'Screen through TSA, then continue straight ahead' : 'Leave through the exit lane';
+      if (n === 'tix' && path[i+1] === 'bag') note = 'Take the escalator down a level';
+      if (n === 'bag' && path[i-1] === 'tix') note = 'Lower level';
+      if (n === 'c4') note = 'Gates C17–C29 ring the rotunda';
+      if (n === 'fc') note = path.includes('c0') ? 'Follow the purple C signs' : '';
+      steps.push({ t: V[n][2], n: note }); lastLabel = n;
+    }
+    if (n.startsWith('p:m:')) {
+      const am = ITEMS[n.slice(2)];
+      if (am && am !== b && !['rest', 'service'].includes(am.cat) && !/vending/i.test(am.name) && !passed.includes(am.name)) passed.push(am.name);
+    }
+  }
+  let endNote = '';
+  if (b.kind === 'gate') endNote = b.zone === 'R' ? 'In the rotunda' : 'Watch the overhead gate numbers';
+  else if (b.kind === 'amen') endNote = b.near;
+  steps.push({ t: b.name, n: endNote, end: true });
+  return { steps, passed: passed.slice(0, 5) };
+}
+function updateRoute(fit) {
+  const a = ITEMS[$('#from').value], b = ITEMS[$('#to').value];
+  if (a === b) {
+    $('#sum').innerHTML = `<span class="big">0</span><span class="meta">You're already there.</span>`;
+    $('#steps').innerHTML = ''; routeLine.setAttribute('points', ''); routeCase.setAttribute('points', ''); return;
+  }
+  const { path, units } = route(a, b);
+  const pts = path.map(n => NODE[n].x + ',' + NODE[n].y).join(' ');
+  routeLine.setAttribute('points', pts); routeCase.setAttribute('points', pts);
+  const { steps, passed } = describe(path, a, b);
+  $('#sum').innerHTML = `<span class="big">${minutes(units)} min</span><span class="meta">${meters(units)} m walk${steps.length > 2 ? ' · ' + (steps.length - 2) + ' waypoints' : ''}</span>`;
+  $('#steps').innerHTML = steps.map(s => `<li class="${s.end ? 'end' : ''}"><span class="dot"></span><span>${esc(s.t)}${s.n ? `<span class="note">${esc(s.n)}</span>` : ''}</span></li>`).join('')
+    + (passed.length ? `<li><span></span><span class="note">On the way: ${passed.map(esc).join(', ')}</span></li>` : '');
+  svg.classList.add('focusing');
+  for (const m of markers) m.classList.remove('hl');
+  a.el.classList.add('hl'); b.el.classList.add('hl');
+  for (const n of path) if (ITEMS[n]) ITEMS[n].el.classList.add('hl');
+  for (const n of path) if (n.startsWith('p:') && ITEMS[n.slice(2)]) ITEMS[n.slice(2)].el.classList.add('hl');
+  if (fit) fitItems(path.map(n => NODE[n]), 30, 3.5);
+}
+$('#from').onchange = $('#to').onchange = () => updateRoute(true);
+$('#swap').onclick = () => { const f = $('#from').value; $('#from').value = $('#to').value; $('#to').value = f; updateRoute(false); };
+
+// ---------- Pass the time ----------
+buildOptions($('#ktGate'), false);
+// keep only gates in this select
+$('#ktGate').querySelectorAll('optgroup').forEach(og => { if (!/gates/.test(og.label)) og.remove(); });
+$('#ktGate').value = 'g:C22';
+let lastIdeas = [];
+function updateIdeas() {
+  const gate = ITEMS[$('#ktGate').value], mins = +$('#ktMin').value, catF = $('#ktCat').value;
+  $('#ktOut').textContent = mins + ' min';
+  const { D } = fromSrc(nodeOf(gate));
+  const seen = new Set();
+  const list = Object.values(ITEMS)
+    .filter(i => i.kind === 'amen' && i.zone !== 'L' && i.cat !== 'rest' && (catF === 'all' || i.cat === catF))
+    .map(i => {
+      const walk = minutes(D[i.id]), total = walk * 2 + i.dwell, spare = mins - 10 - total;
+      return { i, walk, total, spare, status: spare >= 5 ? 'ok' : spare >= 0 ? 'warn' : 'no' };
+    })
+    .sort((p, q) => ({ ok: 0, warn: 1, no: 2 }[p.status] - { ok: 0, warn: 1, no: 2 }[q.status]) || p.walk - q.walk)
+    .filter(r => { const k = r.i.name + r.status; if (seen.has(r.i.name)) return false; seen.add(r.i.name); return true; });
+  lastIdeas = list;
+  const label = { ok: 'Fits', warn: 'Tight', no: 'Skip' };
+  $('#ideas').innerHTML = list.slice(0, 18).map(r => `
+    <button class="idea" data-id="${r.i.id}">
+      <span class="sw ${r.i.cat}"></span>
+      <span><span class="t">${esc(r.i.name)}</span><span class="s">${r.walk} min walk each way · ~${r.i.dwell} min there · ${esc(r.i.near || '')}</span></span>
+      <span class="pill ${r.status}">${label[r.status]}</span>
+    </button>`).join('') || '<p class="note-box">Nothing in this category past security.</p>';
+  $('#ideas').querySelectorAll('.idea').forEach(b => b.onclick = () => showIdea(ITEMS[b.dataset.id]));
+}
+function showIdea(it) {
+  $('#from').value = $('#ktGate').value; $('#to').value = it.id;
+  updateRoute(true); select(it, true);
+}
+$('#ktGate').onchange = $('#ktCat').onchange = updateIdeas;
+$('#ktMin').oninput = updateIdeas;
+$('#surprise').onclick = () => {
+  const ok = lastIdeas.filter(r => r.status === 'ok');
+  const pool = ok.length ? ok : lastIdeas.filter(r => r.status === 'warn');
+  if (!pool.length) { $('#ideas').insertAdjacentHTML('afterbegin', '<p class="note-box">Not enough time to wander. Stay near your gate.</p>'); return; }
+  showIdea(pool[Math.floor(Math.random() * pool.length)].i);
+};
+
+// ---------- Airlines ----------
+$('#airlines').innerHTML = AIRLINES.map((a, i) => `
+  <button class="airline" data-i="${i}">
+    <span class="roundel ${a.con}" aria-hidden="true">${a.con}</span>
+    <span><span class="name">${esc(a.name)}</span>${a.note ? `<br><span class="s" style="font-size:.8rem;color:var(--muted)">${esc(a.note)}</span>` : ''}</span>
+    <span class="gates">${CON_RANGE[a.con]}</span>
+  </button>`).join('');
+function highlightAirline(a) {
+  clearSelection();
+  svg.classList.add('focusing');
+  for (const m of markers) m.classList.remove('hl');
+  for (const it of Object.values(ITEMS)) if (it.kind === 'gate' && it.con === a.con) it.el.classList.add('hl');
+  routeLine.setAttribute('points', ''); routeCase.setAttribute('points', '');
+  fitCon(a.con);
+}
+$('#airlines').querySelectorAll('.airline').forEach(b => b.onclick = () => highlightAirline(AIRLINES[+b.dataset.i]));
+
+// ---------- Tabs ----------
+function setTab(name) {
+  for (const t of ['dir', 'kill', 'air']) {
+    $('#tab-' + t).setAttribute('aria-selected', String(t === name));
+    $('#pane-' + t).hidden = t !== name;
+  }
+  if (name === 'dir') updateRoute(false);
+  if (name === 'kill') { updateIdeas(); }
+}
+$('#tab-dir').onclick = () => setTab('dir');
+$('#tab-kill').onclick = () => setTab('kill');
+$('#tab-air').onclick = () => setTab('air');
+
+// ---------- Search ----------
+const q = $('#q'), results = $('#results');
+let hits = [], active = 0;
+function runSearch() {
+  const s = q.value.trim().toLowerCase();
+  if (!s) { results.hidden = true; return; }
+  hits = [];
+  for (const a of AIRLINES) if (a.name.toLowerCase().includes(s)) hits.push({ label: a.name, kind: `Airline · Concourse ${a.con}`, go: () => highlightAirline(a) });
+  const gq = s.replace(/^gate\s*/, '');
+  const seen = new Set();
+  for (const it of Object.values(ITEMS)) {
+    const hay = (it.kind === 'gate' ? it.code + ' ' + it.name : it.name).toLowerCase();
+    if (hay.includes(gq) || (it.cat && CATS[it.cat].label.toLowerCase().includes(s))) {
+      const kind = it.kind === 'gate' ? `Concourse ${it.con}` : it.kind === 'amen' ? (it.near || '') : 'Arrive & depart';
+      const key = it.name + kind; if (seen.has(key)) continue; seen.add(key);
+      hits.push({ label: it.name, kind, go: () => select(it, false) });
+    }
+  }
+  hits.sort((x, y) => (x.label.toLowerCase().startsWith(gq) ? 0 : 1) - (y.label.toLowerCase().startsWith(gq) ? 0 : 1));
+  hits = hits.slice(0, 10); active = 0;
+  results.innerHTML = hits.length ? hits.map((h, i) => `<button data-i="${i}" class="${i === 0 ? 'active' : ''}">${esc(h.label)}<span class="k">${esc(h.kind)}</span></button>`).join('')
+    : '<div style="padding:8px 10px;color:var(--muted)">No matches. Try a gate like “B6” or an airline.</div>';
+  results.hidden = false;
+  results.querySelectorAll('button').forEach(b => b.onclick = () => pick(+b.dataset.i));
+}
+function pick(i) { const h = hits[i]; if (!h) return; results.hidden = true; q.blur(); h.go(); }
+q.addEventListener('input', runSearch);
+q.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); pick(active); }
+  else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault(); if (!hits.length) return;
+    active = (active + (e.key === 'ArrowDown' ? 1 : hits.length - 1)) % hits.length;
+    results.querySelectorAll('button').forEach((b, i) => b.classList.toggle('active', i === active));
+  } else if (e.key === 'Escape') { results.hidden = true; }
+});
+document.addEventListener('pointerdown', e => { if (!e.target.closest('.search')) results.hidden = true; });
+
+// ---------- Start ----------
+apply();
+updateRoute(false);
+if (matchMedia('(max-width: 820px)').matches) fitItems(route(ITEMS['v:chk'], ITEMS['g:C22']).path.map(n => NODE[n]), 20, 3);
+else fitAll();
+})();
+</script>
+</body>
+</html>
