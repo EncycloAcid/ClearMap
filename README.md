@@ -12,8 +12,9 @@ An interactive map of Cleveland Hopkins International Airport (CLE). It runs as 
 - **Directions:** turn-by-turn walking routes between any gate, amenity, the TSA checkpoint, baggage claim, the RTA Red Line and ground transport, with distance and walking time.
 - **Pass the time:** pick your gate and how long until boarding. It lists nearby food, bars, shops, massage chairs and other distractions. Each one is marked Fits / Tight / Skip, based on the round-trip walk and the time you'd spend there. Tap *Surprise me* for a random pick.
 - **Search and filters:** search gates, airlines or places. Tapping the empty search box shows airlines, your recent picks and popular spots. Matches show in bold, and gate searches are forgiving ("c 22" finds C22). Use the category chips to show or hide amenity types.
-- **Map:** buildings have a soft raised look and each concourse a faint tint of its colour, with jet bridges and parked aircraft at the gates. Panning has momentum after a flick and stops before you lose the airport. A scale bar appears while you zoom, and you can double-tap to zoom.
+- **Map:** traced from OpenStreetMap, north up. It shows the real terminal and concourse outlines, gate positions, jet bridges, aircraft at their actual stands, taxiways, roads and the parking garage. Panning has momentum after a flick and stops before you lose the airport. A scale bar appears while you zoom, and you can double-tap to zoom.
 - **Routes and pins:** routes draw themselves in, with start and end markers and a walking-time bubble. Tapping a place drops a balloon pin with its category icon, and tapping a route step jumps the map to it. Place names appear only where they have room.
+- **Your location:** tap the arrow button to see a blue dot with its GPS accuracy. Choose "My location" as a route start. The Android app asks for location permission the first time you use it.
 - **Remembers your trip:** your route, gate, boarding time and tab are saved on this device between launches.
 
 The layout and amenities come from the airport's published terminal directory. Gate assignments change, so always check your boarding pass. This is not an official airport map.
@@ -41,3 +42,7 @@ cd android
 Or open the `android/` folder in Android Studio and press Run.
 
 The release build is signed with the Android debug key so it installs right away. Before you publish to Google Play, set up your own signing key in `android/app/build.gradle.kts`.
+
+## Map data
+
+The base map comes from [OpenStreetMap](https://www.openstreetmap.org/copyright) and is © OpenStreetMap contributors, available under the Open Database License. To regenerate it, run `python3 tools/build_basemap.py`. The script downloads the CLE area and writes `basemap.js`. Paste that between the `BASEMAP:start` and `BASEMAP:end` markers in `index.html`.

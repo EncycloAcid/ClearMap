@@ -11,8 +11,8 @@ android {
         applicationId = "io.github.encycloacid.clearmap"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "2.2"
+        versionCode = 5
+        versionName = "3.0"
     }
 
     buildTypes {
@@ -33,6 +33,10 @@ android {
     }
 
     sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/webAssets"))
+}
+
+dependencies {
+    implementation("androidx.webkit:webkit:1.12.1")
 }
 
 // Copy the shared web map (../../index.html) into the APK's assets, swapping the

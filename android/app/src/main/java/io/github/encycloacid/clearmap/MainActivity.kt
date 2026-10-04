@@ -1,22 +1,42 @@
 package io.github.encycloacid.clearmap
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Color
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
+import android.webkit.GeolocationPermissions
+import android.webkit.JavascriptInterface
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.window.OnBackInvokedDispatcher
+import androidx.webkit.WebViewAssetLoader
 
 class MainActivity : Activity() {
     private lateinit var web: WebView
     private var insetsJs = ""
+
+    // A location request from the page waiting on the Android permission dialog
+    private var pendingGeo: Pair<String, GeolocationPermissions.Callback>? = null
+
+    // Serve the bundled page from a secure https origin; WebView only allows GPS on secure pages.
+    private val assets by lazy {
+        WebViewAssetLoader.Builder()
+            .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
+            .build()
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -26,18 +46,39 @@ class MainActivity : Activity() {
         web = WebView(this).apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
-            settings.allowFileAccess = true
+            settings.setGeolocationEnabled(true)
+            settings.allowFileAccess = false
             settings.builtInZoomControls = false
             settings.setSupportZoom(false)
             overScrollMode = View.OVER_SCROLL_NEVER
             isVerticalScrollBarEnabled = false
-            setBackgroundColor(Color.parseColor(if (isNight()) "#14171c" else "#eceff3"))
+            setBackgroundColor(Color.parseColor(if (isNight()) "#121612" else "#eef0ec"))
+            addJavascriptInterface(AppBridge(), "CLEApp")
             webViewClient = object : WebViewClient() {
-                // Keep the app on its bundled page; nothing else should load inside it.
-                override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest) =
-                    !request.url.toString().startsWith("file:///android_asset/")
+                override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? =
+                    assets.shouldInterceptRequest(request.url)
+
+                // Keep the app on its bundled page; other links open in the browser.
+                override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                    if (request.url.host == APP_HOST) return false
+                    runCatching { startActivity(Intent(Intent.ACTION_VIEW, request.url)) }
+                    return true
+                }
 
                 override fun onPageFinished(view: WebView, url: String) = pushInsets()
+            }
+            webChromeClient = object : WebChromeClient() {
+                override fun onGeolocationPermissionsShowPrompt(origin: String, callback: GeolocationPermissions.Callback) {
+                    if (hasLocationPermission()) {
+                        callback.invoke(origin, true, false)
+                    } else {
+                        pendingGeo = origin to callback
+                        requestPermissions(
+                            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+                            REQ_LOCATION
+                        )
+                    }
+                }
             }
         }
 
@@ -63,10 +104,32 @@ class MainActivity : Activity() {
 
         setContentView(web)
         if (savedInstanceState != null) web.restoreState(savedInstanceState)
-        else web.loadUrl("file:///android_asset/index.html")
+        else web.loadUrl("https://$APP_HOST/assets/index.html")
 
         if (Build.VERSION.SDK_INT >= 33) {
             onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) { handleBack() }
+        }
+    }
+
+    private fun hasLocationPermission() =
+        checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+            checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != REQ_LOCATION) return
+        val granted = grantResults.any { it == PackageManager.PERMISSION_GRANTED }
+        pendingGeo?.let { (origin, callback) -> callback.invoke(origin, granted, false) }
+        pendingGeo = null
+    }
+
+    /** Lets the page send people to this app's settings page when location was turned off. */
+    inner class AppBridge {
+        @JavascriptInterface
+        fun openSettings() {
+            runOnUiThread {
+                startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null)))
+            }
         }
     }
 
@@ -98,7 +161,7 @@ class MainActivity : Activity() {
         }
     }
 
-    // Let the page close search, a place card or a full-height sheet first; otherwise leave.
+    // Let the page close a toast, search, a place card or a full-height sheet first; otherwise leave.
     private fun handleBack() {
         web.evaluateJavascript("window.cleBack ? window.cleBack() : false") { handled ->
             if (handled != "true") finish()
@@ -116,5 +179,10 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         web.destroy()
         super.onDestroy()
+    }
+
+    companion object {
+        private const val APP_HOST = WebViewAssetLoader.DEFAULT_DOMAIN
+        private const val REQ_LOCATION = 41
     }
 }
