@@ -1,0 +1,9 @@
+<resources>
+    <!-- Light theme: the WebView reports prefers-color-scheme: light. -->
+    <style name="Theme.CLEGateFinder" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/sign</item>
+        <item name="android:statusBarColor">@color/sign</item>
+        <item name="android:navigationBarColor">@color/sign</item>
+        <item name="android:colorAccent">@color/route</item>
+    </style>
+</resources>

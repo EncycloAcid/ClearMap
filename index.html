@@ -970,6 +970,13 @@ q.addEventListener('keydown', e => {
 });
 document.addEventListener('pointerdown', e => { if (!e.target.closest('.search')) results.hidden = true; });
 
+// Android back button: close open overlays before leaving the app
+window.cleBack = () => {
+  if (!results.hidden) { results.hidden = true; return true; }
+  if (!card.hidden) { clearSelection(); return true; }
+  return false;
+};
+
 // ---------- Start ----------
 apply();
 updateRoute(false);

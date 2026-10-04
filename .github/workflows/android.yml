@@ -1,0 +1,27 @@
+name: Android APK
+
+on:
+  push:
+    paths: ["index.html", "android/**", ".github/workflows/android.yml"]
+  pull_request:
+    paths: ["index.html", "android/**", ".github/workflows/android.yml"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - run: ./gradlew assembleRelease --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cle-gate-finder-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
