@@ -173,7 +173,15 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 #map.hide-shop .amen[data-cat="shop"], #map.hide-play .amen[data-cat="play"], #map.hide-service .amen[data-cat="service"],
 #map.hide-rest .amen[data-cat="rest"] { display: none; }
 #map .mk { transition: opacity .3s ease; }
-#map.focusing .mk:not(.hl):not(.con-mk) { opacity: .22; }
+/* a route softens other places a little; gates stay crisp, and zoomed in everything is full strength */
+#map.focusing .amen:not(.hl), #map.focusing .place:not(.hl) { opacity: .5; }
+#map.focusing[data-z="3"] .mk { opacity: 1; }
+.mk .sz { transform-box: fill-box; transform-origin: center; transition: transform .3s var(--spring); }
+#map[data-z="1"] .amen .sz { transform: scale(.62); }
+#map .amen[data-off] { display: none; }
+#map[data-z="1"] .glyph { display: none; }
+.glyph { fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.place .glyph { stroke: var(--map); }
 #map .mk.sel { opacity: 1 !important; }
 #map .mk.sel text { font-size: 7.4px; font-weight: 750; }
 #map .gate text { display: block !important; }
@@ -360,6 +368,16 @@ button.row:active, label.row:active { background: var(--fill); }
 .hero .m1 { font: 700 17px var(--font-display); font-variation-settings: "wdth" 105; align-self: end; }
 .hero .m2 { font-size: 14px; opacity: .8; align-self: start; }
 .hero.same .num { font-size: 40px; }
+.hero { position: relative; }
+.hero-x {
+  position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; border-radius: 50%; border: 0;
+  display: grid; place-items: center; background: color-mix(in srgb, var(--on-primary-c) 12%, transparent); color: var(--on-primary-c);
+  transition: transform .35s var(--spring);
+}
+.hero-x:active { transform: scale(.85); }
+.hero-x .ico { width: 14px; height: 14px; stroke-width: 2.8; }
+.hero.empty { grid-template-columns: 1fr; }
+.hero.empty .m1 { font: 800 30px/1.05 var(--font-display); font-variation-settings: "wdth" 115; }
 
 /* Transit-line steps */
 .line { list-style: none; margin: 0; padding: 14px 16px; }
@@ -926,15 +944,17 @@ for (const it of Object.values(ITEMS)) {
     el('text', { y: .4 }, pop).textContent = it.code;
   } else if (it.kind === 'amen') {
     g = el('g', { class: 'mk amen', 'data-id': it.id, 'data-cat': it.cat }, layerAmen);
-    const pop = el('g', { class: 'pop' }, g);
-    if (it.cat === 'rest') el('rect', { class: 'sym', x: -3.8, y: -3.8, width: 7.6, height: 7.6, rx: 2.2 }, pop);
-    else el('circle', { class: 'sym', r: 3.8 }, pop);
-    el('text', { x: 6, y: 2 }, g).textContent = it.name;
+    const sz = el('g', { class: 'sz' }, el('g', { class: 'pop' }, g));
+    if (it.cat === 'rest') el('rect', { class: 'sym', x: -5, y: -5, width: 10, height: 10, rx: 3 }, sz);
+    else el('circle', { class: 'sym', r: 5.2 }, sz);
+    el('use', { class: 'glyph', href: '#i-' + it.cat, x: -3.6, y: -3.6, width: 7.2, height: 7.2 }, sz);
+    el('text', { x: 8, y: 2 }, g).textContent = it.name;
   } else {
     g = el('g', { class: 'mk place', 'data-id': it.id }, layerPlaces);
-    const pop = el('g', { class: 'pop' }, g);
-    el('circle', { class: 'sym', r: 4.4 }, pop);
-    el('text', { x: 7, y: 2.2 }, g).textContent = it.name;
+    const sz = el('g', { class: 'sz' }, el('g', { class: 'pop' }, g));
+    el('circle', { class: 'sym', r: 5.4 }, sz);
+    el('use', { class: 'glyph', href: '#i-place', x: -3.6, y: -3.8, width: 7.2, height: 7.2 }, sz);
+    el('text', { x: 9, y: 2.2 }, g).textContent = it.name;
   }
   if (it.kind !== 'gate') it.lw = it.name.length * (it.kind === 'place' ? 3.75 : 3.4) + 6;
   el('title', {}, g).textContent = it.kind === 'gate' ? `${it.name} · Concourse ${it.con}` : it.name;
@@ -1074,13 +1094,29 @@ function cullLabels() {
   const zoomed = svg.dataset.z === '3', u = markerScale * view.k, taken = [];
   const scr = p => ({ x: view.x + view.k * p.x, y: view.y + view.k * p.y });
   const rank = it => it.el.classList.contains('sel') ? 0 : it.el.classList.contains('hl') ? 1 : it.kind === 'place' ? 2 : 3;
-  const hidden = it => it.cat && svg.classList.contains('hide-' + it.cat);
+  const hidden = it => (it.cat && svg.classList.contains('hide-' + it.cat)) || it.el.hasAttribute('data-off');
+  // Markers first: where place icons would overlap, keep the more useful one and reveal the rest as you zoom
+  // (selected, on the route, restrooms, food and bars, coffee, shops, then vending and chargers)
+  const RANK = { rest: 2, bar: 3, food: 3, coffee: 4, shop: 5, play: 5, service: 6 };
+  const mrank = it => it.el.classList.contains('sel') ? 0 : it.el.classList.contains('hl') ? 1
+    : RANK[it.cat] + (/vending|FuelRod|Lottery/i.test(it.name) ? 2 : 0);
+  const mr = (svg.dataset.z === '1' ? 3.6 : 5.8) * u, kept = [];
+  for (const it of Object.values(ITEMS)) if (it.kind === 'gate' || it.kind === 'place') {
+    const p = scr(it); kept.push({ l: p.x - mr, r: p.x + mr, t: p.y - mr, b: p.y + mr });
+  }
+  const amens = Object.values(ITEMS).filter(i => i.kind === 'amen').sort((a, b) => mrank(a) - mrank(b));
+  for (const it of amens) {
+    const p = scr(it), box = { l: p.x - mr, r: p.x + mr, t: p.y - mr, b: p.y + mr };
+    const clash = !(it.cat && svg.classList.contains('hide-' + it.cat)) && mrank(it) > 1 && kept.some(o => box.l < o.r && box.r > o.l && box.t < o.b && box.b > o.t);
+    it.el.toggleAttribute('data-off', clash);
+    if (!clash) kept.push(box);
+  }
   const list = labelItems.filter(it => (it.kind === 'place' || zoomed || it.el.classList.contains('sel')) && !hidden(it))
     .sort((a, b) => rank(a) - rank(b));
   const hit = (r, o) => r.l < o.r && r.r > o.l && r.t < o.b && r.b > o.t;
   // every marker's dot or gate pill, and the concourse badges, block names
   const dots = Object.values(ITEMS).filter(i => i.el && !hidden(i)).map(i => {
-    const p = scr(i), w = (i.kind === 'gate' ? 9 : 4.2) * u;
+    const p = scr(i), w = (i.kind === 'gate' ? 9 : 5.6) * u;
     return { it: i, l: p.x - w, r: p.x + w, t: p.y - 5.5 * u, b: p.y + 5.5 * u };
   });
   for (const m of markers) if (m.dataset.con) {
@@ -1107,7 +1143,7 @@ function cullLabels() {
   for (const it of list) {
     const p = scr(it), w = (it.lw - 5) * u, mine = it.el.classList.contains('sel'), important = rank(it) < 2;
     for (const dir of [1, -1]) {
-      const r = dir > 0 ? { l: p.x + 5 * u, r: p.x + 5 * u + w } : { l: p.x - 5 * u - w, r: p.x - 5 * u };
+      const r = dir > 0 ? { l: p.x + 8 * u, r: p.x + 8 * u + w } : { l: p.x - 8 * u - w, r: p.x - 8 * u };
       r.t = p.y - 3.6 * u; r.b = p.y + 3.6 * u;
       if (offscreen(r)) break;
       if (chrome.some(c => hit(r, c)) || taken.some(o => hit(r, o))) continue;
@@ -1119,7 +1155,7 @@ function cullLabels() {
   for (const [it, dir] of side) {
     const t = it.el.querySelector(':scope > text');
     if (t && t.dataset.dir !== String(dir)) {
-      t.dataset.dir = dir; t.setAttribute('x', dir * (it.kind === 'place' ? 7 : 6)); t.setAttribute('text-anchor', dir > 0 ? 'start' : 'end');
+      t.dataset.dir = dir; t.setAttribute('x', dir * (it.kind === 'place' ? 9 : 8)); t.setAttribute('text-anchor', dir > 0 ? 'start' : 'end');
     }
   }
   for (const it of labelItems) it.el.toggleAttribute('data-lbl', shown.has(it));
@@ -1600,6 +1636,7 @@ for (const sel of [$('#from'), $('#to')]) {
   const o = document.createElement('option'); o.value = 'v:me'; o.textContent = 'My location';
   sel.insertBefore(o, sel.firstChild);
 }
+{ const o = document.createElement('option'); o.value = ''; o.textContent = 'Choose a destination'; $('#to').insertBefore(o, $('#to').firstChild); }
 $('#from').value = 'v:chk'; $('#to').value = 'g:C22';
 
 function describe(path, a, b) {
@@ -1645,6 +1682,14 @@ function updateRoute(fit) {
     pendingMe = sel.id;
   }
   const a = ITEMS[$('#from').value], b = ITEMS[$('#to').value];
+  if (!b) {
+    // no destination: plain exploring, nothing dimmed
+    $('#hero').className = 'hero empty';
+    $('#hero').innerHTML = `<span class="m1">Where to?</span><span class="m2">Tap a gate or place on the map, search, or pick the nearest below.</span>`;
+    $('#steps').innerHTML = ''; setRoute([]);
+    svg.classList.remove('focusing'); for (const m of markers) m.classList.remove('hl');
+    cullLabels(); return;
+  }
   if (a === b) {
     $('#hero').className = 'hero same';
     $('#hero').innerHTML = `<span class="num">0<small>min</small></span><span class="m1">You’re already there</span><span class="m2">Pick a different destination</span>`;
@@ -1654,7 +1699,7 @@ function updateRoute(fit) {
   setRoute(path);
   const { steps, passed, via } = describe(path, a, b);
   $('#hero').className = 'hero';
-  $('#hero').innerHTML = `<span class="num">${minutes(units)}<small>min</small></span>
+  $('#hero').innerHTML = `<button class="hero-x" id="clearRoute" aria-label="Clear route">${icon('x')}</button><span class="num">${minutes(units)}<small>min</small></span>
     <span class="m1">${meters(units)} m walk</span>
     <span class="m2">${via.length ? 'via ' + via.slice(0, 3).map(esc).join(' · ') : 'Direct'}</span>`;
   $('#steps').innerHTML = steps.map(s => `<li class="${s.end ? 'end' : ''}" data-node="${esc(s.node)}" tabindex="0" role="button"><span class="stop"></span><span><span class="t">${esc(s.t)}</span>${s.n ? `<span class="n">${esc(s.n)}</span>` : ''}</span></li>`).join('')
@@ -1669,6 +1714,7 @@ function updateRoute(fit) {
     li.onclick = go;
     li.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } };
   });
+  $('#clearRoute').onclick = () => { buzz(5); $('#to').value = ''; updateRoute(false); saveTrip(); };
   const ids = [a.id, b.id];
   for (const n of path) { if (ITEMS[n]) ids.push(n); if (n.startsWith('p:') && ITEMS[n.slice(2)]) ids.push(n.slice(2)); }
   highlight(ids);
@@ -1930,7 +1976,7 @@ function saveTrip() {
   const t = store.get('trip', null);
   if (!t) return;
   if (ITEMS[t.from]) $('#from').value = t.from;
-  if (ITEMS[t.to]) $('#to').value = t.to;
+  if (ITEMS[t.to] || t.to === '') $('#to').value = t.to;
   if (ITEMS[t.gate]) $('#ktGate').value = t.gate;
   if (t.boardAt > Date.now() - 5 * 60000) boardAt = t.boardAt;    // forget a flight that has already boarded
   if (t.reminderAt > Date.now()) reminderAt = t.reminderAt;
