@@ -9,6 +9,7 @@ index.html embeds between the BASEMAP markers.
 Map data © OpenStreetMap contributors, ODbL 1.0.
 
 Usage: python3 tools/build_basemap.py [path/to/cle.osm]
+Needs shapely (pip install shapely) to pave the ramp around the concourses.
 """
 import json, math, os, sys, urllib.request
 import xml.etree.ElementTree as ET
@@ -102,6 +103,19 @@ def main():
         ux, uy = dx / d, dy / d
         cx, cy = a[0] + ux * 17, a[1] + uy * 17
         planes.append([round(cx, 1), round(cy, 1), round(math.degrees(math.atan2(-ux, uy)), 1)])  # SVG rotate() so the nose (0,-1) faces the gate
+    # Pave the ramp around the concourses (not mapped as an apron in OSM): a 57 m buffer,
+    # precomputed as one simple polygon so phones don't rasterise a huge rounded stroke.
+    from shapely.geometry import Polygon
+    from shapely.ops import unary_union
+    rings = []
+    for wid, nds, t in ways:
+        name = t.get('name', '')
+        if t.get('aeroway') == 'terminal' and any(c in name for c in ('Concourse A', 'Concourse B', 'Concourse C', 'Concourse D')):
+            pts = [P(*nodes[n][:2]) for n in nds if n in nodes]
+            if len(pts) > 3: rings.append(Polygon(pts).buffer(0))
+    ramp = unary_union([r.buffer(57, quad_segs=4) for r in rings]).simplify(2.5)
+    geoms = getattr(ramp, 'geoms', [ramp])
+    L['ramp'] = [path(list(g.exterior.coords)[:-1], True) + ''.join(path(list(i.coords)[:-1], True) for i in g.interiors) for g in geoms]
     out = {k: ''.join(v) for k, v in L.items()}
     out['planes'] = planes
     js = 'const BASEMAP = ' + json.dumps(out, separators=(',', ':')) + ';\n'
