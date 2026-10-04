@@ -12,7 +12,7 @@
 :root {
   /* iOS system surfaces */
   --map: #eef0ec; --grass: #d7ead0; --wood: #c6e0bd; --water: #b6d4f2; --apron-pave: #e2e4ea; --taxi: #d8dbe2; --taxi-line: #e2bd3c; --runway: #c3c7cf; --road-case: #d0d5dc; --road-fill: #ffffff; --mway-case: #e3bf6b; --mway-fill: #fde8ad; --rail: #aab2bd; --lot: #e6e8ec; --other-bldg: #e0e2e7; --term-closed: #e7e8ec; --map-grid: #e2e6eb; --bldg: #ffffff; --bldg-edge: #cbd2da; --road: #d6dce3; --walk: #d3d9e0; --bldg-shadow: rgba(30, 45, 70, .13); --plane: #cdd4dc; --bridge: #c3ccd6; --garage: #dfe3e8;
-  --glass: rgba(249, 249, 251, .80); --sheet-bg: rgba(247, 247, 250, .97); --glass-hi: rgba(255, 255, 255, .55); --hairline: rgba(60, 60, 67, .16);
+  --glass: rgba(250, 250, 252, .96); --sheet-bg: rgba(247, 247, 250, .97); --glass-hi: rgba(255, 255, 255, .55); --hairline: rgba(60, 60, 67, .16);
   --card: rgba(255, 255, 255, .92); --solid: #fbfbfd; --fill: rgba(118, 118, 128, .12); --fill-2: rgba(118, 118, 128, .2);
   --label: #101318; --label-2: rgba(60, 60, 67, .64); --label-3: rgba(60, 60, 67, .34);
   --shadow: 0 10px 30px rgba(16, 24, 40, .14), 0 1px 3px rgba(16, 24, 40, .08);
@@ -43,7 +43,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --map: #121612; --grass: #1b2a1f; --wood: #1d2f21; --water: #14283d; --apron-pave: #1c2026; --taxi: #23272e; --taxi-line: #8a7323; --runway: #2b3038; --road-case: #2e343c; --road-fill: #3a414b; --mway-case: #5a4a24; --mway-fill: #6b5a2c; --rail: #4a525d; --lot: #1f242a; --other-bldg: #252a31; --term-closed: #20252b; --map-grid: #1a1e24; --bldg: #262b33; --bldg-edge: #3b424d; --road: #2a3038; --walk: #3a424d; --bldg-shadow: rgba(0, 0, 0, .5); --plane: #323a44; --bridge: #3b444f; --garage: #1d2228;
-    --glass: rgba(28, 28, 32, .78); --sheet-bg: rgba(29, 29, 33, .97); --glass-hi: rgba(255, 255, 255, .07); --hairline: rgba(84, 84, 88, .55);
+    --glass: rgba(34, 34, 38, .95); --sheet-bg: rgba(29, 29, 33, .97); --glass-hi: rgba(255, 255, 255, .07); --hairline: rgba(84, 84, 88, .55);
     --card: rgba(44, 44, 48, .88); --solid: #242428; --fill: rgba(118, 118, 128, .24); --fill-2: rgba(118, 118, 128, .34);
     --label: #f3f4f8; --label-2: rgba(235, 235, 245, .62); --label-3: rgba(235, 235, 245, .3);
     --shadow: 0 10px 30px rgba(0, 0, 0, .5), 0 1px 3px rgba(0, 0, 0, .4);
@@ -58,7 +58,7 @@
 }
 :root[data-theme="dark"] {
   --map: #121612; --grass: #1b2a1f; --wood: #1d2f21; --water: #14283d; --apron-pave: #1c2026; --taxi: #23272e; --taxi-line: #8a7323; --runway: #2b3038; --road-case: #2e343c; --road-fill: #3a414b; --mway-case: #5a4a24; --mway-fill: #6b5a2c; --rail: #4a525d; --lot: #1f242a; --other-bldg: #252a31; --term-closed: #20252b; --map-grid: #1a1e24; --bldg: #262b33; --bldg-edge: #3b424d; --road: #2a3038; --walk: #3a424d; --bldg-shadow: rgba(0, 0, 0, .5); --plane: #323a44; --bridge: #3b444f; --garage: #1d2228;
-  --glass: rgba(28, 28, 32, .78); --sheet-bg: rgba(29, 29, 33, .97); --glass-hi: rgba(255, 255, 255, .07); --hairline: rgba(84, 84, 88, .55);
+  --glass: rgba(34, 34, 38, .95); --sheet-bg: rgba(29, 29, 33, .97); --glass-hi: rgba(255, 255, 255, .07); --hairline: rgba(84, 84, 88, .55);
   --card: rgba(44, 44, 48, .88); --solid: #242428; --fill: rgba(118, 118, 128, .24); --fill-2: rgba(118, 118, 128, .34);
   --label: #f3f4f8; --label-2: rgba(235, 235, 245, .62); --label-3: rgba(235, 235, 245, .3);
   --shadow: 0 10px 30px rgba(0, 0, 0, .5), 0 1px 3px rgba(0, 0, 0, .4);
@@ -86,14 +86,15 @@ button { cursor: pointer; }
 .ico { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 .glass {
   background: var(--glass);
-  -webkit-backdrop-filter: blur(14px) saturate(170%); backdrop-filter: blur(14px) saturate(170%);
   box-shadow: var(--shadow), inset 0 1px 0 var(--glass-hi);
   border: .5px solid var(--hairline);
 }
 
 /* ---------- Map ---------- */
-svg#map { position: fixed; display: block; will-change: transform; contain: strict; touch-action: none; user-select: none; -webkit-user-select: none; }
-.apron { fill: var(--map); }
+#stage { position: fixed; will-change: transform; contain: strict; touch-action: none; }
+#base, svg#map { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+svg#map { touch-action: none; user-select: none; -webkit-user-select: none; }
+.apron { fill: none; pointer-events: all; }
 .grid-line { stroke: var(--map-grid); }
 .bldg { fill: var(--bldg); stroke: var(--bldg-edge); }
 .bldg-stroke { stroke: var(--bldg-edge); fill: none; }
@@ -470,14 +471,14 @@ input.xs::-moz-range-thumb { width: 4px; height: 44px; border: 0; border-radius:
   <symbol id="i-place" viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11.5a7 7 0 0 0-14 0C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></symbol>
 </svg>
 
+<div id="stage">
+<canvas id="base" aria-hidden="true"></canvas>
 <svg id="map" role="img" aria-label="Map of Cleveland Hopkins terminal and concourses">
-  <defs>
-    <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M24 0H0V24" class="grid-line" fill="none" stroke-width=".7"/></pattern>
-  </defs>
   <g id="world">
     <rect x="-3000" y="-3000" width="7000" height="7000" class="apron"/>
   </g>
 </svg>
+</div>
 
 <div class="topbar">
   <div class="search glass">
@@ -818,39 +819,74 @@ const el = (tag, attrs = {}, parent = world) => {
 };
 const ptsStr = ids => ids.map(id => V[id][0] + ',' + V[id][1]).join(' ');
 
-// Base map from OpenStreetMap (see tools/build_basemap.py), drawn bottom to top like a street map
+// Base map from OpenStreetMap (see tools/build_basemap.py), painted on a <canvas>: shapes are
+// parsed once into Path2D objects, so a redraw is a few milliseconds of GPU drawing with no
+// SVG layout. Markers, labels and the route stay in the light SVG overlay on top.
 const B = BASEMAP;
-const layer = (d, cls, extra = {}) => d ? el('path', { d, class: cls, ...extra }) : null;
-const ROUND = { 'stroke-linecap': 'round', 'stroke-linejoin': 'round' };
-layer(B.grass, 'bm-grass'); layer(B.wood, 'bm-wood'); layer(B.water, 'bm-water');
-layer(B.apron, 'bm-apron'); layer(B.lots, 'bm-lot');
-// the ramp around the concourses isn't mapped as an apron, so pave a buffer around them
-layer(B.ramp, 'bm-ramp');
-layer(B.taxiway, 'bm-taxi', { 'stroke-width': 23, ...ROUND });
-layer(B.runway, 'bm-runway', { 'stroke-width': 46 });
-layer(B.taxiway, 'bm-taxi-line', { 'vector-effect': 'non-scaling-stroke', ...ROUND });
-const ROADS = [['service', 5, 'bm-road'], ['minor', 9, 'bm-road'], ['major', 11, 'bm-road'], ['motorway', 15, 'bm-mway']];
-for (const [k, w] of ROADS) layer(B[k], k === 'motorway' ? 'bm-mway-case' : 'bm-road-case', { 'stroke-width': w + 2.6, ...ROUND });
-for (const [k, w, cls] of ROADS) layer(B[k], cls, { 'stroke-width': w, ...ROUND });
-layer(B.rail, 'bm-rail', { 'stroke-width': 2.2 });
-layer(B.buildings, 'bm-bldg'); layer(B.garage, 'bm-garage');
-// parked aircraft at OSM stands, roughly 33 m long
+const baseCanvas = $('#base'), bctx = baseCanvas.getContext('2d', { alpha: false });
+const P2 = {};
+for (const k in B) if (typeof B[k] === 'string' && B[k]) P2[k] = new Path2D(B[k]);
 const PLANE_D = 'M0 -8C1 -8 1.3 -6.5 1.3 -5L1.3 -1.5L8 2L8 3.4L1.3 1.6L1.1 5.2L3 6.6L3 7.6L0 7L-3 7.6L-3 6.6L-1.1 5.2L-1.3 1.6L-8 3.4L-8 2L-1.3 -1.5L-1.3 -5C-1.3 -6.5 -1 -8 0 -8Z';
-const layerPlanes = el('g', {});
-for (const [x, y, a] of B.planes) el('path', { class: 'plane', d: PLANE_D, transform: `translate(${x} ${y}) rotate(${a}) scale(2.1)` }, layerPlanes);
-// terminal buildings, raised on a soft shadow; concourses tinted by their colour
-const shadowG = el('g', { class: 'bldg-shadow', transform: 'translate(1.5 3.5)' });
-for (const k of ['termM', 'termA', 'termB', 'termC', 'termD']) if (B[k]) el('path', { d: B[k] }, shadowG);
-layer(B.termD, 'bm-term-closed');
-layer(B.termM, 'bm-term');
-layer(B.termA, 'bm-term con-fill A'); layer(B.termB, 'bm-term con-fill B'); layer(B.termC, 'bm-term con-fill C');
-layer(B.bridges, 'bridge', { 'stroke-width': 3.6, ...ROUND });
-el('polyline', { points: ptsStr(['c0','c1','c2','c3','c4','crot']), class: 'walk', 'stroke-width': 1 });
-el('polyline', { points: ptsStr(SPINES.B), class: 'walk', 'stroke-width': 1 });
-el('polyline', { points: ptsStr(['hub','a0','a1','a2']), class: 'walk', 'stroke-width': 1 });
-el('polyline', { points: ptsStr(['c0','fc','hub','b0']), class: 'walk', 'stroke-width': 1 });
-// the checkpoint line across the corridor from ticketing
-el('line', { x1: 112 - 12, y1: -155 - 12, x2: 112 + 12, y2: -155 + 12, style: 'stroke:var(--route)', 'stroke-width': 1.8, 'stroke-dasharray': '3 2.4', opacity: .75 });
+const planePath = new Path2D(PLANE_D);
+const walkPath = new Path2D(['c0,c1,c2,c3,c4,crot', 'b0,b1,b2', 'hub,a0,a1,a2', 'c0,fc,hub,b0']
+  .map(s => 'M' + s.split(',').map(id => V[id][0] + ' ' + V[id][1]).join('L')).join(''));
+let pal = null;
+function hexMix(a, b, t) {   // a over b, t = amount of a
+  const n = h => { h = h.replace('#', ''); return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16)); };
+  const x = n(a), y = n(b);
+  return 'rgb(' + x.map((v, i) => Math.round(v * t + y[i] * (1 - t))).join(',') + ')';
+}
+function readPalette() {
+  const cs = getComputedStyle(document.documentElement), g = k => cs.getPropertyValue('--' + k).trim();
+  const p = {};
+  for (const k of ['map', 'grass', 'wood', 'water', 'apron-pave', 'lot', 'taxi', 'runway', 'taxi-line', 'road-case', 'road-fill',
+    'mway-case', 'mway-fill', 'rail', 'other-bldg', 'garage', 'bldg', 'bldg-edge', 'bldg-shadow', 'plane', 'bridge', 'term-closed',
+    'walk', 'route', 'conA', 'conB', 'conC']) p[k] = g(k);
+  for (const c of 'ABC') p['term' + c] = /^#[0-9a-f]{6}$/i.test(p['con' + c]) && /^#[0-9a-f]{6}$/i.test(p.bldg) ? hexMix(p['con' + c], p.bldg, c === 'A' ? .09 : .08) : p.bldg;
+  return p;
+}
+const repaint = () => { pal = null; if (committed) render(true); };
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', repaint);
+new MutationObserver(repaint).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+function drawBase() {
+  pal = pal || readPalette();
+  const c = bctx, k = view.k;
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  c.fillStyle = pal.map; c.fillRect(0, 0, baseCanvas.width, baseCanvas.height);
+  c.setTransform(dpr * k, 0, 0, dpr * k, dpr * (view.x + ox), dpr * (view.y + oy));
+  c.lineCap = c.lineJoin = 'round';
+  const fill = (key, color) => { if (P2[key]) { c.fillStyle = color; c.fill(P2[key], 'evenodd'); } };
+  const stroke = (key, color, w, dash) => { if (P2[key]) { c.strokeStyle = color; c.lineWidth = w; c.setLineDash(dash || []); c.stroke(P2[key]); } };
+  fill('grass', pal.grass); fill('wood', pal.wood); fill('water', pal.water);
+  fill('apron', pal['apron-pave']); fill('lots', pal.lot); fill('ramp', pal['apron-pave']);
+  stroke('taxiway', pal.taxi, 23); stroke('runway', pal.runway, 46);
+  stroke('taxiway', pal['taxi-line'], 1.1 / k);
+  const roads = [['service', 5], ['minor', 9], ['major', 11], ['motorway', 15]];
+  for (const [r, w] of roads) stroke(r, r === 'motorway' ? pal['mway-case'] : pal['road-case'], w + 2.6);
+  for (const [r, w] of roads) stroke(r, r === 'motorway' ? pal['mway-fill'] : pal['road-fill'], w);
+  stroke('rail', pal.rail, 2.2, [6, 4]);
+  fill('buildings', pal['other-bldg']); stroke('buildings', pal['bldg-edge'], .6 / Math.max(k, .5));
+  fill('garage', pal.garage); stroke('garage', pal['bldg-edge'], .8 / Math.max(k, .5));
+  // parked aircraft, roughly 33 m long
+  c.fillStyle = pal.plane;
+  for (const [x, y, a] of B.planes) {
+    c.save(); c.translate(x, y); c.rotate(a * Math.PI / 180); c.scale(2.1, 2.1); c.fill(planePath); c.restore();
+  }
+  // terminals raised on a soft shadow; concourses tinted by their colour
+  c.save(); c.translate(1.5, 3.5); c.fillStyle = pal['bldg-shadow'];
+  for (const t of ['termM', 'termA', 'termB', 'termC', 'termD']) if (P2[t]) c.fill(P2[t]);
+  c.restore();
+  const edge = 1 / Math.max(k, .5);
+  fill('termD', pal['term-closed']); stroke('termD', pal['bldg-edge'], edge, [3, 2]);
+  fill('termM', pal.bldg); stroke('termM', pal['bldg-edge'], edge);
+  for (const t of 'ABC') { fill('term' + t, pal['term' + t]); stroke('term' + t, pal['bldg-edge'], edge); }
+  stroke('bridges', pal.bridge, 3.6);
+  c.strokeStyle = pal.walk; c.lineWidth = 1 / k; c.setLineDash([2 / k, 3 / k]); c.stroke(walkPath);
+  // the checkpoint line across the corridor from ticketing
+  c.strokeStyle = pal.route; c.globalAlpha = .75; c.lineWidth = 1.8; c.setLineDash([3, 2.4]);
+  c.beginPath(); c.moveTo(100, -167); c.lineTo(124, -143); c.stroke();
+  c.globalAlpha = 1; c.setLineDash([]);
+}
 const areaLabels = [];
 const lbl = (x, y, t, anchor = 'middle') => {
   const g = el('g', { class: 'area-lbl' }); g.dataset.x = x; g.dataset.y = y;
@@ -968,9 +1004,15 @@ function updateScaleBar() {
 // then redrawn crisply when things settle. The SVG overhangs the screen so panning has margin.
 const OVER = 0.35;
 let committed = null, commitTimer = null, ox = 0, oy = 0, moving = false, scaledAtK = 0;   // moving: a glide or camera animation is running
+const stage = $('#stage');
+let dpr = 1;
 function sizeSvg() {
   ox = Math.round(innerWidth * OVER); oy = Math.round(innerHeight * OVER);
-  Object.assign(svg.style, { left: -ox + 'px', top: -oy + 'px', width: innerWidth + 2 * ox + 'px', height: innerHeight + 2 * oy + 'px', transformOrigin: `${ox}px ${oy}px` });
+  const w = innerWidth + 2 * ox, h = innerHeight + 2 * oy;
+  Object.assign(stage.style, { left: -ox + 'px', top: -oy + 'px', width: w + 'px', height: h + 'px', transformOrigin: `${ox}px ${oy}px` });
+  // cap the backing store: 2x is sharp on phones and keeps redraws and memory in check
+  dpr = Math.min(devicePixelRatio || 1, 2);
+  baseCanvas.width = Math.round(w * dpr); baseCanvas.height = Math.round(h * dpr);
 }
 sizeSvg();
 function apply() {
@@ -979,7 +1021,7 @@ function apply() {
   const r = view.k / committed.k, tx = view.x - r * committed.x, ty = view.y - r * committed.y;
   // past the overhang, or zoomed far enough to look soft: redraw now
   if (Math.abs(tx) > ox * .85 || Math.abs(ty) > oy * .85 || r > 1.9 || r < .55) return render();
-  svg.style.transform = `translate(${tx}px, ${ty}px) scale(${r})`;
+  stage.style.transform = `translate(${tx}px, ${ty}px) scale(${r})`;
   clearTimeout(commitTimer);
   commitTimer = setTimeout(() => { if (!ptrs.size && !moving) render(); else apply(); }, 160);
 }
@@ -987,7 +1029,8 @@ function render() {
   clearTimeout(commitTimer);
   clampView();
   committed = { ...view };
-  svg.style.transform = '';
+  drawBase();
+  stage.style.transform = '';
   world.setAttribute('transform', `translate(${view.x + ox} ${view.y + oy}) scale(${view.k})`);
   // marker sizes only depend on zoom, so a plain pan skips rewriting ~200 transforms
   if (view.k !== scaledAtK) {
