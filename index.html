@@ -11,7 +11,7 @@
 /* Layout: full-bleed map; floating glass search + control capsules; iOS-style draggable sheet (left sidebar on wide screens). */
 :root {
   /* iOS system surfaces */
-  --map: #eceff3; --map-grid: #e2e6eb; --bldg: #ffffff; --bldg-edge: #cbd2da; --road: #d6dce3; --walk: #d3d9e0;
+  --map: #eceff3; --map-grid: #e2e6eb; --bldg: #ffffff; --bldg-edge: #cbd2da; --road: #d6dce3; --walk: #d3d9e0; --bldg-shadow: rgba(30, 45, 70, .13); --plane: #cdd4dc; --bridge: #c3ccd6; --garage: #dfe3e8;
   --glass: rgba(249, 249, 251, .80); --glass-hi: rgba(255, 255, 255, .55); --hairline: rgba(60, 60, 67, .16);
   --card: rgba(255, 255, 255, .92); --solid: #fbfbfd; --fill: rgba(118, 118, 128, .12); --fill-2: rgba(118, 118, 128, .2);
   --label: #101318; --label-2: rgba(60, 60, 67, .64); --label-3: rgba(60, 60, 67, .34);
@@ -42,7 +42,7 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --map: #14171c; --map-grid: #1a1e24; --bldg: #262b33; --bldg-edge: #3b424d; --road: #2a3038; --walk: #3a424d;
+    --map: #14171c; --map-grid: #1a1e24; --bldg: #262b33; --bldg-edge: #3b424d; --road: #2a3038; --walk: #3a424d; --bldg-shadow: rgba(0, 0, 0, .5); --plane: #323a44; --bridge: #3b444f; --garage: #1d2228;
     --glass: rgba(28, 28, 32, .78); --glass-hi: rgba(255, 255, 255, .07); --hairline: rgba(84, 84, 88, .55);
     --card: rgba(44, 44, 48, .88); --solid: #242428; --fill: rgba(118, 118, 128, .24); --fill-2: rgba(118, 118, 128, .34);
     --label: #f3f4f8; --label-2: rgba(235, 235, 245, .62); --label-3: rgba(235, 235, 245, .3);
@@ -57,7 +57,7 @@
   }
 }
 :root[data-theme="dark"] {
-  --map: #14171c; --map-grid: #1a1e24; --bldg: #262b33; --bldg-edge: #3b424d; --road: #2a3038; --walk: #3a424d;
+  --map: #14171c; --map-grid: #1a1e24; --bldg: #262b33; --bldg-edge: #3b424d; --road: #2a3038; --walk: #3a424d; --bldg-shadow: rgba(0, 0, 0, .5); --plane: #323a44; --bridge: #3b444f; --garage: #1d2228;
   --glass: rgba(28, 28, 32, .78); --glass-hi: rgba(255, 255, 255, .07); --hairline: rgba(84, 84, 88, .55);
   --card: rgba(44, 44, 48, .88); --solid: #242428; --fill: rgba(118, 118, 128, .24); --fill-2: rgba(118, 118, 128, .34);
   --label: #f3f4f8; --label-2: rgba(235, 235, 245, .62); --label-3: rgba(235, 235, 245, .3);
@@ -99,6 +99,36 @@ svg#map { position: fixed; inset: 0; width: 100%; height: 100%; display: block; 
 .bldg-stroke { stroke: var(--bldg-edge); fill: none; }
 .bldg-fill { stroke: var(--bldg); fill: none; }
 .road { stroke: var(--road); fill: none; }
+.bldg-shadow path, .bldg-shadow circle { fill: var(--bldg-shadow); }
+.bldg-shadow polyline { stroke: var(--bldg-shadow); fill: none; }
+.con-fill.A { stroke: var(--bldg); stroke: color-mix(in srgb, var(--conA) 9%, var(--bldg)); }
+.con-fill.B { stroke: var(--bldg); stroke: color-mix(in srgb, var(--conB) 8%, var(--bldg)); }
+.con-fill.C { stroke: var(--bldg); stroke: color-mix(in srgb, var(--conC) 8%, var(--bldg)); }
+.rot-fill { fill: var(--bldg); fill: color-mix(in srgb, var(--conC) 8%, var(--bldg)); }
+.bridge { stroke: var(--bridge); }
+.plane { fill: var(--plane); }
+.garage { fill: var(--garage); stroke: var(--road); stroke-width: 1; }
+.route-start circle { fill: var(--route-case); stroke: var(--route); stroke-width: 2.6; }
+.route-start .core { fill: var(--route); stroke: none; }
+.route-endpt circle { fill: var(--route); stroke: var(--route-case); stroke-width: 2.4; }
+.route-endpt .core { fill: var(--route-case); stroke: none; }
+.eta rect, .eta path { fill: var(--route); }
+.eta text { font: 800 9px var(--font-display); font-variation-settings: "wdth" 108; fill: #fff; text-anchor: middle; dominant-baseline: central; }
+.pin-shadow { fill: rgba(0, 0, 0, .25); }
+.pin-body { stroke: var(--bldg); stroke-width: 1.6; fill: var(--label); }
+.pin[data-cat="food"] .pin-body { fill: var(--c-food); } .pin[data-cat="coffee"] .pin-body { fill: var(--c-coffee); }
+.pin[data-cat="bar"] .pin-body { fill: var(--c-bar); } .pin[data-cat="shop"] .pin-body { fill: var(--c-shop); }
+.pin[data-cat="play"] .pin-body { fill: var(--c-play); } .pin[data-cat="service"] .pin-body { fill: var(--c-service); }
+.pin[data-cat="rest"] .pin-body { fill: var(--c-rest); }
+.pin-ico { fill: none; stroke: #fff; stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; color: #fff; }
+.pin[data-cat="place"] .pin-ico { stroke: var(--map); color: var(--map); }
+.pin-inner { transform-box: fill-box; transform-origin: 50% 100%; }
+.pin.drop .pin-inner { animation: pin-drop .6s var(--spring) both; }
+.pin.drop .pin-shadow { animation: pin-shadow .6s ease-out both; }
+@keyframes pin-drop { from { transform: translateY(-14px) scale(.35); opacity: 0; } }
+@keyframes pin-shadow { from { opacity: 0; } }
+#map .amen.sel .pop, #map .place.sel .pop { transform: scale(.75); }
+@media (hover: hover) { #map .mk:hover .pop { transform: scale(1.3); } }
 .walk { stroke: var(--walk); fill: none; stroke-dasharray: 2 3; }
 .map-lbl { font: 650 8.5px var(--font-display); fill: var(--label-2); letter-spacing: .08em; text-transform: uppercase; }
 .con-letter { font: 800 14px var(--font-display); font-variation-settings: "wdth" 110; fill: #fff; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
@@ -180,6 +210,16 @@ svg#map { position: fixed; inset: 0; width: 100%; height: 100%; display: block; 
 .chip[aria-pressed="true"] .tile { border-radius: 7px; }
 .chip[aria-pressed="false"] { color: var(--label-2); }
 .chip[aria-pressed="false"] .tile { background: var(--fill-2) !important; color: var(--label-2); }
+
+/* ---------- Scale bar (shows while zooming) ---------- */
+.scalebar {
+  position: fixed; z-index: 4; left: calc(var(--safe-left) + 18px); top: calc(var(--safe-top) + 112px);
+  display: flex; flex-direction: column; gap: 2px; pointer-events: none;
+  font: 700 11px var(--font-text); color: var(--label); opacity: 0; transition: opacity .35s ease;
+  text-shadow: 0 0 3px var(--map), 0 0 3px var(--map);
+}
+.scalebar.show { opacity: 1; transition-duration: .1s; }
+.scalebar .bar { height: 5px; border: 2px solid var(--label); border-top: 0; border-radius: 0 0 2px 2px; box-shadow: 0 1px 0 var(--map); transition: width .15s; }
 
 /* ---------- Map controls (right capsules) ---------- */
 .controls { position: fixed; z-index: 4; right: calc(var(--safe-right) + 16px); top: calc(var(--safe-top) + 114px); display: flex; flex-direction: column; gap: 10px; }
@@ -359,6 +399,7 @@ input.xs::-moz-range-thumb { width: 4px; height: 44px; border: 0; border-radius:
   .topbar { left: calc(var(--safe-left) + 424px); right: calc(var(--safe-right) + 76px); }
   .search { max-width: 420px; }
   .controls { top: auto; bottom: 16px; }
+  .scalebar { left: calc(var(--safe-left) + 426px); top: auto; bottom: 22px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: .01ms !important; animation: none !important; }
@@ -407,6 +448,8 @@ input.xs::-moz-range-thumb { width: 4px; height: 44px; border: 0; border-radius:
   </div>
   <div class="chips" id="chips" aria-label="Show on map"></div>
 </div>
+
+<div class="scalebar" id="scalebar" aria-hidden="true"><span class="txt"></span><span class="bar"></span></div>
 
 <div class="controls">
   <div class="cap glass">
@@ -700,15 +743,39 @@ const el = (tag, attrs = {}, parent = world) => {
 };
 const ptsStr = ids => ids.map(id => V[id][0] + ',' + V[id][1]).join(' ');
 
+const TERM_D = 'M392 340 L 500 318 L 612 352 L 642 386 L 642 424 L 592 458 L 520 468 L 448 444 L 392 410 Z';
+// Parked aircraft at about 70% of gates, noses toward the jet bridge (picked by gate code, so it never changes)
+const PLANE_D = 'M0 -8C1 -8 1.3 -6.5 1.3 -5L1.3 -1.5L8 2L8 3.4L1.3 1.6L1.1 5.2L3 6.6L3 7.6L0 7L-3 7.6L-3 6.6L-1.1 5.2L-1.3 1.6L-8 3.4L-8 2L-1.3 -1.5L-1.3 -5C-1.3 -6.5 -1 -8 0 -8Z';
+const layerPlanes = el('g', {}), bridges = [];
+for (const it of Object.values(ITEMS)) {
+  if (it.kind !== 'gate') continue;
+  const gi = gateInfo[it.code];
+  const c = gi.deg !== undefined ? { x: ROT.x, y: ROT.y } : along(SPINES[gi.con], Math.min(gi.t, .999), 0, 0);
+  const edge = gi.deg !== undefined ? ROT.r + 1 : 10.5;
+  let dx = it.x - c.x, dy = it.y - c.y; const L = Math.hypot(dx, dy) || 1; dx /= L; dy /= L;
+  bridges.push([c.x + dx * edge, c.y + dy * edge, c.x + dx * (edge + 13), c.y + dy * (edge + 13)]);
+  const h = [...it.code].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) % 9973, 7) % 10;
+  if (h < 7) {
+    const far = edge + 30;
+    el('path', { class: 'plane', d: PLANE_D, transform: `translate(${(c.x + dx * far).toFixed(1)} ${(c.y + dy * far).toFixed(1)}) rotate(${(Math.atan2(-dx, dy) * 180 / Math.PI).toFixed(1)}) scale(1.3)` }, layerPlanes);
+  }
+}
 el('path', { d: 'M330 470 C 420 520, 560 535, 720 470', class: 'road', 'stroke-width': 14, 'stroke-linecap': 'round' });
 el('path', { d: 'M360 440 C 440 470, 560 470, 690 440', class: 'road', 'stroke-width': 8, 'stroke-linecap': 'round', opacity: .7 });
 el('path', { d: 'M720 470 L 850 520', class: 'road', 'stroke-width': 14, 'stroke-linecap': 'round' });
-el('path', { d: 'M392 340 L 500 318 L 612 352 L 642 386 L 642 424 L 592 458 L 520 468 L 448 444 L 392 410 Z', class: 'bldg', 'stroke-width': 1.4, 'stroke-linejoin': 'round' });
+el('rect', { x: 468, y: 530, width: 150, height: 26, rx: 4, class: 'garage' });
+// soft "raised" shadow under every building
+const shadowG = el('g', { class: 'bldg-shadow', transform: 'translate(1.6 3.6)' });
+el('path', { d: TERM_D }, shadowG);
+for (const con of 'ABC') el('polyline', { points: ptsStr(SPINES[con]), 'stroke-width': 25, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, shadowG);
+el('circle', { cx: ROT.x, cy: ROT.y, r: ROT.r + 3 }, shadowG);
+el('path', { d: TERM_D, class: 'bldg', 'stroke-width': 1.4, 'stroke-linejoin': 'round' });
 for (const con of 'ABC') el('polyline', { points: ptsStr(SPINES[con]), class: 'bldg-stroke', 'stroke-width': 25, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
 el('circle', { cx: ROT.x, cy: ROT.y, r: ROT.r + 3, style: 'fill:var(--bldg-edge)' });
-for (const con of 'ABC') el('polyline', { points: ptsStr(SPINES[con]), class: 'bldg-fill', 'stroke-width': 22.4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
-el('circle', { cx: ROT.x, cy: ROT.y, r: ROT.r + 1.6, class: 'bldg', stroke: 'none' });
+for (const con of 'ABC') el('polyline', { points: ptsStr(SPINES[con]), class: 'bldg-fill con-fill ' + con, 'stroke-width': 22.4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
+el('circle', { cx: ROT.x, cy: ROT.y, r: ROT.r + 1.6, class: 'rot-fill', stroke: 'none' });
 el('path', { d: 'M394 341 L 500 319 L 611 353 L 641 387 L 641 423 L 592 457 L 520 467 L 448 443 L 393 409 Z', class: 'bldg', stroke: 'none' });
+for (const [x1, y1, x2, y2] of bridges) el('line', { x1, y1, x2, y2, class: 'bridge', 'stroke-width': 3.4, 'stroke-linecap': 'round' });
 el('polyline', { points: ptsStr(['c0','c1','c2','c3','c4','crot']), class: 'walk', 'stroke-width': 1 });
 el('polyline', { points: ptsStr(SPINES.B), class: 'walk', 'stroke-width': 1 });
 el('polyline', { points: ptsStr(['hub','a0','a1','a2']), class: 'walk', 'stroke-width': 1 });
@@ -721,7 +788,7 @@ const lbl = (x, y, t, anchor = 'middle') => {
   areaLabels.push(g);
 };
 lbl(600, 384, 'Security', 'start'); lbl(455, 326, 'Food court'); lbl(565, 428, 'Main terminal');
-lbl(745, 490, 'Terminal drive', 'start'); lbl(80, 212, 'Rotunda');
+lbl(745, 490, 'Terminal drive', 'start'); lbl(80, 220, 'Rotunda'); lbl(543, 546, 'Parking garage');
 
 const routeCase = el('path', { class: 'route-case', 'stroke-width': 11, 'vector-effect': 'non-scaling-stroke', d: '' });
 const routeLine = el('path', { class: 'route', 'stroke-width': 7, 'vector-effect': 'non-scaling-stroke', d: '' });
@@ -758,6 +825,39 @@ for (const [con, x, y] of [['A', 680, 345], ['B', 575, 285], ['C', 330, 280]]) {
   el('text', { class: 'con-letter', y: .8 }, pop).textContent = con;
   g.dataset.x = x; g.dataset.y = y; markers.push(g);
 }
+const routeStart = el('g', { class: 'route-start', opacity: 0, style: 'pointer-events:none' });
+el('circle', { r: 5.6 }, routeStart); el('circle', { r: 2.4, class: 'core' }, routeStart);
+const routeEnd = el('g', { class: 'route-endpt', opacity: 0, style: 'pointer-events:none' });
+el('circle', { r: 6.2 }, routeEnd); el('circle', { r: 2.4, class: 'core' }, routeEnd);
+const eta = el('g', { class: 'eta', opacity: 0, style: 'pointer-events:none' });
+const etaRect = el('rect', { y: -29, height: 17, rx: 8.5 }, eta);
+el('path', { d: 'M-4 -12.5 L0 -7 L4 -12.5Z' }, eta);
+const etaText = el('text', { y: -20.2 }, eta);
+const pinG = el('g', { class: 'pin', opacity: 0, style: 'pointer-events:none' });
+el('ellipse', { class: 'pin-shadow', rx: 4.5, ry: 1.6 }, pinG);
+const pinInner = el('g', { class: 'pin-inner' }, pinG);
+el('path', { class: 'pin-body', d: 'M0 -2C-2.6 -5.6 -10 -9.6 -10 -18.5A10 10 0 1 1 10 -18.5C10 -9.6 2.6 -5.6 0 -2Z' }, pinInner);
+const pinUse = el('use', { class: 'pin-ico', href: '#i-place', x: -6.5, y: -25, width: 13, height: 13 }, pinInner);
+let pinItem = null;
+function setPin(it) {
+  pinItem = it && it.kind !== 'gate' ? it : null;
+  if (!pinItem) { pinG.setAttribute('opacity', 0); return; }
+  pinG.dataset.cat = pinItem.cat || 'place';
+  pinUse.setAttribute('href', '#i-' + (pinItem.cat || 'place'));
+  pinG.setAttribute('opacity', 1);
+  placeDecor();
+  if (!reduced) { pinG.classList.remove('drop'); void pinG.getBBox(); pinG.classList.add('drop'); }
+}
+function placeDecor() {
+  const s = markerScale;
+  if (pinItem) pinG.setAttribute('transform', `translate(${pinItem.x} ${pinItem.y}) scale(${s * 1.15})`);
+  if (routePts.length > 1) {
+    const a = routePts[0], b = routePts[routePts.length - 1], m = pointAt(routeTotal * 0.5);
+    routeStart.setAttribute('transform', `translate(${a.x} ${a.y}) scale(${s})`);
+    routeEnd.setAttribute('transform', `translate(${b.x} ${b.y}) scale(${s})`);
+    eta.setAttribute('transform', `translate(${m.x} ${m.y}) scale(${s})`);
+  }
+}
 const puckG = el('g', { style: 'pointer-events:none', opacity: 0 });
 el('circle', { class: 'puck-halo', r: 9 }, puckG);
 el('circle', { class: 'puck', r: 4.6 }, puckG);
@@ -765,17 +865,40 @@ el('circle', { class: 'puck', r: 4.6 }, puckG);
 // ---------- Pan / zoom in screen pixels ----------
 const view = { k: 1, x: 0, y: 0 };
 let markerScale = 1;
+function clampView() {
+  // keep at least part of the airport on screen
+  const W = innerWidth, H = innerHeight, m = 90;
+  const l = view.x + view.k * 10, r = view.x + view.k * 850, t = view.y + view.k * 50, b = view.y + view.k * 560;
+  if (r < m) view.x += m - r; if (l > W - m) view.x -= l - (W - m);
+  if (b < m + 60) view.y += m + 60 - b; if (t > H - m) view.y -= t - (H - m);
+}
+let scaleTimer = null, lastScaleK = 0;
+function updateScaleBar() {
+  if (Math.abs(view.k - lastScaleK) < 1e-4) return;
+  const first = !lastScaleK; lastScaleK = view.k;
+  const want = 90 / view.k * M_PER_UNIT;   // metres covered by ~90 px
+  const nice = [5, 10, 20, 25, 50, 100, 200, 250, 500, 1000].reduce((p, n) => n <= want ? n : p, 5);
+  const bar = $('#scalebar');
+  bar.querySelector('.bar').style.width = (nice / M_PER_UNIT * view.k).toFixed(1) + 'px';
+  bar.querySelector('.txt').textContent = nice >= 1000 ? nice / 1000 + ' km' : nice + ' m';
+  if (first || !userMoved) return;
+  bar.classList.add('show'); clearTimeout(scaleTimer);
+  scaleTimer = setTimeout(() => bar.classList.remove('show'), 1400);
+}
 function apply() {
+  clampView();
   world.setAttribute('transform', `translate(${view.x} ${view.y}) scale(${view.k})`);
   markerScale = 1 / Math.pow(view.k, 0.62);
   for (const m of markers) m.setAttribute('transform', `translate(${m.dataset.x} ${m.dataset.y}) scale(${markerScale})`);
   for (const g of areaLabels) g.setAttribute('transform', `translate(${g.dataset.x} ${g.dataset.y}) scale(${markerScale})`);
   svg.dataset.z = view.k >= 2.2 ? 3 : view.k >= 1.4 ? 2 : 1;
   placePuck();
+  placeDecor();
+  updateScaleBar();
   cullLabels();
 }
 // Show a place's name only where it has room: selected first, then places on the route, then the rest.
-let labelItems = null;
+let labelItems = null, chromeCache = null;
 function cullLabels() {
   labelItems = labelItems || Object.values(ITEMS).filter(i => i.kind !== 'gate');
   const zoomed = svg.dataset.z === '3', u = markerScale * view.k, taken = [];
@@ -790,8 +913,17 @@ function cullLabels() {
   }) : [];
   const hit = (r, o) => r.l < o.r && r.r > o.l && r.t < o.b && r.b > o.t;
   // floating chrome hides whatever is under it, so don't put names there
-  const chrome = ['.controls', '.topbar', '#sheet'].map(s => document.querySelector(s).getBoundingClientRect());
+  const chrome = chromeCache || (chromeCache = ['.controls', '.topbar', '#sheet'].map(s => document.querySelector(s).getBoundingClientRect()));
   const side = new Map();
+  // the dropped pin's head and the route's time bubble also block labels
+  if (pinItem) {
+    const px = view.x + view.k * pinItem.x, py = view.y + view.k * pinItem.y, pu = u * 1.15;
+    taken.push({ l: px - 11 * pu, r: px + 11 * pu, t: py - 30 * pu, b: py - 3 * pu });
+  }
+  if (routePts.length > 1 && eta.getAttribute('opacity') === '1') {
+    const m = pointAt(routeTotal * 0.5), ex = view.x + view.k * m.x, ey = view.y + view.k * m.y, w = +etaRect.getAttribute('width') / 2;
+    taken.push({ l: ex - w * u, r: ex + w * u, t: ey - 30 * u, b: ey - 7 * u });
+  }
   for (const it of list) {
     const x = view.x + view.k * it.x, y = view.y + view.k * it.y, w = (it.lw - 5) * u;
     const mine = it.el.classList.contains('sel');
@@ -852,7 +984,7 @@ function fitItems(list, pad, maxK, instant) {
   const xs = list.map(i => i.x), ys = list.map(i => i.y);
   fitBox(Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys), pad, maxK, instant);
 }
-const fitAll = instant => fitBox(20, 70, 840, 505, 4, 4, instant);
+const fitAll = instant => fitBox(14, 52, 850, 556, 4, 4, instant);
 const fitCon = con => fitItems(Object.values(ITEMS).filter(i => i.kind === 'gate' && i.con === con), 24, 5);
 
 let userMoved = false;
@@ -871,7 +1003,8 @@ svg.addEventListener('pointerdown', e => {
   svg.setPointerCapture(e.pointerId);
   ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (ptrs.size === 1) { moved = 0; downTarget = e.target.closest('[data-id], [data-con]'); } else downTarget = null;
-  pinch = null; cancelAnimationFrame(anim); userMoved = true;
+  pinch = null; cancelAnimationFrame(anim); cancelAnimationFrame(glide); userMoved = true;
+  vel = { x: 0, y: 0, t: e.timeStamp }; panned = ptrs.size === 1;
   $('#results').hidden = true; $('#q').blur();
 });
 svg.addEventListener('pointermove', e => {
@@ -881,12 +1014,14 @@ svg.addEventListener('pointermove', e => {
   if (ptrs.size === 1) {
     const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
     moved += Math.abs(dx) + Math.abs(dy);
+    const dt = Math.max(1, e.timeStamp - vel.t);
+    vel = { x: .75 * dx / dt + .25 * vel.x, y: .75 * dy / dt + .25 * vel.y, t: e.timeStamp };
     view.x += dx; view.y += dy; apply();
   } else if (ptrs.size === 2) {
     const [a, b] = [...ptrs.values()];
     const d = Math.hypot(a.x - b.x, a.y - b.y), mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
     if (pinch) { zoomAt(mid.x, mid.y, d / pinch.d); view.x += mid.x - pinch.mid.x; view.y += mid.y - pinch.mid.y; apply(); }
-    pinch = { d, mid }; moved = 99;
+    pinch = { d, mid }; moved = 99; panned = false;
   }
 });
 function nearestMarker(cx, cy, maxPx = 24) {
@@ -898,9 +1033,26 @@ function nearestMarker(cx, cy, maxPx = 24) {
   }
   return best;
 }
+let vel = { x: 0, y: 0, t: 0 }, panned = false, glide = null;
+function startGlide() {
+  // momentum after a flick, decaying like an iOS scroll view
+  if (reduced || isStale()) return;
+  let last = performance.now();
+  const step = now => {
+    const dt = Math.min(40, now - last); last = now;
+    view.x += vel.x * dt; view.y += vel.y * dt;
+    const f = Math.exp(-dt / 320); vel.x *= f; vel.y *= f;
+    apply();
+    if (Math.hypot(vel.x, vel.y) > 0.02) glide = requestAnimationFrame(step);
+  };
+  glide = requestAnimationFrame(step);
+}
+// a flick only counts if the finger was still moving when it lifted
+const isStale = () => performance.now() - vel.t > 80 || Math.hypot(vel.x, vel.y) < 0.15;
 const endPtr = e => {
   if (!ptrs.has(e.pointerId)) return;
   ptrs.delete(e.pointerId); pinch = null;
+  if (!ptrs.size && panned && moved >= 6 && e.type === 'pointerup') startGlide();
   if (ptrs.size || moved >= 6 || e.type !== 'pointerup') return;
   const t = downTarget || nearestMarker(e.clientX, e.clientY);
   if (t && t.dataset.con) { buzz(); fitCon(t.dataset.con); }
@@ -955,9 +1107,41 @@ function setRoute(nodes) {
   routeLens = [0];
   for (let i = 1; i < routePts.length; i++) routeLens.push(routeLens[i - 1] + dist(routePts[i - 1], routePts[i]));
   routeTotal = routeLens[routeLens.length - 1] || 0;
-  const d = routePts.length ? 'M' + routePts.map(p => p.x.toFixed(1) + ' ' + p.y.toFixed(1)).join('L') : '';
-  routeLine.setAttribute('d', d); routeCase.setAttribute('d', d);
-  puckG._p = null; startPuck();
+  const show = routePts.length > 1 ? 1 : 0;
+  for (const g of [routeStart, routeEnd, eta]) g.setAttribute('opacity', show);
+  if (show) {
+    etaText.textContent = minutes(routeTotal) + ' min';
+    const w = etaText.textContent.length * 5.2 + 14;
+    etaRect.setAttribute('x', -w / 2); etaRect.setAttribute('width', w);
+  }
+  cancelAnimationFrame(drawRAF);
+  puckG._p = null; cancelAnimationFrame(puckRAF); placePuck();
+  const draw = f => {
+    const d = partialPath(f);
+    routeLine.setAttribute('d', d); routeCase.setAttribute('d', d);
+  };
+  placeDecor();
+  if (reduced || !show) { draw(1); startPuck(); return; }
+  // draw the route in from the start, then send the puck along it
+  const t0 = performance.now(), dur = 650;
+  eta.setAttribute('opacity', 0); routeEnd.setAttribute('opacity', 0); puckG.setAttribute('opacity', 0);
+  const step = now => {
+    const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+    draw(e);
+    if (p < 1) drawRAF = requestAnimationFrame(step);
+    else { eta.setAttribute('opacity', 1); routeEnd.setAttribute('opacity', 1); startPuck(); }
+  };
+  drawRAF = requestAnimationFrame(step);
+}
+let drawRAF = null;
+function partialPath(f) {
+  if (!routePts.length) return '';
+  const upto = routeTotal * f, out = [routePts[0]];
+  for (let i = 1; i < routePts.length; i++) {
+    if (routeLens[i] <= upto) out.push(routePts[i]);
+    else { out.push(pointAt(upto)); break; }
+  }
+  return 'M' + out.map(p => p.x.toFixed(1) + ' ' + p.y.toFixed(1)).join('L');
 }
 
 // ---------- Sheet (iOS detents) ----------
@@ -973,7 +1157,9 @@ function visibleFor(d) {
   const extra = first ? Math.min(first.offsetHeight, 132) + 20 : 90;
   return Math.min(H, sheetHead.offsetHeight + extra + cssPx('--sab'));
 }
+sheet.addEventListener('transitionend', () => { chromeCache = null; cullLabels(); });
 function setSheetY(y, animate) {
+  chromeCache = null;
   sheet.classList.toggle('snapping', !!animate && !reduced);
   sheetY = y;
   sheet.style.setProperty('--y', y + 'px');
@@ -1053,6 +1239,7 @@ function setTab(name, quiet) {
   $('#title').textContent = TAB_TITLES[name];
   $('#eyebrow').textContent = 'Cleveland Hopkins · CLE';
   if (selected) { selected.el.classList.remove('sel'); selected = null; }
+  setPin(null);
   if (name === 'dir') updateRoute(false);
   if (name === 'kill') updateIdeas();
   if (!quiet) buzz(5);
@@ -1076,7 +1263,7 @@ const tileFor = it => it.kind === 'gate' ? `<span class="tile ${it.con}">${icon(
 function showPlace(it, fromMap) {
   if (!it) return;
   if (selected) selected.el.classList.remove('sel');
-  selected = it; it.el.classList.add('sel'); cullLabels();
+  selected = it; it.el.classList.add('sel'); setPin(it); cullLabels();
   placeMode = true;
   $('#seg').hidden = true; $('#closePlace').hidden = false;
   ['dir', 'kill', 'air'].forEach(t => $('#pane-' + t).hidden = true);
@@ -1398,16 +1585,23 @@ ktCats.addEventListener('click', () => setTimeout(saveTrip));
 // ---------- Start ----------
 let lastWide = wide();
 addEventListener('resize', () => {
+  chromeCache = null;
   setDetent(detent, false);
   if (wide() !== lastWide) { lastWide = wide(); fitAll(true); } else apply();
 });
 updateRoute(false);
 setTab(tab, true);
 setDetent('peek', false);
-const initialFit = () => { if (wide()) fitAll(true); else if (routePts.length && tab === 'dir') fitItems(routePts, 18, 3, true); else fitAll(true); };
-initialFit();
+const initialFit = instant => {
+  if (!wide() && routePts.length > 1 && tab === 'dir') fitItems(routePts, 18, 3, instant); else fitAll(instant);
+};
+// open on a slightly pulled-back overview, then glide in to the trip
+fitAll(true);
+if (!reduced) { const R = visibleRect(); zoomAt((R.l + R.r) / 2, (R.t + R.b) / 2, 0.82); }
+let flown = false;
+setTimeout(() => { flown = true; if (!userMoved) initialFit(false); }, 380);
 // fonts change the sheet header height once they load; re-fit if the map hasn't been touched
-document.fonts && document.fonts.ready.then(() => { setDetent(detent, false); if (!userMoved) initialFit(); });
+document.fonts && document.fonts.ready.then(() => { setDetent(detent, false); chromeCache = null; if (!userMoved && flown) initialFit(false); });
 })();
 </script>
 </body>
