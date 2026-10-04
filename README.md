@@ -11,7 +11,9 @@ An interactive map of Cleveland Hopkins International Airport (CLE). It runs as 
 - **Airlines:** tap one to light up its concourse's gates.
 - **Directions:** turn-by-turn walking routes between any gate, amenity, the TSA checkpoint, baggage claim, the RTA Red Line and ground transport, with distance and walking time.
 - **Pass the time:** pick your gate and how long until boarding. It lists nearby food, bars, shops, massage chairs and other distractions. Each one is marked Fits / Tight / Skip, based on the round-trip walk and the time you'd spend there. Tap *Surprise me* for a random pick.
-- **Search and filters:** search gates, airlines or places. Use the category chips to show or hide amenity types.
+- **Search and filters:** search gates, airlines or places. Tapping the empty search box shows airlines, your recent picks and popular spots. Matches show in bold, and gate searches are forgiving ("c 22" finds C22). Use the category chips to show or hide amenity types.
+- **Map extras:** double-tap to zoom, and tap a route step to jump the map to it. Place names appear only where they have room, with the selected and on-route places shown first.
+- **Remembers your trip:** your route, gate, boarding time and tab are saved on this device between launches.
 
 The layout and amenities come from the airport's published terminal directory. Gate assignments change, so always check your boarding pass. This is not an official airport map.
 

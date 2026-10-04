@@ -1,0 +1,11 @@
+<resources>
+    <!-- Android 12+: native launch splash in Hopkins blue with the app icon. Dark system theme. -->
+    <style name="Theme.CLEGateFinder" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/map_dark</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:colorAccent">@color/primary</item>
+        <item name="android:windowSplashScreenBackground">@color/primary</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+    </style>
+</resources>

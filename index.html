@@ -75,11 +75,12 @@
 [hidden] { display: none !important; }
 html, body { height: 100%; }
 body {
-  margin: 0; overflow: hidden; background: var(--map); color: var(--label);
+  margin: 0; overflow: hidden; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; background: var(--map); color: var(--label);
   font: 16px/1.35 var(--font-text); letter-spacing: -.01em;
   -webkit-font-smoothing: antialiased;
 }
 button, input, select { font: inherit; color: inherit; letter-spacing: inherit; }
+input, select { -webkit-user-select: text; user-select: text; }
 button { cursor: pointer; }
 :focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
 .ico { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
@@ -111,8 +112,8 @@ svg#map { position: fixed; inset: 0; width: 100%; height: 100%; display: block; 
 .gate text { font: 700 6.6px var(--font-display); font-variation-settings: "wdth" 85; fill: #fff; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
 .amen .sym { stroke: var(--bldg); stroke-width: 1.2; }
 .amen text, .place text { font: 600 5.6px var(--font-text); fill: var(--label); paint-order: stroke; stroke: var(--map); stroke-width: 2.2px; stroke-linejoin: round; pointer-events: none; }
-.amen text { display: none; }
-#map[data-z="3"] .amen text { display: block; }
+.amen text, .place text { display: none; }
+#map .mk[data-lbl] text { display: block; }
 .place .sym { fill: var(--label); stroke: var(--bldg); stroke-width: 1.2; }
 .place text { font-weight: 700; font-size: 6.2px; }
 [data-cat="food"] .sym { fill: var(--c-food); } [data-cat="coffee"] .sym { fill: var(--c-coffee); }
@@ -123,7 +124,11 @@ svg#map { position: fixed; inset: 0; width: 100%; height: 100%; display: block; 
 #map.hide-shop .amen[data-cat="shop"], #map.hide-play .amen[data-cat="play"], #map.hide-service .amen[data-cat="service"],
 #map.hide-rest .amen[data-cat="rest"] { display: none; }
 #map .mk { transition: opacity .3s ease; }
-#map.focusing .mk:not(.hl):not(.con-mk) { opacity: .3; }
+#map.focusing .mk:not(.hl):not(.con-mk) { opacity: .22; }
+#map .mk.sel { opacity: 1 !important; }
+#map .mk.sel text { font-size: 7.4px; font-weight: 750; }
+#map .gate text { display: block !important; }
+#map .gate.sel text { font-size: 6.6px; }
 .route-case { stroke: var(--route-case); fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 0 11; }
 .route { stroke: var(--route); fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 0 11; }
 .puck-halo { fill: var(--route); opacity: .22; }
@@ -148,7 +153,20 @@ svg#map { position: fixed; inset: 0; width: 100%; height: 100%; display: block; 
 .results button.active, .results button:hover { background: var(--fill); }
 .results .k { display: block; font-size: 13px; color: var(--label-2); }
 .results .empty { padding: 12px 16px; color: var(--label-2); }
-.chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px 6px; }
+.results .sec { padding: 10px 16px 4px; font-size: 13px; font-weight: 600; color: var(--label-2); }
+.results mark { background: none; color: inherit; font-weight: 750; }
+.results .airline-row { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 4px 16px 10px; }
+.results .airline-row::-webkit-scrollbar { display: none; }
+.results .airline-row button {
+  display: inline-flex; width: auto; flex: none; gap: 6px; padding: 6px 12px 6px 6px; border-radius: 18px;
+  background: var(--fill); font-size: 14px; font-weight: 600; align-items: center;
+}
+.results .airline-row .badge { width: 24px; height: 24px; }
+.chips {
+  display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px 6px;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 22px), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 22px), transparent);
+}
 .chips::-webkit-scrollbar { display: none; }
 .chip {
   flex: none; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px 0 8px; border-radius: 17px;
@@ -205,6 +223,10 @@ h1 {
 
 .sheet-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 16px calc(var(--pad-b, 0px) + var(--safe-bottom) + 24px); }
 .pane { display: flex; flex-direction: column; gap: 16px; }
+.pane.enter { animation: pane-in .42s var(--spring-slow) both; }
+@keyframes pane-in { from { opacity: 0; transform: translateY(10px) scale(.985); } }
+h1.enter { animation: title-in .38s var(--spring-slow) both; }
+@keyframes title-in { from { opacity: 0; transform: translateY(6px); } }
 
 /* iOS inset grouped list */
 .group { background: var(--card); border-radius: 16px; overflow: hidden; }
@@ -268,6 +290,9 @@ button.row:active, label.row:active { background: var(--fill); }
 .line li.end .stop { background: var(--route); box-shadow: 0 0 0 4px color-mix(in srgb, var(--route) 25%, transparent); }
 .line .t { font-weight: 600; }
 .line .n { display: block; font-size: 14px; color: var(--label-2); }
+.line li[data-node] { cursor: pointer; border-radius: 12px; }
+.line li[data-node] > span:last-child { transition: transform .35s var(--spring); }
+.line li[data-node]:active > span:last-child { transform: translateX(4px); }
 .line li.passing { grid-template-columns: 1fr; padding-top: 4px; font-size: 14px; color: var(--label-2); border-top: .5px solid var(--hairline); padding-top: 12px; }
 .foot { margin: -4px 16px 0; font-size: 13px; color: var(--label-2); }
 
@@ -283,6 +308,7 @@ input.xs:active::-webkit-slider-thumb { width: 2px; }
 input.xs::-moz-range-track { height: 16px; border-radius: 8px; background: var(--primary-c); }
 input.xs::-moz-range-progress { height: 16px; border-radius: 8px; background: var(--primary); }
 input.xs::-moz-range-thumb { width: 4px; height: 44px; border: 0; border-radius: 2px; background: var(--primary); }
+.slider-clock { margin: -8px 0 6px; font-size: 14px; color: var(--label-2); font-variant-numeric: tabular-nums; }
 .slider-scale { display: flex; justify-content: space-between; font-size: 12px; color: var(--label-2); font-variant-numeric: tabular-nums; }
 .filter { margin: 0 -16px; padding: 0 16px 2px; }
 .filter .chip { background: var(--card); box-shadow: none; }
@@ -415,7 +441,7 @@ input.xs::-moz-range-thumb { width: 4px; height: 44px; border: 0; border-radius:
         <button class="swap" id="swap" aria-label="Swap start and destination"><svg class="ico"><use href="#i-swap"/></svg></button>
       </div>
       <ol class="group line" id="steps"></ol>
-      <p class="foot">Walking times assume about 75 m a minute. Allow 15–30 minutes for the TSA checkpoint when it’s busy.</p>
+      <p class="foot">Tap a step to see it on the map. Walking times assume about 75 m a minute. Allow 15–30 minutes for the TSA checkpoint when it’s busy.</p>
     </div>
 
     <div class="pane" id="pane-kill" role="tabpanel" aria-labelledby="tab-kill" hidden>
@@ -424,6 +450,7 @@ input.xs::-moz-range-thumb { width: 4px; height: 44px; border: 0; border-radius:
       </div>
       <div class="group slider-card">
         <div class="slider-top"><span class="rl">Boarding starts in</span><output id="ktOut" for="ktMin">55<small>min</small></output></div>
+        <div class="slider-clock" id="ktClock"></div>
         <input type="range" class="xs" id="ktMin" min="10" max="150" step="5" value="55" aria-label="Minutes until boarding">
         <div class="slider-scale"><span>10 min</span><span>2½ hr</span></div>
       </div>
@@ -565,7 +592,7 @@ for (const con of 'ABC') for (const [g, t, s] of GATE_DEF[con]) {
   ITEMS['g:' + g] = { id: 'g:' + g, kind: 'gate', name: 'Gate ' + g, code: g, con, zone: con, ...p };
 }
 for (const [g, deg] of ROT_GATES) {
-  const p = polar(deg, ROT.r + 12);
+  const p = polar(deg, ROT.r + 15);
   gateInfo[g] = { con: 'C', deg };
   ITEMS['g:' + g] = { id: 'g:' + g, kind: 'gate', name: 'Gate ' + g, code: g, con: 'C', zone: 'R', ...p };
 }
@@ -687,7 +714,12 @@ el('polyline', { points: ptsStr(SPINES.B), class: 'walk', 'stroke-width': 1 });
 el('polyline', { points: ptsStr(['hub','a0','a1','a2']), class: 'walk', 'stroke-width': 1 });
 el('polyline', { points: ptsStr(['c0','fc','hub','b0']), class: 'walk', 'stroke-width': 1 });
 el('line', { x1: 470, y1: 372, x2: 590, y2: 378, style: 'stroke:var(--route)', 'stroke-width': 1.6, 'stroke-dasharray': '3 3', opacity: .7 });
-const lbl = (x, y, t, anchor = 'middle') => { el('text', { x, y, class: 'map-lbl', 'text-anchor': anchor }).textContent = t; };
+const areaLabels = [];
+const lbl = (x, y, t, anchor = 'middle') => {
+  const g = el('g', {}); g.dataset.x = x; g.dataset.y = y;
+  el('text', { class: 'map-lbl', 'text-anchor': anchor }, g).textContent = t;
+  areaLabels.push(g);
+};
 lbl(600, 384, 'Security', 'start'); lbl(455, 326, 'Food court'); lbl(565, 428, 'Main terminal');
 lbl(745, 490, 'Terminal drive', 'start'); lbl(80, 212, 'Rotunda');
 
@@ -715,6 +747,8 @@ for (const it of Object.values(ITEMS)) {
     el('circle', { class: 'sym', r: 4.4 }, pop);
     el('text', { x: 7, y: 2.2 }, g).textContent = it.name;
   }
+  if (it.kind !== 'gate') it.lw = it.name.length * (it.kind === 'place' ? 3.75 : 3.4) + 6;
+  el('title', {}, g).textContent = it.kind === 'gate' ? `${it.name} · Concourse ${it.con}` : it.name;
   g.dataset.x = it.x; g.dataset.y = it.y; it.el = g; markers.push(g);
 }
 for (const [con, x, y] of [['A', 680, 345], ['B', 575, 285], ['C', 330, 280]]) {
@@ -735,8 +769,49 @@ function apply() {
   world.setAttribute('transform', `translate(${view.x} ${view.y}) scale(${view.k})`);
   markerScale = 1 / Math.pow(view.k, 0.62);
   for (const m of markers) m.setAttribute('transform', `translate(${m.dataset.x} ${m.dataset.y}) scale(${markerScale})`);
+  for (const g of areaLabels) g.setAttribute('transform', `translate(${g.dataset.x} ${g.dataset.y}) scale(${markerScale})`);
   svg.dataset.z = view.k >= 2.2 ? 3 : view.k >= 1.4 ? 2 : 1;
   placePuck();
+  cullLabels();
+}
+// Show a place's name only where it has room: selected first, then places on the route, then the rest.
+let labelItems = null;
+function cullLabels() {
+  labelItems = labelItems || Object.values(ITEMS).filter(i => i.kind !== 'gate');
+  const zoomed = svg.dataset.z === '3', u = markerScale * view.k, taken = [];
+  const rank = it => it.el.classList.contains('sel') ? 0 : it.el.classList.contains('hl') ? 1 : it.kind === 'place' ? 2 : 3;
+  const list = labelItems.filter(it => (it.kind === 'place' || zoomed || it.el.classList.contains('sel'))
+    && !(it.cat && svg.classList.contains('hide-' + it.cat))).sort((a, b) => rank(a) - rank(b));
+  const shown = new Set();
+  // other markers' dots and gate pills block labels too
+  const dots = zoomed ? Object.values(ITEMS).filter(i => !(i.cat && svg.classList.contains('hide-' + i.cat))).map(i => {
+    const x = view.x + view.k * i.x, y = view.y + view.k * i.y, w = (i.kind === 'gate' ? 9 : 4.2) * u;
+    return { it: i, l: x - w, r: x + w, t: y - 5.5 * u, b: y + 5.5 * u };
+  }) : [];
+  const hit = (r, o) => r.l < o.r && r.r > o.l && r.t < o.b && r.b > o.t;
+  // floating chrome hides whatever is under it, so don't put names there
+  const chrome = ['.controls', '.topbar', '#sheet'].map(s => document.querySelector(s).getBoundingClientRect());
+  const side = new Map();
+  for (const it of list) {
+    const x = view.x + view.k * it.x, y = view.y + view.k * it.y, w = (it.lw - 5) * u;
+    const mine = it.el.classList.contains('sel');
+    for (const dir of [1, -1]) {
+      const r = dir > 0 ? { l: x + 5 * u, r: x + 5 * u + w } : { l: x - 5 * u - w, r: x - 5 * u };
+      r.t = y - 3.6 * u; r.b = y + 3.6 * u;
+      if (r.r < 0 || r.l > innerWidth || r.b < 0 || r.t > innerHeight) break;
+      if (chrome.some(c => hit(r, { l: c.left, r: c.right, t: c.top, b: c.bottom }))) continue;
+      if (taken.some(o => hit(r, o))) continue;
+      if (!mine && dots.some(o => o.it !== it && hit(r, o))) continue;
+      taken.push(r); shown.add(it); side.set(it, dir); break;
+    }
+  }
+  for (const [it, dir] of side) {
+    const t = it.el.querySelector(':scope > text');
+    if (t && t.dataset.dir !== String(dir)) {
+      t.dataset.dir = dir; t.setAttribute('x', dir * (it.kind === 'place' ? 7 : 6)); t.setAttribute('text-anchor', dir > 0 ? 'start' : 'end');
+    }
+  }
+  for (const it of labelItems) it.el.toggleAttribute('data-lbl', shown.has(it));
 }
 const clampK = k => Math.max(0.25, Math.min(10, k));
 function zoomAt(px, py, f) {
@@ -780,8 +855,13 @@ function fitItems(list, pad, maxK, instant) {
 const fitAll = instant => fitBox(20, 70, 840, 505, 4, 4, instant);
 const fitCon = con => fitItems(Object.values(ITEMS).filter(i => i.kind === 'gate' && i.con === con), 24, 5);
 
+let userMoved = false;
+function zoomAnimAt(px, py, f) {
+  const nk = clampK(view.k * f), r = nk / view.k;
+  animateTo({ k: nk, x: px - (px - view.x) * r, y: py - (py - view.y) * r });
+}
 svg.addEventListener('wheel', e => {
-  e.preventDefault(); cancelAnimationFrame(anim);
+  e.preventDefault(); cancelAnimationFrame(anim); userMoved = true;
   zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * (e.deltaMode ? 0.05 : 0.0018)));
 }, { passive: false });
 
@@ -791,7 +871,7 @@ svg.addEventListener('pointerdown', e => {
   svg.setPointerCapture(e.pointerId);
   ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (ptrs.size === 1) { moved = 0; downTarget = e.target.closest('[data-id], [data-con]'); } else downTarget = null;
-  pinch = null; cancelAnimationFrame(anim);
+  pinch = null; cancelAnimationFrame(anim); userMoved = true;
   $('#results').hidden = true; $('#q').blur();
 });
 svg.addEventListener('pointermove', e => {
@@ -825,10 +905,18 @@ const endPtr = e => {
   const t = downTarget || nearestMarker(e.clientX, e.clientY);
   if (t && t.dataset.con) { buzz(); fitCon(t.dataset.con); }
   else if (t) { buzz(); showPlace(ITEMS[t.dataset.id], true); }
+  else {
+    // double-tap empty map to zoom in, as in Apple Maps and Google Maps
+    const now = e.timeStamp;
+    if (lastTap && now - lastTap.t < 320 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 30) {
+      zoomAnimAt(e.clientX, e.clientY, 2); buzz(5); lastTap = null;
+    } else lastTap = { t: now, x: e.clientX, y: e.clientY };
+  }
 };
+let lastTap = null;
 svg.addEventListener('pointerup', endPtr);
 svg.addEventListener('pointercancel', endPtr);
-const zoomCenter = f => { const R = visibleRect(); zoomAt((R.l + R.r) / 2, (R.t + R.b) / 2, f); };
+const zoomCenter = f => { const R = visibleRect(); userMoved = true; zoomAnimAt((R.l + R.r) / 2, (R.t + R.b) / 2, f); };
 $('#zin').onclick = () => zoomCenter(1.6);
 $('#zout').onclick = () => zoomCenter(1 / 1.6);
 $('#zfit').onclick = () => fitAll();
@@ -944,12 +1032,13 @@ for (const [cat, c] of Object.entries(CATS)) {
   b.innerHTML = `<span class="tile ${cat}">${icon(cat)}</span>${c.label}`;
   b.onclick = () => {
     const on = b.getAttribute('aria-pressed') === 'true';
-    b.setAttribute('aria-pressed', String(!on)); svg.classList.toggle('hide-' + cat, on); buzz(5);
+    b.setAttribute('aria-pressed', String(!on)); svg.classList.toggle('hide-' + cat, on); buzz(5); cullLabels();
   };
   chips.appendChild(b);
 }
 
 // ---------- Tabs ----------
+function replay(node) { if (reduced) return; node.classList.remove('enter'); void node.offsetWidth; node.classList.add('enter'); }
 const TAB_TITLES = { dir: 'Directions', kill: 'Pass the time', air: 'Airlines' };
 let tab = 'dir';
 function setTab(name, quiet) {
@@ -960,6 +1049,7 @@ function setTab(name, quiet) {
     $('#pane-' + t).hidden = t !== name;
     if (t === name) $('#seg').style.setProperty('--i', i);
   });
+  replay($('#pane-' + name)); replay($('#title'));
   $('#title').textContent = TAB_TITLES[name];
   $('#eyebrow').textContent = 'Cleveland Hopkins · CLE';
   if (selected) { selected.el.classList.remove('sel'); selected = null; }
@@ -986,11 +1076,11 @@ const tileFor = it => it.kind === 'gate' ? `<span class="tile ${it.con}">${icon(
 function showPlace(it, fromMap) {
   if (!it) return;
   if (selected) selected.el.classList.remove('sel');
-  selected = it; it.el.classList.add('sel');
+  selected = it; it.el.classList.add('sel'); cullLabels();
   placeMode = true;
   $('#seg').hidden = true; $('#closePlace').hidden = false;
   ['dir', 'kill', 'air'].forEach(t => $('#pane-' + t).hidden = true);
-  const pane = $('#pane-place'); pane.hidden = false;
+  const pane = $('#pane-place'); pane.hidden = false; replay(pane); replay($('#title'));
   $('#title').textContent = it.name;
   $('#eyebrow').textContent = it.kind === 'gate' ? `Concourse ${it.con}` : it.kind === 'amen' ? CATS[it.cat].label : (it.node === 'chk' ? 'Main terminal' : 'Arrive & depart');
   let html = `<div class="bgroup">
@@ -1012,8 +1102,8 @@ function showPlace(it, fromMap) {
   const near = it.kind !== 'place' ? nearbyNames(it) : [];
   if (near.length) html += `<div class="group-title">Nearby</div><div class="group tags">${near.map(n => `<span class="tag">${esc(n)}</span>`).join('')}</div>`;
   pane.innerHTML = html;
-  pane.querySelector('[data-act="to"]').onclick = () => { buzz(); $('#to').value = it.id; if ($('#from').value === it.id) $('#from').value = 'v:chk'; setTab('dir', true); updateRoute(true); };
-  pane.querySelector('[data-act="from"]').onclick = () => { buzz(); $('#from').value = it.id; if ($('#to').value === it.id) $('#to').value = 'v:chk'; setTab('dir', true); updateRoute(true); };
+  pane.querySelector('[data-act="to"]').onclick = () => { buzz(); $('#to').value = it.id; if ($('#from').value === it.id) $('#from').value = 'v:chk'; setTab('dir', true); if (!wide()) setDetent('peek'); updateRoute(true); };
+  pane.querySelector('[data-act="from"]').onclick = () => { buzz(); $('#from').value = it.id; if ($('#to').value === it.id) $('#to').value = 'v:chk'; setTab('dir', true); if (!wide()) setDetent('peek'); updateRoute(true); };
   sheetBody.scrollTop = 0;
   if (!wide()) setDetent(detent === 'full' || detent === 'peek' ? 'half' : detent);
   if (!fromMap) fitItems([it], 60, 3.5);
@@ -1050,7 +1140,7 @@ buildOptions($('#from')); buildOptions($('#to'));
 $('#from').value = 'v:chk'; $('#to').value = 'g:C22';
 
 function describe(path, a, b) {
-  const steps = [{ t: a.name, n: 'Start' }];
+  const steps = [{ t: a.name, n: 'Start', node: nodeOf(a) }];
   const crossesSecurity = path.some((n, i) => i && ((n === 'chk' && path[i - 1] === 'hub') || (n === 'hub' && path[i - 1] === 'chk')));
   let lastLabel = a.kind === 'place' ? a.node : null;
   const passed = [], via = [];
@@ -1063,7 +1153,7 @@ function describe(path, a, b) {
       if (n === 'bag' && path[i - 1] === 'tix') note = 'Lower level';
       if (n === 'c4') note = 'Gates C17–C29 ring the rotunda';
       if (n === 'fc' && path.includes('c0')) note = 'Follow the purple C signs';
-      steps.push({ t: V[n][2], n: note }); lastLabel = n;
+      steps.push({ t: V[n][2], n: note, node: n }); lastLabel = n;
       via.push(V[n][2].replace(/^Main terminal, past security$/, 'Main terminal').replace(/^Main terminal food court$/, 'Food court').replace(/ \((upper|lower) level\)/, ''));
     }
     if (n.startsWith('p:m:')) {
@@ -1074,13 +1164,14 @@ function describe(path, a, b) {
   let endNote = '';
   if (b.kind === 'gate') endNote = b.zone === 'R' ? 'In the rotunda' : 'Watch the overhead gate numbers';
   else if (b.kind === 'amen') endNote = b.near;
-  steps.push({ t: b.name, n: endNote, end: true });
+  steps.push({ t: b.name, n: endNote, end: true, node: nodeOf(b) });
   return { steps, passed: passed.slice(0, 5), via };
 }
 function highlight(ids) {
   svg.classList.add('focusing');
   for (const m of markers) m.classList.remove('hl');
   for (const id of ids) if (ITEMS[id]) ITEMS[id].el.classList.add('hl');
+  cullLabels();
 }
 function updateRoute(fit) {
   const a = ITEMS[$('#from').value], b = ITEMS[$('#to').value];
@@ -1096,8 +1187,18 @@ function updateRoute(fit) {
   $('#hero').innerHTML = `<span class="num">${minutes(units)}<small>min</small></span>
     <span class="m1">${meters(units)} m walk</span>
     <span class="m2">${via.length ? 'via ' + via.slice(0, 3).map(esc).join(' · ') : 'Direct'}</span>`;
-  $('#steps').innerHTML = steps.map(s => `<li class="${s.end ? 'end' : ''}"><span class="stop"></span><span><span class="t">${esc(s.t)}</span>${s.n ? `<span class="n">${esc(s.n)}</span>` : ''}</span></li>`).join('')
+  $('#steps').innerHTML = steps.map(s => `<li class="${s.end ? 'end' : ''}" data-node="${esc(s.node)}" tabindex="0" role="button"><span class="stop"></span><span><span class="t">${esc(s.t)}</span>${s.n ? `<span class="n">${esc(s.n)}</span>` : ''}</span></li>`).join('')
     + (passed.length ? `<li class="passing">On the way: ${passed.map(esc).join(', ')}</li>` : '');
+  $('#steps').querySelectorAll('[data-node]').forEach(li => {
+    const go = () => {
+      const p = NODE[li.dataset.node]; if (!p) return;
+      buzz(5); userMoved = true;
+      if (!wide() && detent === 'full') setDetent('half');
+      fitBox(p.x - 45, p.y - 45, p.x + 45, p.y + 45, 10, 3.6);
+    };
+    li.onclick = go;
+    li.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } };
+  });
   const ids = [a.id, b.id];
   for (const n of path) { if (ITEMS[n]) ids.push(n); if (n.startsWith('p:') && ITEMS[n.slice(2)]) ids.push(n.slice(2)); }
   highlight(ids);
@@ -1126,9 +1227,15 @@ for (const [cat, label] of [['all', 'Everything'], ...Object.entries(CATS).filte
   };
   ktCats.appendChild(b);
 }
+function updateClock() {
+  const at = new Date(Date.now() + +$('#ktMin').value * 60000);
+  $('#ktClock').textContent = 'Boarding at about ' + at.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+setInterval(() => { if (!$('#pane-kill').hidden) updateClock(); }, 30000);
 function updateIdeas() {
   const gate = ITEMS[$('#ktGate').value], range = $('#ktMin'), mins = +range.value;
-  $('#ktOut').innerHTML = `${mins}<small>min</small>`;
+  $('#ktOut').innerHTML = mins >= 60 ? `${Math.floor(mins / 60)}<small>h</small> ${mins % 60}<small>min</small>` : `${mins}<small>min</small>`;
+  updateClock();
   range.style.setProperty('--p', ((mins - range.min) / (range.max - range.min) * 100) + '%');
   const { D } = fromSrc(nodeOf(gate));
   const seen = new Set();
@@ -1187,42 +1294,79 @@ $('#airlines').querySelectorAll('[data-i]').forEach(b => b.onclick = () => highl
 // ---------- Search ----------
 const q = $('#q'), results = $('#results');
 let hits = [], active = 0;
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('cle.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('cle.' + k, JSON.stringify(v)); } catch (e) {} },
+};
+const kindOf = it => it.kind === 'gate' ? `Concourse ${it.con}` : it.kind === 'amen' ? (it.near || '') : 'Arrive & depart';
+const itemHit = it => ({ label: it.name, kind: kindOf(it), lead: tileFor(it), id: it.id, go: () => showPlace(it, false) });
+function mark(label, needle) {
+  const i = needle ? label.toLowerCase().indexOf(needle) : -1;
+  return i < 0 ? esc(label) : esc(label.slice(0, i)) + '<mark>' + esc(label.slice(i, i + needle.length)) + '</mark>' + esc(label.slice(i + needle.length));
+}
+function renderHits(sections, needle) {
+  let html = '', n = 0;
+  for (const [title, list] of sections) {
+    if (!list.length) continue;
+    if (title) html += `<div class="sec">${title}</div>`;
+    html += list.map(h => `<button data-i="${n}" class="${n++ === active ? 'active' : ''}">${h.lead}<span><span>${mark(h.label, needle)}</span><span class="k">${esc(h.kind)}</span></span></button>`).join('');
+  }
+  return html;
+}
+function suggestions() {
+  const recent = store.get('recent', []).map(id => ITEMS[id]).filter(Boolean).slice(0, 4);
+  const popular = ['v:chk', 'v:bag', 'v:rta'].map(id => ITEMS[id])
+    .concat(Object.values(ITEMS).filter(i => i.kind === 'amen' && /Great Lakes|Bar Symon|Rock & Roll/.test(i.name)))
+    .filter(i => !recent.includes(i)).slice(0, 5);
+  hits = [...recent.map(itemHit), ...popular.map(itemHit)]; active = -1;
+  results.innerHTML = `<div class="sec">Airlines</div><div class="airline-row">${AIRLINES.map((a, i) => `<button data-air="${i}">${badgeSvg(a.con, 24)}${esc(a.name)}</button>`).join('')}</div>`
+    + renderHits([['Recent', recent.map(itemHit)], ['Popular', popular.map(itemHit)]]);
+  results.hidden = false; wireResults();
+}
 function runSearch() {
   const s = q.value.trim().toLowerCase();
   $('#qClear').hidden = !s;
-  if (!s) { results.hidden = true; return; }
-  hits = [];
-  for (const a of AIRLINES) if (a.name.toLowerCase().includes(s)) hits.push({ label: a.name, kind: `Airline · Concourse ${a.con}`, lead: badgeSvg(a.con, 30), go: () => highlightAirline(a) });
-  const gq = s.replace(/^gate\s*/, '');
-  const seen = new Set();
+  if (!s) { if (document.activeElement === q) suggestions(); else results.hidden = true; return; }
+  const code = s.replace(/^gate\s*/, '').replace(/\s+/g, '');
+  const air = AIRLINES.filter(a => a.name.toLowerCase().includes(s))
+    .map(a => ({ label: a.name, kind: `Airline · Concourse ${a.con} · ${CON_RANGE[a.con]}`, lead: badgeSvg(a.con, 30), go: () => highlightAirline(a) }));
+  const gates = [], places = [], seen = new Set();
   for (const it of Object.values(ITEMS)) {
-    const hay = (it.kind === 'gate' ? it.code + ' ' + it.name : it.name).toLowerCase();
-    if (hay.includes(gq) || (it.cat && CATS[it.cat].label.toLowerCase().includes(s))) {
-      const kind = it.kind === 'gate' ? `Concourse ${it.con}` : it.kind === 'amen' ? (it.near || '') : 'Arrive & depart';
-      const key = it.name + kind; if (seen.has(key)) continue; seen.add(key);
-      hits.push({ label: it.name, kind, lead: tileFor(it), go: () => showPlace(it, false) });
-    }
+    const isGate = it.kind === 'gate' && it.code.toLowerCase().startsWith(code);
+    const isName = it.kind !== 'gate' && (it.name.toLowerCase().includes(s) || (it.cat && CATS[it.cat].label.toLowerCase().includes(s)));
+    if (!isGate && !isName) continue;
+    const key = it.name + kindOf(it); if (seen.has(key)) continue; seen.add(key);
+    (isGate ? gates : places).push(itemHit(it));
   }
-  hits.sort((x, y) => (x.label.toLowerCase().startsWith(gq) ? 0 : 1) - (y.label.toLowerCase().startsWith(gq) ? 0 : 1));
-  hits = hits.slice(0, 12); active = 0;
-  results.innerHTML = hits.length
-    ? hits.map((h, i) => `<button data-i="${i}" class="${i === 0 ? 'active' : ''}">${h.lead}<span><span>${esc(h.label)}</span><span class="k">${esc(h.kind)}</span></span></button>`).join('')
-    : '<div class="empty">No matches. Try a gate like “B6” or an airline.</div>';
-  results.hidden = false;
-  results.querySelectorAll('button').forEach(b => b.onclick = () => pick(+b.dataset.i));
+  const gnum = h => +h.label.replace(/\D/g, '');
+  gates.sort((x, y) => gnum(x) - gnum(y));
+  places.sort((x, y) => (x.label.toLowerCase().startsWith(s) ? 0 : 1) - (y.label.toLowerCase().startsWith(s) ? 0 : 1));
+  const sections = [['', air.slice(0, 3)], ['', gates.slice(0, 6)], ['', places.slice(0, 8)]];
+  hits = sections.flatMap(([, l]) => l); active = 0;
+  results.innerHTML = hits.length ? renderHits(sections, s.length > 1 || !gates.length ? s : '')
+    : `<div class="empty">No results for “${esc(q.value.trim())}”. Try a gate like B6, an airline, or “coffee”.</div>`;
+  results.hidden = false; wireResults();
 }
-function pick(i) { const h = hits[i]; if (!h) return; results.hidden = true; q.blur(); h.go(); }
+function wireResults() {
+  results.querySelectorAll('[data-i]').forEach(b => b.onclick = () => pick(+b.dataset.i));
+  results.querySelectorAll('[data-air]').forEach(b => b.onclick = () => { results.hidden = true; q.blur(); highlightAirline(AIRLINES[+b.dataset.air]); });
+}
+function pick(i) {
+  const h = hits[i]; if (!h) return;
+  if (h.id) store.set('recent', [h.id, ...store.get('recent', []).filter(x => x !== h.id)].slice(0, 6));
+  results.hidden = true; q.blur(); h.go();
+}
 q.addEventListener('input', runSearch);
-q.addEventListener('focus', () => { if (q.value) runSearch(); });
+q.addEventListener('focus', runSearch);
 q.addEventListener('keydown', e => {
-  if (e.key === 'Enter') { e.preventDefault(); pick(active); }
+  if (e.key === 'Enter') { e.preventDefault(); pick(Math.max(active, 0)); }
   else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
     e.preventDefault(); if (!hits.length) return;
-    active = (active + (e.key === 'ArrowDown' ? 1 : hits.length - 1)) % hits.length;
-    results.querySelectorAll('button').forEach((b, i) => b.classList.toggle('active', i === active));
-  } else if (e.key === 'Escape') { results.hidden = true; }
+    active = (Math.max(active, e.key === 'ArrowDown' ? -1 : 0) + (e.key === 'ArrowDown' ? 1 : hits.length - 1)) % hits.length;
+    results.querySelectorAll('[data-i]').forEach(b => b.classList.toggle('active', +b.dataset.i === active));
+  } else if (e.key === 'Escape') { results.hidden = true; q.blur(); }
 });
-$('#qClear').onclick = () => { q.value = ''; runSearch(); q.focus(); };
+$('#qClear').onclick = () => { q.value = ''; q.focus(); runSearch(); };
 document.addEventListener('pointerdown', e => { if (!e.target.closest('.search')) results.hidden = true; });
 
 // Android back button: close overlays before leaving the app
@@ -1233,18 +1377,37 @@ window.cleBack = () => {
   return false;
 };
 
+// ---------- Remember the trip between launches ----------
+function saveTrip() {
+  store.set('trip', { from: $('#from').value, to: $('#to').value, gate: $('#ktGate').value, mins: +$('#ktMin').value, cat: ktCat, tab });
+}
+(() => {
+  const t = store.get('trip', null);
+  if (!t) return;
+  if (ITEMS[t.from]) $('#from').value = t.from;
+  if (ITEMS[t.to]) $('#to').value = t.to;
+  if (ITEMS[t.gate]) $('#ktGate').value = t.gate;
+  if (t.mins >= 10 && t.mins <= 150) $('#ktMin').value = t.mins;
+  if (t.cat && ktCats.querySelector(`[data-cat="${t.cat}"]`)) ktCats.querySelector(`[data-cat="${t.cat}"]`).click();
+  if (['dir', 'kill', 'air'].includes(t.tab)) tab = t.tab;
+})();
+for (const id of ['from', 'to', 'ktGate', 'ktMin']) $('#' + id).addEventListener('change', saveTrip);
+['tab-dir', 'tab-kill', 'tab-air', 'swap'].forEach(id => $('#' + id).addEventListener('click', () => setTimeout(saveTrip)));
+ktCats.addEventListener('click', () => setTimeout(saveTrip));
+
 // ---------- Start ----------
 let lastWide = wide();
 addEventListener('resize', () => {
   setDetent(detent, false);
   if (wide() !== lastWide) { lastWide = wide(); fitAll(true); } else apply();
 });
-setTab('dir', true);
+updateRoute(false);
+setTab(tab, true);
 setDetent('peek', false);
-if (wide()) fitAll(true);
-else fitItems(routePts, 18, 3, true);
-// fonts change the sheet header height once they load
-document.fonts && document.fonts.ready.then(() => { setDetent(detent, false); });
+const initialFit = () => { if (wide()) fitAll(true); else if (routePts.length && tab === 'dir') fitItems(routePts, 18, 3, true); else fitAll(true); };
+initialFit();
+// fonts change the sheet header height once they load; re-fit if the map hasn't been touched
+document.fonts && document.fonts.ready.then(() => { setDetent(detent, false); if (!userMoved) initialFit(); });
 })();
 </script>
 </body>
