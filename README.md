@@ -15,6 +15,8 @@ An interactive map of Cleveland Hopkins International Airport (CLE). It runs as 
 - **Map:** traced from OpenStreetMap, north up. It shows the real terminal and concourse outlines, gate positions, jet bridges, aircraft at their actual stands, taxiways, roads and the parking garage. Panning has momentum after a flick and stops before you lose the airport. A scale bar appears while you zoom, and you can double-tap to zoom.
 - **Routes and pins:** routes draw themselves in, with start and end markers and a walking-time bubble. Tapping a place drops a balloon pin with its category icon, and tapping a route step jumps the map to it. Place names appear only where they have room.
 - **Your location:** tap the arrow button to see a blue dot with its GPS accuracy. Choose "My location" as a route start. The Android app asks for location permission the first time you use it.
+- **Nearest…:** one tap finds the nearest restroom, coffee, food, bar or charging spot, or routes to your gate. It starts from your location when the app knows it.
+- **Leave-by time:** set when boarding starts and the app shows when to head to your gate, based on the walk from where you are. In the Android app, *Remind me when to leave* sends a notification at that time.
 - **Remembers your trip:** your route, gate, boarding time and tab are saved on this device between launches.
 
 The layout and amenities come from the airport's published terminal directory. Gate assignments change, so always check your boarding pass. This is not an official airport map.

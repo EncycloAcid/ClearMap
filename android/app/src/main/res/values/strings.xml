@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">CLE Gate Finder</string>
+    <string name="sc_restroom_short">Restroom</string>
+    <string name="sc_restroom_long">Nearest restroom</string>
+    <string name="sc_coffee_short">Coffee</string>
+    <string name="sc_coffee_long">Nearest coffee</string>
+    <string name="sc_gate_short">My gate</string>
+    <string name="sc_gate_long">Directions to my gate</string>
+    <string name="reminder_channel">Gate reminders</string>
 </resources>

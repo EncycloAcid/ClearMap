@@ -104,11 +104,20 @@ class MainActivity : Activity() {
 
         setContentView(web)
         if (savedInstanceState != null) web.restoreState(savedInstanceState)
-        else web.loadUrl("https://$APP_HOST/assets/index.html")
+        else web.loadUrl("https://$APP_HOST/assets/index.html" + (actionOf(intent)?.let { "#$it" } ?: ""))
 
         if (Build.VERSION.SDK_INT >= 33) {
             onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) { handleBack() }
         }
+    }
+
+    /** "restroom", "coffee" or "gate" from a home-screen shortcut or the reminder notification. */
+    private fun actionOf(intent: Intent?): String? =
+        intent?.data?.takeIf { it.scheme == "clegate" }?.lastPathSegment?.takeIf { it.matches(Regex("[a-z]+")) }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        actionOf(intent)?.let { web.evaluateJavascript("window.cleAction && cleAction('$it')", null) }
     }
 
     private fun hasLocationPermission() =
@@ -125,6 +134,17 @@ class MainActivity : Activity() {
 
     /** Lets the page send people to this app's settings page when location was turned off. */
     inner class AppBridge {
+        @JavascriptInterface
+        fun scheduleReminder(atMillis: Double, title: String, body: String) {
+            if (Build.VERSION.SDK_INT >= 33 &&
+                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            ) runOnUiThread { requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), REQ_NOTIFY) }
+            ReminderReceiver.schedule(this@MainActivity, atMillis.toLong(), title, body)
+        }
+
+        @JavascriptInterface
+        fun cancelReminder() = ReminderReceiver.cancel(this@MainActivity)
+
         @JavascriptInterface
         fun openSettings() {
             runOnUiThread {
@@ -184,5 +204,6 @@ class MainActivity : Activity() {
     companion object {
         private const val APP_HOST = WebViewAssetLoader.DEFAULT_DOMAIN
         private const val REQ_LOCATION = 41
+        private const val REQ_NOTIFY = 42
     }
 }

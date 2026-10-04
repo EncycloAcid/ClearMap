@@ -391,7 +391,18 @@ input.xs::-moz-range-progress { height: 16px; border-radius: 8px; background: va
 input.xs::-moz-range-thumb { width: 4px; height: 44px; border: 0; border-radius: 2px; background: var(--primary); }
 .slider-clock { margin: -8px 0 6px; font-size: 14px; color: var(--label-2); font-variant-numeric: tabular-nums; }
 .slider-scale { display: flex; justify-content: space-between; font-size: 12px; color: var(--label-2); font-variant-numeric: tabular-nums; }
-.filter { margin: 0 -16px; padding: 0 16px 2px; }
+.filter, .quick { margin: 0 -16px; padding: 0 16px 2px; }
+.quick .chip { background: var(--card); box-shadow: none; color: var(--label); }
+.leave { margin: -2px 0 8px; font-size: 15px; font-weight: 650; color: var(--label); }
+.leave b { color: var(--primary); }
+.tonal-btn {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 18px 0 14px; border: 0;
+  border-radius: 22px; background: var(--primary-c); color: var(--on-primary-c);
+  font: 700 15px var(--font-display); font-variation-settings: "wdth" 105;
+  transition: border-radius .45s var(--spring), transform .4s var(--spring);
+}
+.tonal-btn:active { border-radius: 12px; transform: scale(.97); }
+.tonal-btn[aria-pressed="true"] { background: var(--on-primary-c); color: var(--primary-c); }
 .filter .chip { background: var(--card); box-shadow: none; }
 .filter .chip[aria-pressed="true"] { background: var(--on-primary-c); color: var(--primary-c); border-color: transparent; padding-left: 14px; }
 .filter .chip[aria-pressed="false"] { color: var(--label); }
@@ -456,6 +467,7 @@ input.xs::-moz-range-thumb { width: 4px; height: 44px; border: 0; border-radius:
   <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
   <symbol id="i-fit" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
   <symbol id="i-locate" viewBox="0 0 24 24"><path d="M20.5 3.5L3.5 10.6l7.2 2.7 2.7 7.2z"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0"/></symbol>
   <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
   <symbol id="i-walk" viewBox="0 0 24 24"><circle cx="13" cy="4.5" r="1.8"/><path d="M10 21l2.5-6.5L15 17v4M12.5 14.5L11 9l-3 2v4M11 9l3.5-.5 2 3.5 2.5 1"/></symbol>
   <symbol id="i-dice" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="9" cy="9" r=".6" fill="currentColor"/><circle cx="15" cy="15" r=".6" fill="currentColor"/><circle cx="15" cy="9" r=".6" fill="currentColor"/><circle cx="9" cy="15" r=".6" fill="currentColor"/><circle cx="12" cy="12" r=".6" fill="currentColor"/></symbol>
@@ -521,6 +533,7 @@ input.xs::-moz-range-thumb { width: 4px; height: 44px; border: 0; border-radius:
   <div class="sheet-body" id="sheetBody">
     <div class="pane" id="pane-dir" role="tabpanel" aria-labelledby="tab-dir">
       <div class="hero" id="hero"></div>
+      <div class="chips quick" id="quick" role="group" aria-label="Go to the nearest"></div>
       <div class="group fromto">
         <label class="row"><span class="pt a"></span><span class="rl">From</span><select id="from" aria-label="From"></select></label>
         <label class="row"><span class="pt b"></span><span class="rl">To</span><select id="to" aria-label="To"></select></label>
@@ -537,10 +550,12 @@ input.xs::-moz-range-thumb { width: 4px; height: 44px; border: 0; border-radius:
       <div class="group slider-card">
         <div class="slider-top"><span class="rl">Boarding starts in</span><output id="ktOut" for="ktMin">55<small>min</small></output></div>
         <div class="slider-clock" id="ktClock"></div>
+        <div class="leave" id="ktLeave"></div>
         <input type="range" class="xs" id="ktMin" min="10" max="150" step="5" value="55" aria-label="Minutes until boarding">
         <div class="slider-scale"><span>10 min</span><span>2½ hr</span></div>
       </div>
       <div class="chips filter" id="ktCats" role="group" aria-label="Kind of place"></div>
+      <button class="tonal-btn" id="remind" hidden><svg class="ico"><use href="#i-bell"/></svg><span>Remind me when to leave</span></button>
       <button class="fab" id="surprise"><svg class="ico"><use href="#i-dice"/></svg>Surprise me</button>
       <p class="toast" id="ktToast">Keeps a 10-minute buffer before boarding.</p>
       <div class="group" id="ideas"></div>
@@ -1408,7 +1423,10 @@ function visibleFor(d) {
   if (d === 'full') return H;
   if (d === 'half') return Math.min(H, Math.round(innerHeight * 0.52));
   const first = sheetBody.querySelector('.pane:not([hidden]) > *');
-  const extra = first ? Math.min(first.offsetHeight, 132) + 20 : 90;
+  let extra = first ? Math.min(first.offsetHeight, 132) + 20 : 90;
+  // keep the "nearest" buttons in the collapsed sheet too
+  const next = first && first.nextElementSibling;
+  if (next && next.classList.contains('quick')) extra += next.offsetHeight + 16;
   return Math.min(H, sheetHead.offsetHeight + extra + cssPx('--sab'));
 }
 sheet.addEventListener('transitionend', () => { chromeCache = null; cullLabels(); });
@@ -1662,6 +1680,43 @@ $('#swap').onclick = () => {
   $('#swap').classList.toggle('spin'); buzz(); updateRoute(false);
 };
 
+// ---------- Go to the nearest… ----------
+const QUICK = [
+  ['rest', 'Restroom', 'rest', i => i.cat === 'rest'],
+  ['coffee', 'Coffee', 'coffee', i => i.cat === 'coffee' && !/vending/i.test(i.name)],
+  ['food', 'Food', 'food', i => i.cat === 'food' && !/vending/i.test(i.name)],
+  ['bar', 'Bar', 'bar', i => i.cat === 'bar'],
+  ['charge', 'Charging', 'service', i => /FuelRod/.test(i.name)],
+  ['gate', 'My gate', 'gate'],
+];
+function goNearest(key) {
+  const q = QUICK.find(x => x[0] === key); if (!q) return;
+  if (ITEMS['v:me']) $('#from').value = 'v:me';           // start from you when we know where you are
+  const from = ITEMS[$('#from').value];
+  let best = null;
+  if (key === 'gate') best = ITEMS[$('#ktGate').value];
+  else {
+    const { D } = fromSrc(nodeOf(from));
+    for (const it of Object.values(ITEMS)) if (it.kind === 'amen' && q[3](it) && D[it.id] != null && (!best || D[it.id] < D[best.id])) best = it;
+  }
+  if (!best) return;
+  buzz();
+  if (tab !== 'dir' || placeMode) setTab('dir', true);
+  $('#to').value = best.id;
+  if (!wide()) setDetent('peek');
+  updateRoute(true); saveTrip();
+  const where = best.gate ? 'near gate ' + best.gate : best.zone === 'L' ? 'before security' : 'in the main terminal';
+  const mins = minutes(route(from, best).units);
+  if (key === 'rest') toast(`Nearest restrooms are ${where}, ${mins} min away.`);
+  else if (key !== 'gate') toast(`Nearest ${q[1].toLowerCase()}: ${best.name}, ${where} (${mins} min).`);
+}
+$('#quick').innerHTML = QUICK.map(([k, label, ico]) =>
+  `<button class="chip" data-q="${k}"><span class="tile ${ico === 'gate' ? 'gate' : ico}">${icon(ico)}</span>${label}</button>`).join('');
+$('#quick').querySelectorAll('[data-q]').forEach(b => b.onclick = () => goNearest(b.dataset.q));
+// Android home-screen shortcuts and links: #restroom, #coffee, #food, #gate
+const ACTIONS = { restroom: 'rest', coffee: 'coffee', food: 'food', bar: 'bar', charging: 'charge', gate: 'gate' };
+window.cleAction = name => { if (ACTIONS[name]) goNearest(ACTIONS[name]); };
+
 // ---------- Pass the time ----------
 buildOptions($('#ktGate'), false, true);
 $('#ktGate').value = 'g:C22';
@@ -1679,16 +1734,51 @@ for (const [cat, label] of [['all', 'Everything'], ...Object.entries(CATS).filte
   };
   ktCats.appendChild(b);
 }
-function updateClock() {
-  const at = new Date(Date.now() + +$('#ktMin').value * 60000);
-  $('#ktClock').textContent = 'Boarding at about ' + at.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+// Boarding is kept as a clock time, so "55 min" counts down instead of resetting each launch
+let boardAt = Date.now() + 55 * 60000, reminderAt = 0;
+const clock = t => new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+const minsLeft = () => Math.max(0, Math.round((boardAt - Date.now()) / 60000));
+function leavePlan() {
+  // walk from where you are (or the Directions start) to your gate, plus 5 minutes' slack
+  const gate = ITEMS[$('#ktGate').value], from = ITEMS['v:me'] || ITEMS[$('#from').value];
+  const walk = from && from !== gate ? minutes(route(from, gate).units) : 0;
+  return { gate, from, walk, at: boardAt - (walk + 5) * 60000 };
 }
-setInterval(() => { if (!$('#pane-kill').hidden) updateClock(); }, 30000);
+function updateClock() {
+  $('#ktClock').textContent = 'Boarding at about ' + clock(boardAt);
+  const p = leavePlan();
+  const where = p.from && p.from.id === 'v:me' ? 'from where you are' : p.from ? 'from ' + p.from.name : '';
+  $('#ktLeave').innerHTML = p.at <= Date.now()
+    ? `Head to ${esc(p.gate.name)} <b>now</b> · ${p.walk} min walk ${esc(where)}`
+    : `Head to ${esc(p.gate.name)} by <b>${clock(p.at)}</b> · ${p.walk} min walk ${esc(where)}`;
+  const rb = $('#remind');
+  rb.hidden = !(window.CLEApp && CLEApp.scheduleReminder);
+  const on = reminderAt > Date.now();
+  rb.setAttribute('aria-pressed', String(on));
+  rb.querySelector('span').textContent = on ? `Reminder at ${clock(reminderAt)} · Cancel` : 'Remind me when to leave';
+}
+setInterval(() => { if (!$('#pane-kill').hidden) updateIdeas(); }, 30000);
+$('#remind').onclick = () => {
+  buzz();
+  if (reminderAt > Date.now()) {
+    try { CLEApp.cancelReminder(); } catch (e) {}
+    reminderAt = 0; toast('Reminder cancelled.');
+  } else {
+    const p = leavePlan();
+    if (p.at <= Date.now() + 60000) { toast(`It’s time to head to ${p.gate.name} now.`); return; }
+    try {
+      CLEApp.scheduleReminder(p.at, `Time to head to ${p.gate.name}`, `Boarding starts around ${clock(boardAt)}. It’s about a ${p.walk}-minute walk.`);
+      reminderAt = p.at; toast(`We’ll remind you at ${clock(p.at)}.`);
+    } catch (e) { toast('Couldn’t set a reminder on this device.'); }
+  }
+  saveTrip(); updateClock();
+};
 function updateIdeas() {
-  const gate = ITEMS[$('#ktGate').value], range = $('#ktMin'), mins = +range.value;
+  const gate = ITEMS[$('#ktGate').value], range = $('#ktMin'), mins = minsLeft();
+  range.value = Math.min(+range.max, Math.max(+range.min, mins));
   $('#ktOut').innerHTML = mins >= 60 ? `${Math.floor(mins / 60)}<small>h</small> ${mins % 60}<small>min</small>` : `${mins}<small>min</small>`;
   updateClock();
-  range.style.setProperty('--p', ((mins - range.min) / (range.max - range.min) * 100) + '%');
+  range.style.setProperty('--p', ((+range.value - range.min) / (range.max - range.min) * 100) + '%');
   const { D } = fromSrc(nodeOf(gate));
   const seen = new Set();
   const order = { ok: 0, warn: 1, no: 2 };
@@ -1716,7 +1806,7 @@ function showIdea(it) {
   updateRoute(true); showPlace(it, true);
 }
 $('#ktGate').onchange = updateIdeas;
-$('#ktMin').oninput = updateIdeas;
+$('#ktMin').oninput = () => { boardAt = Date.now() + +$('#ktMin').value * 60000; updateIdeas(); };
 $('#surprise').onclick = () => {
   const ok = lastIdeas.filter(r => r.status === 'ok');
   const pool = ok.length ? ok : lastIdeas.filter(r => r.status === 'warn');
@@ -1834,7 +1924,7 @@ window.cleBack = () => {
 // ---------- Remember the trip between launches ----------
 function saveTrip() {
   const keep = v => v === 'v:me' ? null : v;
-  store.set('trip', { from: keep($('#from').value), to: keep($('#to').value), gate: $('#ktGate').value, mins: +$('#ktMin').value, cat: ktCat, tab });
+  store.set('trip', { from: keep($('#from').value), to: keep($('#to').value), gate: $('#ktGate').value, boardAt, reminderAt, cat: ktCat, tab });
 }
 (() => {
   const t = store.get('trip', null);
@@ -1842,11 +1932,13 @@ function saveTrip() {
   if (ITEMS[t.from]) $('#from').value = t.from;
   if (ITEMS[t.to]) $('#to').value = t.to;
   if (ITEMS[t.gate]) $('#ktGate').value = t.gate;
-  if (t.mins >= 10 && t.mins <= 150) $('#ktMin').value = t.mins;
+  if (t.boardAt > Date.now() - 5 * 60000) boardAt = t.boardAt;    // forget a flight that has already boarded
+  if (t.reminderAt > Date.now()) reminderAt = t.reminderAt;
   if (t.cat && ktCats.querySelector(`[data-cat="${t.cat}"]`)) ktCats.querySelector(`[data-cat="${t.cat}"]`).click();
   if (['dir', 'kill', 'air'].includes(t.tab)) tab = t.tab;
 })();
 for (const id of ['from', 'to', 'ktGate', 'ktMin']) $('#' + id).addEventListener('change', saveTrip);
+$('#ktGate').addEventListener('change', updateClock);
 ['tab-dir', 'tab-kill', 'tab-air', 'swap'].forEach(id => $('#' + id).addEventListener('click', () => setTimeout(saveTrip)));
 ktCats.addEventListener('click', () => setTimeout(saveTrip));
 
@@ -1860,6 +1952,8 @@ addEventListener('resize', () => {
 });
 updateRoute(false);
 setTab(tab, true);
+const launchAction = (location.hash || '').slice(1);
+if (ACTIONS[launchAction]) { tab = 'dir'; setTimeout(() => cleAction(launchAction), 450); }
 setDetent('peek', false);
 const initialFit = instant => {
   if (!wide() && routePts.length > 1 && tab === 'dir') fitItems(routePts, 18, 3, instant); else fitAll(instant);

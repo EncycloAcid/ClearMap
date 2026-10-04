@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="restroom" android:enabled="true"
+        android:icon="@drawable/sc_restroom"
+        android:shortcutShortLabel="@string/sc_restroom_short" android:shortcutLongLabel="@string/sc_restroom_long">
+        <intent android:action="android.intent.action.VIEW" android:data="clegate://action/restroom"
+            android:targetPackage="io.github.encycloacid.clearmap" android:targetClass="io.github.encycloacid.clearmap.MainActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="coffee" android:enabled="true"
+        android:icon="@drawable/sc_coffee"
+        android:shortcutShortLabel="@string/sc_coffee_short" android:shortcutLongLabel="@string/sc_coffee_long">
+        <intent android:action="android.intent.action.VIEW" android:data="clegate://action/coffee"
+            android:targetPackage="io.github.encycloacid.clearmap" android:targetClass="io.github.encycloacid.clearmap.MainActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="gate" android:enabled="true"
+        android:icon="@drawable/sc_gate"
+        android:shortcutShortLabel="@string/sc_gate_short" android:shortcutLongLabel="@string/sc_gate_long">
+        <intent android:action="android.intent.action.VIEW" android:data="clegate://action/gate"
+            android:targetPackage="io.github.encycloacid.clearmap" android:targetClass="io.github.encycloacid.clearmap.MainActivity" />
+    </shortcut>
+</shortcuts>
