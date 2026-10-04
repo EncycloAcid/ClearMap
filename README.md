@@ -2,6 +2,10 @@
 
 An interactive map of Cleveland Hopkins International Airport (CLE). It runs as an Android app, and the same map is a self-contained web page, `index.html`, that opens in any browser.
 
+**Design:** iOS sets the structure and Material 3 Expressive sets the character.
+- **iOS:** a full-screen map, frosted-glass controls, a draggable bottom sheet with peek, half and full heights (a sidebar on wide screens), a segmented control, inset grouped lists, and Apple-Maps-style dotted walking routes with a moving puck.
+- **Material 3 Expressive:** bold Roboto Flex numerals, springy motion, tonal colours, concourse badges coded by shape (A circle, B clover, C cookie), button groups and an extended FAB that change shape when pressed, and a thick-track slider.
+
 - **Zoom and pan:** scroll, pinch, or drag the map. The A/B/C buttons jump to a concourse.
 - **Gates:** every active gate from A1–A14, B1–B11 and C2–C29, colour-coded by concourse.
 - **Airlines:** tap one to light up its concourse's gates.
@@ -13,7 +17,7 @@ The layout and amenities come from the airport's published terminal directory. G
 
 ## Android app
 
-The `android/` folder is a native Android app (Kotlin, Android 8.0+). It shows the map in a full-screen WebView and works offline, with the fonts bundled in the APK. The Back button closes an open info card or search before it leaves the app.
+The `android/` folder is a native Android app (Kotlin, Android 8.0+). It shows the map in a full-screen WebView and works offline, with the font bundled in the APK. The map runs edge-to-edge behind the status and navigation bars, and taps give light haptic feedback. Back closes search, a place card, or a full-height sheet before it leaves the app.
 
 The app loads the same `index.html` as the web version. A build step copies it into the APK, so you only edit the map in one place.
 

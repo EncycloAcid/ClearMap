@@ -11,8 +11,8 @@ android {
         applicationId = "io.github.encycloacid.clearmap"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "2.0"
     }
 
     buildTypes {
@@ -37,7 +37,7 @@ android {
 
 // Copy the shared web map (../../index.html) into the APK's assets, swapping the
 // Google Fonts link for the bundled offline copies.
-val copyWebAssets by tasks.registering(Copy::class) {
+val copyWebAssets by tasks.registering(Sync::class) {
     from(rootProject.file("../index.html")) {
         filter { line ->
             if (line.contains("fonts.googleapis.com") || line.contains("fonts.gstatic.com")) {
