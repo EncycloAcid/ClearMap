@@ -60,7 +60,8 @@ def main():
     src = sys.argv[1] if len(sys.argv) > 1 else 'cle.osm'
     nodes, ways = load(src)
     L = {k: [] for k in ['grass', 'wood', 'water', 'apron', 'taxiway', 'runway', 'lots', 'motorway', 'major', 'minor',
-                         'service', 'rail', 'buildings', 'garage', 'termA', 'termB', 'termC', 'termM', 'termD', 'bridges']}
+                         'service', 'rail', 'buildings', 'garage', 'termA', 'termB', 'termC', 'termM', 'termD', 'bridges',
+                         'walk1', 'walk0', 'walkm1', 'stairs']}
     stands = []
     for wid, nds, t in ways:
         pts = [P(*nodes[n][:2]) for n in nds if n in nodes]
@@ -68,6 +69,14 @@ def main():
         closed = nds[0] == nds[-1]
         simp = dp(pts, 0.8)
         aw, hw, lu, nat = t.get('aeroway'), t.get('highway'), t.get('landuse'), t.get('natural')
+        # Indoor walkways by floor. At CLE: level 1 = upper (gates, security, ticketing),
+        # 0 = lower (baggage claim, ground transportation), -1 = RTA platform, 2 = jet bridges (skipped).
+        lv = t.get('level')
+        if lv and hw in ('footway', 'corridor', 'steps') and aw != 'jet_bridge':
+            layer = 'stairs' if (';' in lv or hw == 'steps') else {'1': 'walk1', '0': 'walk0', '-1': 'walkm1'}.get(lv)
+            if layer:
+                L[layer].append(path(simp, False))
+                continue
         name = t.get('name', '')
         if aw == 'terminal' and 'Concourse D' in name: L['termD'].append(path(simp, True))
         elif aw == 'terminal' and 'Concourse A' in name: L['termA'].append(path(simp, True))
