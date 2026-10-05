@@ -1542,7 +1542,7 @@ const store = {
 const kindOf = it => it.kind === 'gate' ? `Concourse ${it.con}` : it.kind === 'amen' ? (it.near || '') + ((s => s ? ' · ' + s.text : '')(hoursStatus(it))) : 'Arrive & depart';
 const itemHit = it => ({ label: it.name, kind: kindOf(it), lead: tileFor(it), id: it.id, go: () => showPlace(it, false) });
 function mark(label, needle) {
-  const i = needle ? label.toLowerCase().indexOf(needle) : -1;
+  const i = needle ? norm(label).indexOf(needle) : -1;
   return i < 0 ? esc(label) : esc(label.slice(0, i)) + '<mark>' + esc(label.slice(i, i + needle.length)) + '</mark>' + esc(label.slice(i + needle.length));
 }
 function renderHits(sections, needle) {
@@ -1550,7 +1550,7 @@ function renderHits(sections, needle) {
   for (const [title, list] of sections) {
     if (!list.length) continue;
     if (title) html += `<div class="sec">${title}</div>`;
-    html += list.map(h => `<button data-i="${n}" class="${n++ === active ? 'active' : ''}">${h.lead}<span><span>${mark(h.label, needle)}</span><span class="k">${esc(h.kind)}</span></span></button>`).join('');
+    html += list.map(h => `<button data-i="${n}" class="${n++ === active ? 'active' : ''}">${h.lead}<span><span>${mark(h.label, needle)}</span><span class="k">${h.html ? h.kind : esc(h.kind)}</span></span></button>`).join('');
   }
   return html;
 }
@@ -1564,31 +1564,74 @@ function suggestions() {
     + renderHits([['Recent', recent.map(itemHit)], ['Popular', popular.map(itemHit)]]);
   results.classList.toggle('fresh', results.hidden); if (results.hidden) stagger(results, ':scope > button'); results.hidden = false; wireResults();
 }
+// Everyday words for each kind of place, so "pizza" or "bathroom" finds something
+const SYNONYMS = {
+  food: 'food eat restaurant meal lunch dinner breakfast pizza burger burrito taco sandwich salad chicken sushi bagel grill kitchen snack',
+  coffee: 'coffee cafe café latte espresso tea donut doughnut pastry pretzel cinnamon yogurt ice cream dessert smoothie juice sweet treat',
+  bar: 'bar beer wine drink drinks cocktail pub brewery alcohol',
+  shop: 'shop shopping store news newsstand magazine book gift souvenir sunglasses electronics headphones luggage',
+  play: 'relax massage spa lounge chairs play kids lottery',
+  service: 'charge charger charging phone outlet power atm cash money information help desk lost pet animal relief wifi pharmacy vending sim',
+  rest: 'restroom restrooms bathroom toilet toilets washroom loo wc lavatory family changing',
+};
+const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[’']/g, '');
+// one typo (a missing, extra, swapped or wrong letter) still matches a word
+function near1(a, b) {
+  if (Math.abs(a.length - b.length) > 1 || a.length < 4) return false;
+  let i = 0; while (i < a.length && a[i] === b[i]) i++;
+  if (i === a.length && i === b.length) return true;
+  return a.slice(i + 1) === b.slice(i + 1) || a.slice(i + 1) === b.slice(i) || a.slice(i) === b.slice(i + 1)
+    || (a[i] === b[i + 1] && a[i + 1] === b[i] && a.slice(i + 2) === b.slice(i + 2));
+}
+// how well a query matches some text: 3 starts with, 2 a word starts with, 1 contains, 0.5 one typo, 0 no
+function score(text, s) {
+  const t = norm(text);
+  if (t.startsWith(s)) return 3;
+  const words = t.split(/[^a-z0-9]+/).filter(Boolean);
+  if (words.some(w => w.startsWith(s))) return 2;
+  if (t.includes(s)) return 1;
+  const qs = s.split(/\s+/);
+  return qs.every(qw => words.some(w => w.startsWith(qw) || near1(qw, w) || near1(qw, w.slice(0, qw.length)))) ? .5 : 0;
+}
 function runSearch() {
-  const s = q.value.trim().toLowerCase();
+  const raw = q.value.trim(), s = norm(raw);
   $('#qClear').hidden = !s;
   if (!s) { if (document.activeElement === q) suggestions(); else results.hidden = true; return; }
   const code = s.replace(/^gate\s*/, '').replace(/\s+/g, '');
   // airline codes match too, unless a gate has that number (JetBlue is B6)
   const isGateCode = Object.values(ITEMS).some(it => it.kind === 'gate' && it.code.toLowerCase() === code);
-  const air = AIRLINES.filter(a => a.name.toLowerCase().includes(s) || (!isGateCode && a.code && a.code.toLowerCase() === s))
-    .map(a => ({ label: a.name, kind: `Airline · Concourse ${a.con} · ${CON_RANGE[a.con]}`, lead: airMark(a, 30), go: () => showAirline(a) }));
+  const air = AIRLINES.map(a => ({ a, sc: Math.max(score(a.name, s), !isGateCode && a.code && a.code.toLowerCase() === s ? 3 : 0) })).filter(x => x.sc)
+    .sort((x, y) => y.sc - x.sc)
+    .map(({ a }) => ({ label: a.name, kind: `Airline · Concourse ${a.con} · ${CON_RANGE[a.con]}`, lead: airMark(a, 30), go: () => showAirline(a) }));
+  // categories the query names, by label or everyday word
+  const cats = Object.keys(CATS).filter(c => score(CATS[c].label, s) >= 1 || SYNONYMS[c].split(' ').some(w => w.startsWith(s) || (s.length >= 4 && near1(s, w))));
+  // nearest first, from where directions start (or where you are)
+  const from = ITEMS['v:me'] || ITEMS[$('#from').value] || ITEMS[CHK];
+  const D = from ? fromSrc(nodeOf(from)).D : {};
+  const walk = it => D[it.id] != null ? minutes(D[it.id]) : null;
   const gates = [], places = [], seen = new Set();
   for (const it of Object.values(ITEMS)) {
     if (it.id === 'v:me') continue;
-    const isGate = it.kind === 'gate' && it.code.toLowerCase().startsWith(code);
-    const isName = it.kind !== 'gate' && (it.name.toLowerCase().includes(s) || (it.cat && CATS[it.cat].label.toLowerCase().includes(s)));
-    if (!isGate && !isName) continue;
-    const key = it.name + kindOf(it); if (seen.has(key)) continue; seen.add(key);
-    (isGate ? gates : places).push(itemHit(it));
+    if (it.kind === 'gate') { if (code && it.code.toLowerCase().startsWith(code)) gates.push(it); continue; }
+    const sc = Math.max(score(it.name, s), it.cat && cats.includes(it.cat) ? 1.5 : 0);
+    if (!sc) continue;
+    const key = it.name + '|' + (it.gate || it.zone); if (seen.has(key)) continue; seen.add(key);
+    places.push({ it, sc, w: walk(it) });
   }
-  const gnum = h => +h.label.replace(/\D/g, '');
-  gates.sort((x, y) => gnum(x) - gnum(y));
-  places.sort((x, y) => (x.label.toLowerCase().startsWith(s) ? 0 : 1) - (y.label.toLowerCase().startsWith(s) ? 0 : 1));
-  const sections = [['', air.slice(0, 3)], ['', gates.slice(0, 6)], ['', places.slice(0, 8)]];
+  const gnum = it => +it.code.replace(/\D/g, '');
+  gates.sort((x, y) => (x.code.toLowerCase() === code ? -1 : 0) - (y.code.toLowerCase() === code ? -1 : 0) || gnum(x) - gnum(y));
+  // strong name matches first, then by walk; within a category search, purely by walk
+  const strong = p => cats.length ? p.sc >= 3 && !CATS[p.it.cat]?.label.toLowerCase().startsWith(s) : p.sc >= 2;
+  places.sort((x, y) => strong(y) - strong(x) || (x.w ?? 999) - (y.w ?? 999) || y.sc - x.sc);
+  const hitFor = ({ it, w }) => ({ ...itemHit(it), kind: (w != null && it !== from ? `<b>${w} min</b> · ` : '') + esc(kindOf(it)), html: true });
+  const typo = places.length && places.every(p => p.sc < 1) && !gates.length && !air.length;
+  const placeTitle = cats.length === 1 && places.every(p => p.sc < 2) ? `${CATS[cats[0]].label} · nearest first` : places.length > 1 ? 'Places · nearest first' : '';
+  const sections = [['Airlines', air.slice(0, 3)], ['Gates', gates.slice(0, 6).map(itemHit)], [placeTitle, places.slice(0, 10).map(hitFor)]];
   hits = sections.flatMap(([, l]) => l); active = 0;
-  results.innerHTML = hits.length ? renderHits(sections, s.length > 1 || !gates.length ? s : '')
-    : `<div class="empty">No results for “${esc(q.value.trim())}”. Try a gate like B6, an airline, or “coffee”.</div>`;
+  const showTitles = sections.filter(([, l]) => l.length).length > 1 || !!placeTitle;
+  results.innerHTML = hits.length
+    ? (typo ? `<div class="hint">Showing results for similar spellings</div>` : '') + renderHits(sections.map(([t, l]) => [showTitles ? t : '', l]), gates.length && s.length < 2 ? '' : s)
+    : `<div class="empty">No results for “${esc(raw)}”. Try a gate like B6, an airline, or a word like coffee, pizza or restroom.</div>`;
   results.classList.toggle('fresh', results.hidden); if (results.hidden) stagger(results, ':scope > button'); results.hidden = false; wireResults();
 }
 function wireResults() {

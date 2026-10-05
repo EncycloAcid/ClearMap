@@ -217,7 +217,7 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 }
 .topbar > * { pointer-events: auto; }
 .search { position: relative; z-index: 2; display: flex; align-items: center; gap: 8px; height: 48px; padding: 0 8px 0 16px; border-radius: 24px; }
-.search .ico { color: var(--label-2); }
+.search > .ico { color: var(--label-2); }
 .search input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; outline: none; font-size: 17px; }
 .search input::placeholder { color: var(--label-2); }
 .search input::-webkit-search-cancel-button { display: none; }
@@ -228,6 +228,8 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 .results button.active, .results button:hover { background: var(--fill); }
 .results .k { display: block; font-size: 13px; color: var(--label-2); }
 .results .empty { padding: 12px 16px; color: var(--label-2); }
+.results .k b { color: var(--label); font-weight: 650; }
+.results .hint { padding: 2px 16px 8px; font-size: 13px; color: var(--label-2); }
 .results .sec { padding: 10px 16px 4px; font-size: 13px; font-weight: 600; color: var(--label-2); }
 .results mark { background: none; color: inherit; font-weight: 750; }
 .results .airline-row { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 4px 16px 10px; }
