@@ -173,6 +173,15 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 .mk .pop { transition: transform .45s var(--spring); transform-box: fill-box; transform-origin: center; }
 .mk.sel .pop { transform: scale(1.55); }
 .gate .pill { stroke: var(--bldg); stroke-width: 1; }
+.gate .drop { fill: rgba(20, 30, 50, .22); }
+.gate .stem { display: none; fill: var(--bldg); }
+.gate.A .stem { fill: var(--conA); } .gate.B .stem { fill: var(--conB); } .gate.C .stem { fill: var(--conC); }
+/* selected or destination gate: a bigger pill on a stem whose tip marks the gate */
+#map .gate.sel .stem, #map .gate.dest .stem { display: block; }
+#map .gate.sel .pop, #map .gate.dest .pop { transform: translate(0, -13px) scale(1.45); }
+#map .gate.sel .drop, #map .gate.dest .drop { fill: rgba(20, 30, 50, .3); }
+#map .gate.dest { opacity: 1 !important; }
+#map.gate-end .route-endpt, #map.gate-start .route-start { display: none; }
 .gate[data-dot] .pop { transform: scale(.42); }
 .gate[data-dot] text { opacity: 0; }
 .gate[data-dot] .pill { x: -5.5px; width: 11px; }
