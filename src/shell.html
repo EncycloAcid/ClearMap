@@ -20,6 +20,7 @@
   --primary: #2f50d0; --on-primary: #ffffff; --primary-c: #dee3ff; --on-primary-c: #0c1a66;
   --tertiary-c: #ffe07d; --on-tertiary-c: #3b2c00;
   --route: #1f6bff; --route-case: #ffffff;
+  --p-terminal: #2b3340; --p-bags: #2a72c9; --p-transit: #d42a32; --p-ground: #4a5568;
   /* Concourse identity: A circle, B clover, C cookie */
   --conA: #64798a; --conB: #2563d8; --conC: #7a4cd6;
   --c-food: #ec7a1c; --c-coffee: #a0663e; --c-bar: #d23f86; --c-shop: #e5383b; --c-play: #2fa84f; --c-service: #11998e; --c-rest: #4a6cff;
@@ -50,6 +51,8 @@
     --primary: #b9c4ff; --on-primary: #0f1f6e; --primary-c: #2c3f9c; --on-primary-c: #e0e5ff;
     --tertiary-c: #5a4600; --on-tertiary-c: #ffe07d;
     --route: #4d8dff; --route-case: #0c0f13;
+  --p-terminal: #d9dee6; --p-bags: #4a8fe0; --p-transit: #e5484f; --p-ground: #7a8699;
+    --p-terminal: #d9dee6; --p-bags: #4a8fe0; --p-transit: #e5484f; --p-ground: #7a8699;
     --conA: #93a6b4; --conB: #5f97f2; --conC: #a989ee;
     --c-food: #ff9a45; --c-coffee: #c98d63; --c-bar: #f06aa9; --c-shop: #ff6366; --c-play: #4fd07a; --c-service: #33c2b6; --c-rest: #7f99ff;
     --ok: #4fd07a; --warn: #f0b04a; --no: #ff6b63;
@@ -65,6 +68,7 @@
   --primary: #b9c4ff; --on-primary: #0f1f6e; --primary-c: #2c3f9c; --on-primary-c: #e0e5ff;
   --tertiary-c: #5a4600; --on-tertiary-c: #ffe07d;
   --route: #4d8dff; --route-case: #0c0f13;
+  --p-terminal: #d9dee6; --p-bags: #4a8fe0; --p-transit: #e5484f; --p-ground: #7a8699;
   --conA: #93a6b4; --conB: #5f97f2; --conC: #a989ee;
   --c-food: #ff9a45; --c-coffee: #c98d63; --c-bar: #f06aa9; --c-shop: #ff6366; --c-play: #4fd07a; --c-service: #33c2b6; --c-rest: #7f99ff;
   --ok: #4fd07a; --warn: #f0b04a; --no: #ff6b63;
@@ -140,6 +144,9 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 .pin[data-cat="rest"] .pin-body { fill: var(--c-rest); }
 .pin-ico { fill: none; stroke: #fff; stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; color: #fff; }
 .pin[data-cat="place"] .pin-ico { stroke: var(--map); color: var(--map); }
+.pin[data-pk="terminal"] .pin-body { fill: var(--p-terminal); } .pin[data-pk="bags"] .pin-body { fill: var(--p-bags); }
+.pin[data-pk="transit"] .pin-body { fill: var(--p-transit); } .pin[data-pk="ground"] .pin-body { fill: var(--p-ground); }
+.pin[data-pk="bags"] .pin-ico, .pin[data-pk="transit"] .pin-ico, .pin[data-pk="ground"] .pin-ico { stroke: #fff; color: #fff; }
 .pin-inner { transform-box: fill-box; transform-origin: 50% 100%; }
 .pin.drop .pin-inner { animation: pin-drop .6s var(--spring) both; }
 .pin.drop .pin-shadow { animation: pin-shadow .6s ease-out both; }
@@ -168,7 +175,9 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 .amen text, .place text { font: 600 5.6px var(--font-text); fill: var(--label); paint-order: stroke; stroke: var(--map); stroke-width: 2.2px; stroke-linejoin: round; pointer-events: none; }
 .amen text, .place text { display: none; }
 #map .mk[data-lbl] text { display: block; }
-.place .sym { fill: var(--label); stroke: var(--bldg); stroke-width: 1.2; }
+.place .sym { fill: var(--p-terminal); stroke: var(--bldg); stroke-width: 1.2; }
+.place[data-pk="bags"] .sym { fill: var(--p-bags); } .place[data-pk="transit"] .sym { fill: var(--p-transit); } .place[data-pk="ground"] .sym { fill: var(--p-ground); }
+.place:not([data-pk="terminal"]) .glyph { stroke: #fff; }
 .place text { font-weight: 700; font-size: 6.2px; }
 [data-cat="food"] .sym { fill: var(--c-food); } [data-cat="coffee"] .sym { fill: var(--c-coffee); }
 [data-cat="bar"] .sym { fill: var(--c-bar); } [data-cat="shop"] .sym { fill: var(--c-shop); }
@@ -186,6 +195,7 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 #map .amen[data-off] { display: none; }
 #map .amen.closed .sz { opacity: .45; filter: grayscale(1); }
 #map[data-z="1"] .glyph { display: none; }
+#map[data-z="1"] .place .glyph { display: block; }
 .glyph { fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
 .place .glyph { stroke: var(--map); }
 #map .mk.sel { opacity: 1 !important; }
@@ -405,7 +415,8 @@ button.row:active, label.row:active { background: var(--fill); }
 .tile .ico { width: 17px; height: 17px; stroke-width: 2.2; }
 .tile.food { background: var(--c-food); } .tile.coffee { background: var(--c-coffee); } .tile.bar { background: var(--c-bar); }
 .tile.shop { background: var(--c-shop); } .tile.play { background: var(--c-play); } .tile.service { background: var(--c-service); }
-.tile.rest { background: var(--c-rest); } .tile.gate { background: var(--label-2); } .tile.place { background: var(--label); color: var(--map); }
+.tile.rest { background: var(--c-rest); } .tile.gate { background: var(--label-2); } .tile.place { background: var(--p-terminal); color: var(--map); }
+.tile.place.bags { background: var(--p-bags); color: #fff; } .tile.place.transit { background: var(--p-transit); color: #fff; } .tile.place.ground { background: var(--p-ground); color: #fff; }
 .tile.A { background: var(--conA); } .tile.B { background: var(--conB); } .tile.C { background: var(--conC); }
 .badge { width: 30px; height: 30px; flex: none; }
 .badge text { font: 800 9px var(--font-display); fill: #fff; text-anchor: middle; dominant-baseline: central; }
@@ -585,6 +596,16 @@ input.switch:checked::after { transform: translateX(20px); }
   <symbol id="i-service" viewBox="0 0 24 24"><path d="M13 2.5L5.5 13.5h6l-1 8 8-11.5h-6z"/></symbol>
   <symbol id="i-rest" viewBox="0 0 24 24"><circle cx="12" cy="4.5" r="2"/><path d="M8.5 21v-6.5L7.5 9h9l-1 5.5V21"/></symbol>
   <symbol id="i-gate" viewBox="0 0 24 24"><path d="M3 15.5l8-2.5V6a1.5 1.5 0 0 1 3 0v7l8 2.5M11 13v5l-2.5 2h7L13 18v-5"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M3 7h18v3a2 2 0 0 0 0 4v3H3v-3a2 2 0 0 0 0-4z"/><path d="M14.5 7.5v1.5M14.5 11.25v1.5M14.5 15v1.5"/></symbol>
+  <symbol id="i-bag" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="12" rx="2.5"/><path d="M9 8V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V8M9 12v4M15 12v4"/></symbol>
+  <symbol id="i-train" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="14" rx="3"/><path d="M6 10.5h12M9 20.5L7.5 22M15 20.5l1.5 1.5M9.5 14h.01M14.5 14h.01"/></symbol>
+  <symbol id="i-bus" viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="15" rx="2.5"/><path d="M5 11h14M8 18.5V21M16 18.5V21M8.5 15h.01M15.5 15h.01"/></symbol>
+  <symbol id="i-car" viewBox="0 0 24 24"><path d="M5 17v-4.5L7 7.5h10l2 5V17zM5 17v2.5M19 17v2.5M4.5 12.5h15M8 14.8h.01M16 14.8h.01"/></symbol>
+  <symbol id="i-taxi" viewBox="0 0 24 24"><path d="M5 18v-4.5L7 9h10l2 4.5V18zM5 18v2M19 18v2M4.5 13.5h15M8 15.8h.01M16 15.8h.01M10 9V6h4v3"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8-8M16 7l2 2M13.5 9.5l2 2"/></symbol>
+  <symbol id="i-bed" viewBox="0 0 24 24"><path d="M3 18V6.5M3 14.5h18V18M21 14.5V12a3 3 0 0 0-3-3h-7v5.5"/><circle cx="7" cy="11" r="1.7"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></symbol>
   <symbol id="i-place" viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11.5a7 7 0 0 0-14 0C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></symbol>
 </svg>
 

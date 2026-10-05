@@ -62,7 +62,8 @@ for (const [g, [x, y]] of Object.entries(GATE_POS)) {
   ITEMS[it.id] = it;
 }
 for (const id of AP.PLACES) {
-  ITEMS['v:' + id] = { id: 'v:' + id, kind: 'place', name: V[id][2], node: id, zone: 'L', ...P(id) };
+  const [icon, pk] = (AP.PLACE_STYLE || {})[id] || ['place', 'terminal'];
+  ITEMS['v:' + id] = { id: 'v:' + id, kind: 'place', name: V[id][2], node: id, zone: 'L', icon, pk, ...P(id) };
 }
 const perGate = {};
 AMEN.forEach(([name, cat, at, dwell, note], i) => {

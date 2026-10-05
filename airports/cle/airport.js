@@ -136,11 +136,15 @@ AIRPORTS.CLE = (() => {
     GEO, V, EDGES, SPINES, ROT, MAP_BOUNDS, AIRLINES, CON_RANGE, GATE_POS, ROT_GATES, AMEN, HOURS,
     LOWER_V: ['bag', 'rta', 'gtc', 'taxi', 'rent', 'hotel', 'ride', 'curb', 'lift_r'],
     PLACES: ['chk', 'tix', 'bag', 'rta', 'gtc', 'taxi', 'rent', 'hotel', 'ride', 'curb'],
+    // how each place is drawn: [icon, kind]; kinds set the sign colour (terminal, bags, transit, ground)
+    PLACE_STYLE: { chk: ['shield', 'terminal'], tix: ['ticket', 'terminal'], bag: ['bag', 'bags'], rta: ['train', 'transit'],
+      gtc: ['bus', 'ground'], taxi: ['taxi', 'ground'], rent: ['key', 'ground'], hotel: ['bed', 'ground'], ride: ['phone', 'ground'], curb: ['car', 'ground'] },
     basemap: BASEMAP_CLE,
     // node roles the engine needs: security checkpoint, airside hub, baggage claim, ticketing
     roles: { checkpoint: 'chk', hub: 'hub', baggage: 'bag', ticketing: 'tix', transit: 'rta' },
     ui: {
-      labels: [[150, -95, 'Main terminal'], [-185, 271, 'Rotunda'], [255, -40, 'Parking garage'], [125, 385, 'Concourse D · closed'], [140, 60, 'Lower Drive']],
+      // [x, y, text, anchor, floor]; no floor means both
+      labels: [[150, -95, 'Main terminal', , 'up'], [62, -100, 'Baggage claim', , 'lo'], [-185, 271, 'Rotunda'], [255, -40, 'Parking garage'], [125, 385, 'Concourse D · closed'], [140, 60, 'Lower Drive']],
       roundels: [['A', 118, -458], ['B', -236, -171], ['C', 72, 28]],
       securityLine: [100, -167, 124, -143],
       defaults: { from: 'v:chk', to: 'g:C22', gate: 'g:C22', arrGate: 'g:B6' },

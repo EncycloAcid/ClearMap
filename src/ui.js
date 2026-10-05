@@ -94,7 +94,10 @@ function drawBase() {
   fill('termM', pal.bldg); stroke('termM', pal['bldg-edge'], edge);
   // the concourses only have an upper level, so they fade back on the lower floor
   const lower = floor === 'lo';
-  for (const t of 'ABC') { fill('term' + t, lower ? pal['term-closed'] : pal['term' + t]); stroke('term' + t, pal['bldg-edge'], edge, lower ? [3, 2] : null); }
+  for (const t of 'ABC') {
+    if (!lower) { fill('term' + t, pal['term' + t]); stroke('term' + t, pal['bldg-edge'], edge); continue; }
+    c.globalAlpha = .55; fill('term' + t, pal['term-closed']); stroke('term' + t, pal['bldg-edge'], edge * .8); c.globalAlpha = 1;
+  }
   if (!lower) stroke('bridges', pal.bridge, 3.6);
   // this floor's walkways (OpenStreetMap indoor ways) and the escalators between floors
   stroke(lower ? 'walk0' : 'walk1', pal.corridor, 5);
@@ -109,13 +112,13 @@ function drawBase() {
   c.setLineDash([]);
 }
 const areaLabels = [];
-const lbl = (x, y, t, anchor = 'middle') => {
-  const g = el('g', { class: 'area-lbl' }); g.dataset.x = x; g.dataset.y = y;
+const lbl = (x, y, t, anchor = 'middle', lvl) => {
+  const g = el('g', { class: 'area-lbl' }); g.dataset.x = x; g.dataset.y = y; if (lvl) g.dataset.lv = lvl;
   el('text', { class: 'map-lbl', 'text-anchor': anchor }, g).textContent = t;
   g._w = t.length * 6.3; g._anchor = anchor;
   areaLabels.push(g);
 };
-for (const [x, y, t, anchor] of AP.ui.labels) lbl(x, y, t, anchor);
+for (const [x, y, t, anchor, lvl] of AP.ui.labels) lbl(x, y, t, anchor || 'middle', lvl);
 
 const routeGhostCase = el('path', { class: 'route-case ghost', 'stroke-width': 11, 'vector-effect': 'non-scaling-stroke', d: '' });
 const routeGhost = el('path', { class: 'route ghost', 'stroke-width': 7, 'vector-effect': 'non-scaling-stroke', d: '' });
@@ -139,13 +142,15 @@ for (const it of Object.values(ITEMS)) {
     el('use', { class: 'glyph', href: '#i-' + (it.icon || it.cat), x: -3.6, y: -3.6, width: 7.2, height: 7.2 }, sz);
     el('text', { x: 8, y: 2 }, g).textContent = it.name;
   } else {
-    g = el('g', { class: 'mk place', 'data-id': it.id }, layerPlaces);
+    // places are drawn as signs: a rounded square in their kind's colour
+    g = el('g', { class: 'mk place', 'data-id': it.id, 'data-pk': it.pk || 'terminal' }, layerPlaces);
     const sz = el('g', { class: 'sz' }, el('g', { class: 'pop' }, g));
-    el('circle', { class: 'sym', r: 5.4 }, sz);
-    el('use', { class: 'glyph', href: '#i-place', x: -3.6, y: -3.8, width: 7.2, height: 7.2 }, sz);
-    el('text', { x: 9, y: 2.2 }, g).textContent = it.name;
+    el('rect', { class: 'sym', x: -5.6, y: -5.6, width: 11.2, height: 11.2, rx: 3.4 }, sz);
+    el('use', { class: 'glyph', href: '#i-' + (it.icon || 'place'), x: -3.7, y: -3.7, width: 7.4, height: 7.4 }, sz);
+    // the map already shows which floor, so "(lower level)" and the like are dropped from the name
+    el('text', { x: 9, y: 2.2 }, g).textContent = it.name.replace(/\s*\([^)]*\)$/, '');
   }
-  if (it.kind !== 'gate') it.lw = it.name.length * (it.kind === 'place' ? 3.75 : 3.4) + 6;
+  if (it.kind !== 'gate') it.lw = g.querySelector('text').textContent.length * (it.kind === 'place' ? 3.75 : 3.4) + 6;
   el('title', {}, g).textContent = it.kind === 'gate' ? `${it.name} · Concourse ${it.con}` : it.name;
   if (it.lvl) g.dataset.lv = it.lvl;
   g.dataset.x = it.x; g.dataset.y = it.y; it.el = g; markers.push(g);
@@ -180,7 +185,7 @@ let pinItem = null;
 function setPin(it) {
   pinItem = it && it.kind !== 'gate' ? it : null;
   if (!pinItem) { pinG.setAttribute('opacity', 0); return; }
-  pinG.dataset.cat = pinItem.cat || 'place';
+  pinG.dataset.cat = pinItem.cat || 'place'; pinG.dataset.pk = pinItem.pk || '';
   pinUse.setAttribute('href', '#i-' + (pinItem.icon || pinItem.cat || 'place'));
   pinG.setAttribute('opacity', 1);
   placeDecor();
@@ -374,7 +379,7 @@ function cullLabels() {
     const p = scr({ x: +g.dataset.x, y: +g.dataset.y }), w = g._w * u;
     const r = g._anchor === 'start' ? { l: p.x, r: p.x + w } : { l: p.x - w / 2, r: p.x + w / 2 };
     r.t = p.y - 7 * u; r.b = p.y + 2 * u;
-    const ok = !offscreen(r) && !chrome.some(c => hit(r, c)) && !taken.some(o => hit(r, o)) && !dots.some(o => hit(r, o)) && !onRoute(r);
+    const ok = (!g.dataset.lv || g.dataset.lv === floor) && !offscreen(r) && !chrome.some(c => hit(r, c)) && !taken.some(o => hit(r, o)) && !dots.some(o => hit(r, o)) && !onRoute(r);
     g.toggleAttribute('data-off', !ok);
     if (ok) taken.push(r);
   }
@@ -846,7 +851,7 @@ function nearbyNames(it, n = 6) {
     .map(o => o.name).filter((v, i, a) => a.indexOf(v) === i).slice(0, n);
 }
 const tileFor = it => it.kind === 'gate' ? `<span class="tile ${it.con}">${icon('gate')}</span>`
-  : it.kind === 'amen' ? `<span class="tile ${it.cat}">${icon(it.icon || it.cat)}</span>` : `<span class="tile place">${icon('place')}</span>`;
+  : it.kind === 'amen' ? `<span class="tile ${it.cat}">${icon(it.icon || it.cat)}</span>` : `<span class="tile place ${it.pk || ''}">${icon(it.icon || 'place')}</span>`;
 function showPlace(it, fromMap) {
   if (!it) return;
   if (selected) selected.el.classList.remove('sel');
