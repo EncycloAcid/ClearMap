@@ -344,7 +344,7 @@ function cullLabels() {
   for (let s = 0; routePts.length > 1 && s <= routeTotal; s += 6) routeHits.push(scr(pointAt(s)));
   const onRoute = r => routeHits.some(p => p.x > r.l - 3 && p.x < r.r + 3 && p.y > r.t - 3 && p.y < r.b + 3);
   // floating chrome hides whatever is under it
-  const chrome = (chromeCache || (chromeCache = ['.controls', '.topbar', '#sheet'].map(s => document.querySelector(s).getBoundingClientRect())))
+  const chrome = (chromeCache || (chromeCache = ['.controls', '.topbar', '#sheet', '#navBanner', '#navBar'].map(s => document.querySelector(s).getBoundingClientRect())))
     .map(c => ({ l: c.left, r: c.right, t: c.top, b: c.bottom }));
   if (pinItem) {
     const p = scr(pinItem), pu = u * 1.15;
@@ -413,6 +413,10 @@ function animateTo(target) {
 }
 function visibleRect() {
   const W = innerWidth, H = innerHeight;
+  if (nav) {
+    const b = $('#navBanner').getBoundingClientRect(), f = $('#navBar').getBoundingClientRect();
+    return wide() ? { l: 448, t: 16, r: W - 72, b: H - 16 } : { l: 12, t: b.bottom + 8, r: W - 66, b: f.top - 8 };
+  }
   const top = $('.topbar').getBoundingClientRect().bottom + 6;
   let R;
   if (wide()) R = { l: sheet.getBoundingClientRect().right + 12, t: top, r: W - 72, b: H - 16 };
@@ -592,6 +596,7 @@ function setRoute(nodes, mins) {
   };
   drawRAF = requestAnimationFrame(step);
 }
+let nav = null;
 let drawRAF = null, pendingMe = null, routeNodes = [], routeDrawn = 1;
 // Draw the first f of the route: parts on the floor you're looking at in full, the rest faded
 function drawRoute(f) {
@@ -675,6 +680,7 @@ function onFix(pos) {
   // "My location" can start a route once we're at the airport
   const node = nearestWalkNode(p);
   ITEMS['v:me'] = { id: 'v:me', kind: 'place', name: 'My location', node, zone: 'L', x: p.x, y: p.y, el: meG };
+  navFix(p);
   if (pendingMe) { $('#' + pendingMe).value = 'v:me'; pendingMe = null; meNode = null; if (tab === 'dir' && !placeMode) updateRoute(true); }
   if (node !== meNode) {
     meNode = node;
@@ -723,7 +729,7 @@ function visibleFor(d) {
   if (d === 'full') return H;
   if (d === 'half') return Math.min(H, Math.round(innerHeight * 0.52));
   const first = sheetBody.querySelector('.pane:not([hidden]) > *');
-  let extra = first ? Math.min(first.offsetHeight, 132) + 20 : 90;
+  let extra = first ? Math.min(first.offsetHeight, 200) + 20 : 90;
   // keep the "nearest" buttons in the collapsed sheet too
   const next = first && first.nextElementSibling;
   if (next && next.classList.contains('quick') && !next.hidden) extra += next.offsetHeight + 16;
@@ -918,6 +924,112 @@ function showPlace(it, fromMap) {
 }
 $('#closePlace').onclick = () => { buzz(5); setTab(tab, true); };
 
+// ---------- Navigation: step by step ----------
+let curSteps = [];
+$('#hero').addEventListener('click', e => { if (e.target.closest('[data-go]')) startNav(); });
+// Which way you turn leaving the route at distance d: compare the heading a few metres before and after
+function turnAt(d) {
+  if (d <= 1 || d >= routeTotal - 1) return 'straight';
+  const a = pointAt(Math.max(0, d - 14)), b = pointAt(d), c = pointAt(Math.min(routeTotal, d + 14));
+  const ux = b.x - a.x, uy = b.y - a.y, vx = c.x - b.x, vy = c.y - b.y;
+  if (Math.hypot(ux, uy) < 1 || Math.hypot(vx, vy) < 1) return 'straight';
+  const ang = Math.atan2(ux * vy - uy * vx, ux * vx + uy * vy) * 180 / Math.PI;   // y points down, so positive is a right turn
+  const m = Math.abs(ang), side = ang > 0 ? 'right' : 'left';
+  return m < 30 ? 'straight' : m < 60 ? 'slight-' + side : m < 150 ? side : 'uturn';
+}
+const TURN_TEXT = { follow: 'Follow the signs', straight: 'Continue straight', 'slight-left': 'Bear left', 'slight-right': 'Bear right', left: 'Turn left', right: 'Turn right', uturn: 'Turn around' };
+function buildLegs() {
+  // where each step sits along the drawn route
+  let k = 0;
+  const at = curSteps.map(s => {
+    let j = routeNodes.indexOf(s.node, k); if (j < 0) j = s.end ? routeNodes.length - 1 : k;
+    k = j; return j;
+  });
+  const legs = [];
+  for (let i = 1; i < curSteps.length; i++) {
+    const ia = at[i - 1], ib = at[i];
+    let change = null;
+    for (let j = ia + 1; j <= ib; j++) if (levelOf(routeNodes[j - 1]) !== levelOf(routeNodes[j])) {
+      change = { lift: EDGE_KIND[routeNodes[j - 1] + '|' + routeNodes[j]] === 'lift', down: levelOf(routeNodes[j]) === 'lo' };
+    }
+    // at the foot of an escalator or out of a lift the drawn geometry doesn't match what you see, so just follow the signs
+    const prev = legs[legs.length - 1];
+    legs.push({ step: curSteps[i], from: curSteps[i - 1], ia, ib, d0: routeLens[ia] || 0, d1: routeLens[ib] || 0, change, turn: i === 1 ? 'start' : prev && prev.change ? 'follow' : turnAt(routeLens[ia] || 0) });
+  }
+  return legs;
+}
+function startNav() {
+  if (routeNodes.length < 2 || curSteps.length < 2) return;
+  buzz(); nav = { legs: buildLegs(), i: 0, done: false };
+  document.body.classList.add('navigating'); chromeCache = null;
+  fade($('#navBanner'), true); fade($('#navBar'), true);
+  showLeg(0, 1);
+}
+function endNav() {
+  if (!nav) return;
+  nav = null; buzz(5);
+  document.body.classList.remove('navigating'); chromeCache = null;
+  fade($('#navBanner'), false); fade($('#navBar'), false);
+  setDetent(wide() ? detent : 'peek');
+  fitItems(routePts, 24, 3.5);
+}
+function showLeg(i, dir) {
+  const legs = nav.legs;
+  nav.i = Math.max(0, Math.min(legs.length, i));
+  const main = $('#nbMain'), banner = $('#navBanner');
+  main.classList.toggle('back', dir < 0); replay(main);
+  if (nav.i === legs.length) {
+    // arrived
+    const s = legs[legs.length - 1].step;
+    banner.classList.add('arrived');
+    main.innerHTML = `<span class="nb-ico">${icon('flag')}</span><span class="nb-dist">You’re there</span><span class="nb-t">${esc(s.t)}</span>${s.n ? `<span class="nb-n">${esc(s.n)}</span>` : ''}`;
+    $('#nvMins').textContent = 'Arrived'; $('#nvSub').textContent = clock(Date.now());
+    $('#nvEnd').textContent = 'Done'; $('#navBar').classList.add('done');
+    $('#nbNext').disabled = true; $('#nbPrev').disabled = false; $('#nbCount').textContent = `${legs.length} of ${legs.length}`;
+    const p = NODE[s.node] || routePts[routePts.length - 1];
+    setFloor(levelOf(s.node), true); fitBox(p.x - 30, p.y - 30, p.x + 30, p.y + 30, 10, 4);
+    buzz(); return;
+  }
+  banner.classList.remove('arrived'); $('#navBar').classList.remove('done'); $('#nvEnd').textContent = 'End';
+  const L = legs[nav.i], dist = Math.max(5, Math.round((L.d1 - L.d0) / 5) * 5);
+  let ico = 'straight', cls = '', how = TURN_TEXT[L.turn] || '';
+  if (L.turn === 'start') { ico = 'walk'; how = `From ${L.from.t}`; }
+  else if (L.turn === 'uturn') ico = 'uturn';
+  else if (L.turn.includes('left') || L.turn.includes('right')) { ico = L.turn.startsWith('slight') ? 'slight' : 'right'; if (L.turn.includes('left')) cls = 'left'; }
+  if (L.change) { ico = L.change.lift ? 'lift' : 'swap'; cls = ''; how = `${L.change.lift ? 'Elevator' : 'Escalator'} ${L.change.down ? 'down to the lower level' : 'up to the upper level'}`; }
+  if (L.step.end) ico = L.change ? ico : 'flag';
+  const note = [how, L.step.n].filter(Boolean).join(' · ');
+  main.innerHTML = `<span class="nb-ico ${cls}">${icon(ico)}</span><span class="nb-dist">${dist}<small> m</small></span><span class="nb-t">${esc(L.step.t.replace(/\s*\((upper|lower) level\)$/, ''))}</span>${note ? `<span class="nb-n">${esc(note)}</span>` : ''}`;
+  $('#nbCount').textContent = `Step ${nav.i + 1} of ${legs.length}`;
+  $('#nbPrev').disabled = nav.i === 0; $('#nbNext').disabled = false;
+  // time left from the start of this leg
+  const left = Math.max(1, Math.ceil((routeTotal - L.d0) / M_PER_MIN) + (L.change && L.change.lift ? 1 : 0));
+  $('#nvMins').textContent = `${left} min`;
+  $('#nvSub').textContent = `${clock(Date.now() + left * 60000)} arrival · ${meters(routeTotal - L.d0)} m`;
+  // frame this leg, on the floor you start it on
+  const pts = routePts.slice(L.ia, L.ib + 1);
+  setFloor(levelOf(routeNodes[L.ia]), true);
+  fitItems(pts.length > 1 ? pts : [routePts[L.ia], routePts[L.ib]], 30, 3.6);
+}
+$('#nbMain').addEventListener('click', e => { const n = e.target.closest('.nb-n'); if (n) n.classList.toggle('open'); });
+$('#nbNext').onclick = () => { if (nav) { buzz(5); showLeg(nav.i + 1, 1); } };
+$('#nbPrev').onclick = () => { if (nav) { buzz(5); showLeg(nav.i - 1, -1); } };
+$('#nvEnd').onclick = () => endNav();
+{ // swipe the banner sideways to change step
+  let sx = null;
+  $('#navBanner').addEventListener('pointerdown', e => { sx = e.clientX; });
+  $('#navBanner').addEventListener('pointerup', e => {
+    if (sx == null || !nav) return; const dx = e.clientX - sx; sx = null;
+    if (Math.abs(dx) > 50) dx < 0 ? $('#nbNext').click() : (!$('#nbPrev').disabled && $('#nbPrev').click());
+  });
+}
+// with location on, move to the next step as you reach each one
+function navFix(p) {
+  if (!nav || nav.i >= nav.legs.length) return;
+  const L = nav.legs[nav.i], target = NODE[L.step.node];
+  if (target && Math.hypot(p.x - target.x, p.y - target.y) < Math.max(12, Math.min(25, (me && me.acc) || 15))) showLeg(nav.i + 1, 1);
+}
+
 // ---------- Directions ----------
 function buildOptions(sel, includeLandside = true, gatesOnly = false) {
   sel.innerHTML = '';
@@ -1011,7 +1123,9 @@ function updateRoute(fit) {
   $('#hero').className = 'hero';
   $('#hero').innerHTML = `<button class="hero-x" id="clearRoute" aria-label="Clear route">${icon('x')}</button><span class="num">${minutes(units)}<small>min</small></span>
     <span class="m1">${meters(len)} m walk${lift ? ' · elevator' : ''}</span>
-    <span class="m2">${via.length ? 'via ' + via.slice(0, 3).map(esc).join(' · ') : 'Direct'}</span>`;
+    <span class="m2">${via.length ? 'via ' + via.slice(0, 3).map(esc).join(' · ') : 'Direct'}</span>
+    <button class="go" data-go>${icon('walk')}Go</button>`;
+  curSteps = steps; if (nav) { nav.legs = buildLegs(); showLeg(Math.min(nav.i, nav.legs.length - 1), 0); }
   $('#steps').innerHTML = steps.map(s => `<li class="${s.end ? 'end' : ''}" data-node="${esc(s.node)}" tabindex="0" role="button"><span class="stop"></span><span><span class="t">${esc(s.t)}</span>${s.n ? `<span class="n">${esc(s.n)}</span>` : ''}</span></li>`).join('')
     + (passed.length ? `<li class="passing">On the way: ${passed.map(esc).join(', ')}</li>` : '');
   $('#steps').querySelectorAll('[data-node]').forEach(li => {
@@ -1071,7 +1185,9 @@ function updateArrival(fit) {
   $('#hero').className = 'hero';
   $('#hero').innerHTML = `<span class="num">${total}<small>min</small></span>
     <span class="m1">${meters(len)} m walk${p1.lift || p2.lift ? ' · elevator' : ''}${bags ? ` + ~${BAG_WAIT} min for bags` : ''}</span>
-    <span class="m2">${esc(gate.name)} to ${esc(info ? info[1] : dest.name)}</span>`;
+    <span class="m2">${esc(gate.name)} to ${esc(info ? info[1] : dest.name)}</span>
+    <button class="go" data-go>${icon('walk')}Go</button>`;
+  curSteps = steps; if (nav) { nav.legs = buildLegs(); showLeg(Math.min(nav.i, nav.legs.length - 1), 0); }
   $('#steps').innerHTML = steps.map(s => `<li class="${s.end ? 'end' : ''}" data-node="${esc(s.node)}" tabindex="0" role="button"><span class="stop"></span><span><span class="t">${esc(s.t)}</span>${s.n ? `<span class="n">${esc(s.n)}</span>` : ''}</span></li>`).join('')
     + (passed.length ? `<li class="passing">On the way: ${passed.map(esc).join(', ')}</li>` : '');
   $('#steps').querySelectorAll('[data-node]').forEach(li => {
@@ -1403,6 +1519,7 @@ document.addEventListener('pointerdown', e => { if (!apMenu.hidden && !e.target.
 
 // Android back button: close overlays before leaving the app
 window.cleBack = () => {
+  if (nav) { endNav(); return true; }
   if (!layersEl.hidden) { openLayers(false); return true; }
   if (!apMenu.hidden) { openAirports(false); return true; }
   if (!toastEl.hidden) { toastEl.hidden = true; return true; }
