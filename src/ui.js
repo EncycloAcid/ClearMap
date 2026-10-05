@@ -370,13 +370,20 @@ let anim = null;
 function animateTo(target) {
   cancelAnimationFrame(anim); cancelAnimationFrame(glide);
   if (reduced) { Object.assign(view, target); render(); return; }
-  const from = { ...view }, t0 = performance.now(), dur = 650;
+  // Fly the centre of the screen in a straight line while zoom changes
+  // geometrically, so places don't drift sideways; long hops ease out a
+  // little and back in, like Apple Maps.
+  const W = innerWidth / 2, H = innerHeight / 2, from = { ...view };
+  const c0 = { x: (W - from.x) / from.k, y: (H - from.y) / from.k }, c1 = { x: (W - target.x) / target.k, y: (H - target.y) / target.k };
+  const hop = Math.hypot(c1.x - c0.x, c1.y - c0.y) * Math.min(from.k, target.k) / Math.max(W, H);
+  const lift = Math.min(0.45, Math.max(0, hop - 0.6) * 0.25);
+  const dur = Math.min(900, 480 + hop * 120), t0 = performance.now();
   const step = now => {
     const p = Math.min(1, (now - t0) / dur);
-    // critically-damped spring-ish ease with a whisper of overshoot
-    const e = 1 - Math.exp(-7 * p) * (1 + 7 * p) * (1 - p * .02) ;
-    const kk = from.k * Math.pow(target.k / from.k, e);
-    view.k = kk; view.x = from.x + (target.x - from.x) * e; view.y = from.y + (target.y - from.y) * e;
+    const e = 1 - Math.exp(-7 * p) * (1 + 7 * p);          // critically damped, no overshoot
+    const k = from.k * Math.pow(target.k / from.k, e) * (1 - lift * Math.sin(Math.PI * e));
+    const cx = c0.x + (c1.x - c0.x) * e, cy = c0.y + (c1.y - c0.y) * e;
+    view.k = k; view.x = W - cx * k; view.y = H - cy * k;
     if (p < 1) { moving = true; apply(); anim = requestAnimationFrame(step); } else { moving = false; Object.assign(view, target); render(); }
   };
   anim = requestAnimationFrame(step);
@@ -587,6 +594,7 @@ function setFloor(f, quiet) {
   if (!f || f === floor) return;
   floor = f; svg.dataset.floor = f;
   document.querySelectorAll('#floorCap [data-floor]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.floor === f)));
+  $('#floorCap').style.setProperty('--i', f === 'lo' ? 1 : 0);
   if (routeDrawn >= 1) drawRoute(1);
   if (committed) render();
   if (!quiet) { buzz(5); toast(FLOOR_NAME[f]); }
@@ -608,9 +616,9 @@ const toastEl = $('#toast');
 let toastTimer = null;
 function toast(msg, action, label = 'Settings') {
   $('#toastMsg').textContent = msg;
-  const b = $('#toastAct'); b.hidden = !action; b.textContent = label; b.onclick = () => { toastEl.hidden = true; action(); };
-  toastEl.hidden = false; replay(toastEl);
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => { toastEl.hidden = true; }, action ? 7000 : 4200);
+  const b = $('#toastAct'); b.hidden = !action; b.textContent = label; b.onclick = () => { fade(toastEl, false); action(); };
+  if (toastEl.hidden) fade(toastEl, true); else bump(toastEl);
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => fade(toastEl, false), action ? 7000 : 4200);
 }
 const toMap = (lat, lon) => ({ x: (lon - GEO.lon0) * GEO.kx, y: -(lat - GEO.lat0) * GEO.ky });
 const locBtn = $('#locate');
@@ -760,13 +768,31 @@ layersEl.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => {
   const on = b.getAttribute('aria-pressed') === 'true';
   b.setAttribute('aria-pressed', String(!on)); svg.classList.toggle('hide-' + b.dataset.cat, on); buzz(5); cullLabels();
 });
-function openLayers(open) { layersEl.hidden = !open; layersBtn.setAttribute('aria-expanded', String(open)); }
-layersBtn.onclick = () => { buzz(5); openLayers(layersEl.hidden); };
+function openLayers(open) { if (open) stagger(layersEl, 'button'); fade(layersEl, open); layersBtn.setAttribute('aria-expanded', String(open)); }
+layersBtn.onclick = () => { buzz(5); openLayers(layersEl.hidden || layersEl.classList.contains('leaving')); };
 document.addEventListener('pointerdown', e => { if (!layersEl.hidden && !e.target.closest('#layers, #layersBtn')) openLayers(false); }, true);
 $('#q').placeholder = `Search ${AP.short}`;
 
 // ---------- Tabs ----------
 function replay(node) { if (reduced) return; node.classList.remove('enter'); void node.offsetWidth; node.classList.add('enter'); }
+// Show or hide a popover, letting it fade out rather than vanish
+function fade(node, show) {
+  clearTimeout(node._fade);
+  if (show) { node.classList.remove('leaving'); node.hidden = false; return; }
+  if (node.hidden || reduced) { node.hidden = true; node.classList.remove('leaving'); return; }
+  node.classList.add('leaving');
+  node._fade = setTimeout(() => { node.hidden = true; node.classList.remove('leaving'); }, 160);
+}
+function bump(node) { if (reduced) return; node.classList.remove('bump'); void node.offsetWidth; node.classList.add('bump'); }
+// stagger the rows of a list as it opens
+function stagger(node, sel) { node.querySelectorAll(sel).forEach((r, i) => r.style.setProperty('--n', Math.min(i, 10))); }
+// the big minutes figure nudges when the time changes
+let heroMins = null;
+new MutationObserver(() => {
+  const n = $('#hero .num'), v = n && n.firstChild ? n.firstChild.textContent : null;
+  if (n && heroMins !== null && v !== heroMins) bump(n);
+  heroMins = v;
+}).observe($('#hero'), { childList: true });
 const TAB_TITLES = { dir: 'Directions', kill: 'Pass the time', air: 'Airlines' };
 let tab = 'dir';
 function setTab(name, quiet) {
@@ -1020,6 +1046,7 @@ function updateArrival(fit) {
 function setMode(m, quiet) {
   mode = m;
   document.querySelectorAll('#modeSw [data-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === m)));
+  $('#modeSw').style.setProperty('--i', m === 'arr' ? 1 : 0);
   const arr = m === 'arr';
   $('#arrForm').hidden = !arr;
   document.querySelector('#pane-dir .fromto').hidden = arr;
@@ -1266,7 +1293,7 @@ function suggestions() {
   hits = [...recent.map(itemHit), ...popular.map(itemHit)]; active = -1;
   results.innerHTML = `<div class="sec">Airlines</div><div class="airline-row">${AIRLINES.map((a, i) => `<button data-air="${i}">${badgeSvg(a.con, 24)}${esc(a.name)}</button>`).join('')}</div>`
     + renderHits([['Recent', recent.map(itemHit)], ['Popular', popular.map(itemHit)]]);
-  results.hidden = false; wireResults();
+  results.classList.toggle('fresh', results.hidden); if (results.hidden) stagger(results, ':scope > button'); results.hidden = false; wireResults();
 }
 function runSearch() {
   const s = q.value.trim().toLowerCase();
@@ -1291,7 +1318,7 @@ function runSearch() {
   hits = sections.flatMap(([, l]) => l); active = 0;
   results.innerHTML = hits.length ? renderHits(sections, s.length > 1 || !gates.length ? s : '')
     : `<div class="empty">No results for “${esc(q.value.trim())}”. Try a gate like B6, an airline, or “coffee”.</div>`;
-  results.hidden = false; wireResults();
+  results.classList.toggle('fresh', results.hidden); if (results.hidden) stagger(results, ':scope > button'); results.hidden = false; wireResults();
 }
 function wireResults() {
   results.querySelectorAll('[data-i]').forEach(b => b.onclick = () => pick(+b.dataset.i));
@@ -1318,19 +1345,20 @@ document.addEventListener('pointerdown', e => { if (!e.target.closest('.search')
 // ---------- Airport picker ----------
 const apMenu = $('#apMenu'), apBtn = $('#eyebrow');
 function openAirports(open) {
-  apMenu.hidden = !open; apBtn.setAttribute('aria-expanded', String(open));
+  fade(apMenu, open); apBtn.setAttribute('aria-expanded', String(open));
   if (!open) return;
   apMenu.innerHTML = Object.values(AIRPORTS).map(a => `<button role="menuitemradio" aria-checked="${a.code === AP.code}" data-ap="${a.code}">
       <span class="code">${esc(a.code)}</span><span><span>${esc(a.name)}</span><span class="s">${esc(a.city)}</span></span>
       <span style="color:var(--primary)">${a.code === AP.code ? icon('check') : ''}</span></button>`).join('')
     + `<div class="soon">More airports are on the way.</div>`;
+  stagger(apMenu, 'button');
   apMenu.querySelectorAll('[data-ap]').forEach(b => b.onclick = () => {
     if (b.dataset.ap === AP.code) return openAirports(false);
     try { localStorage.setItem('cw.airport', b.dataset.ap); } catch (e) {}
     location.reload();
   });
 }
-apBtn.addEventListener('click', () => { if (!placeMode) { buzz(5); openAirports(apMenu.hidden); } });
+apBtn.addEventListener('click', () => { if (!placeMode) { buzz(5); openAirports(apMenu.hidden || apMenu.classList.contains('leaving')); } });
 document.addEventListener('pointerdown', e => { if (!apMenu.hidden && !e.target.closest('#apMenu, #eyebrow')) openAirports(false); });
 
 // Android back button: close overlays before leaving the app

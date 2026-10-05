@@ -239,6 +239,24 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 .chip[aria-pressed="false"] { color: var(--label-2); }
 .chip[aria-pressed="false"] .tile { background: var(--fill-2) !important; color: var(--label-2); }
 
+/* ---------- Popovers: spring in from where they're anchored, quick fade out ---------- */
+.results, .layers, .ap-menu, .toast-bar { animation: pop-in .42s var(--spring) both; }
+.results { transform-origin: 50% 0; }
+.layers { transform-origin: calc(100% + 30px) 22px; }
+.ap-menu { transform-origin: 40px 0; }
+.toast-bar { transform-origin: 50% 0; }
+.leaving { animation: pop-out .16s ease-in both !important; pointer-events: none; }
+@keyframes pop-in { from { opacity: 0; transform: scale(.9) translateY(-6px); } }
+@keyframes pop-out { to { opacity: 0; transform: scale(.96) translateY(-4px); } }
+.layers button, .results.fresh > button, .ap-menu button { animation: row-in .38s var(--spring-slow) both; animation-delay: calc(var(--n, 0) * 22ms); }
+@keyframes row-in { from { opacity: 0; transform: translateY(-5px); } }
+/* map markers ease in when a layer is switched back on */
+#map .amen { animation: mk-in .35s var(--spring) both; transform-box: fill-box; transform-origin: center; }
+@keyframes mk-in { from { opacity: 0; } }
+/* numbers that change give a small nudge */
+.bump { animation: bump .45s var(--spring); }
+@keyframes bump { 30% { transform: scale(1.08); } }
+
 /* ---------- Layers menu ---------- */
 .layers { position: fixed; z-index: 6; right: calc(var(--safe-right) + 72px); top: calc(var(--safe-top) + 70px); width: min(270px, calc(100% - 104px)); border-radius: 20px; padding: 6px 0; background: var(--solid); }
 .layers .lh { padding: 8px 16px 4px; font-size: 13px; font-weight: 600; color: var(--label-2); }
@@ -270,8 +288,11 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 .sheet-head { position: relative; }
 
 /* ---------- Floors ---------- */
-.floor button { font: 800 16px var(--font-display); color: var(--label-2); }
-.floor button[aria-pressed="true"] { background: var(--on-primary-c); color: var(--primary-c); }
+.floor { position: relative; }
+.floor::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 44px; background: var(--on-primary-c);
+  transform: translateY(calc(var(--i, 0) * 100%)); transition: transform .45s var(--spring); }
+.floor button { position: relative; font: 800 16px var(--font-display); color: var(--label-2); transition: color .25s, transform .35s var(--spring); }
+.floor button[aria-pressed="true"] { color: var(--primary-c); }
 #map[data-floor="up"] .mk[data-lv="lo"]:not(.sel), #map[data-floor="lo"] .mk[data-lv="up"]:not(.sel) { display: none; }
 .ghost { opacity: .32; }
 .esc { cursor: pointer; }
@@ -290,12 +311,10 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 .me-cone { fill: var(--route); opacity: .35; }
 @keyframes me-pulse { from { transform: scale(.6); opacity: .45; } to { transform: scale(2.2); opacity: 0; } }
 .toast-bar {
-  position: fixed; z-index: 7; left: 50%; top: calc(var(--safe-top) + 70px); translate: -50% 0;
-  max-width: min(440px, calc(100% - 32px)); display: flex; align-items: center; gap: 12px;
+  position: fixed; z-index: 7; left: calc(var(--safe-left) + 16px); right: calc(var(--safe-right) + 76px); margin: 0 auto; width: fit-content; top: calc(var(--safe-top) + 70px);
+  max-width: 440px; display: flex; align-items: center; gap: 12px;
   padding: 10px 12px 10px 16px; border-radius: 18px; font-size: 14px; font-weight: 600;
-  animation: toast-in .45s var(--spring) both;
 }
-@keyframes toast-in { from { opacity: 0; transform: translateY(-8px) scale(.96); } }
 .toast-bar button { border: 0; border-radius: 12px; padding: 6px 12px; background: var(--primary); color: var(--on-primary); font-weight: 700; font-size: 13px; flex: none; }
 .attrib { margin: 8px 16px 0; font-size: 12px; color: var(--label-3); }
 .attrib a { color: inherit; }
@@ -406,6 +425,7 @@ button.row:active, label.row:active { background: var(--fill); }
   background: var(--primary-c); color: var(--on-primary-c); border-radius: 32px 32px 32px 12px;
 }
 .hero .num { font: 900 64px/0.85 var(--font-display); font-variation-settings: "wdth" 125, "opsz" 96; letter-spacing: -.04em; font-variant-numeric: tabular-nums; grid-row: span 2; }
+.hero .num { transform-origin: 0 100%; }
 .hero .num small { font-size: 22px; font-weight: 750; letter-spacing: 0; margin-left: 4px; font-variation-settings: "wdth" 100; }
 .hero .m1 { font: 700 17px var(--font-display); font-variation-settings: "wdth" 105; align-self: end; }
 .hero .m2 { font-size: 14px; opacity: .8; align-self: start; }
@@ -463,10 +483,14 @@ input.xs::-moz-range-thumb { width: 4px; height: 44px; border: 0; border-radius:
 }
 .tonal-btn:active { border-radius: 12px; transform: scale(.97); }
 .titlebar > .mode { flex: none; }
-.mode { display: flex; gap: 2px; padding: 2px; border-radius: 12px; background: var(--fill); flex: none; align-self: center; }
-.mode button { height: 30px; padding: 0 10px; border: 0; border-radius: 10px; background: none; font-size: 13px; font-weight: 700; color: var(--label-2);
-  transition: background-color .25s, color .25s, border-radius .4s var(--spring); }
-.mode button[aria-pressed="true"] { background: var(--on-primary-c); color: var(--primary-c); border-radius: 8px; }
+.mode { position: relative; display: grid; grid-template-columns: 1fr 1fr; padding: 2px; border-radius: 12px; background: var(--fill); flex: none; align-self: center; }
+.mode::before { content: ""; position: absolute; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 2px); border-radius: 10px; background: var(--on-primary-c);
+  transform: translateX(calc(var(--i, 0) * 100%)); transition: transform .45s var(--spring), border-radius .3s; }
+.mode:active::before { border-radius: 8px; }
+.mode button { position: relative; height: 30px; padding: 0 10px; border: 0; background: none; font-size: 13px; font-weight: 700; color: var(--label-2);
+  transition: color .25s, transform .35s var(--spring); }
+.mode button:active { transform: scale(.94); }
+.mode button[aria-pressed="true"] { color: var(--primary-c); }
 /* iOS-style switch */
 input.switch { -webkit-appearance: none; appearance: none; width: 51px; height: 31px; border-radius: 16px; background: var(--fill-2); position: relative; flex: none; margin: 0; cursor: pointer; transition: background-color .25s; }
 input.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.2); transition: transform .4s var(--spring); }
@@ -1391,13 +1415,20 @@ let anim = null;
 function animateTo(target) {
   cancelAnimationFrame(anim); cancelAnimationFrame(glide);
   if (reduced) { Object.assign(view, target); render(); return; }
-  const from = { ...view }, t0 = performance.now(), dur = 650;
+  // Fly the centre of the screen in a straight line while zoom changes
+  // geometrically, so places don't drift sideways; long hops ease out a
+  // little and back in, like Apple Maps.
+  const W = innerWidth / 2, H = innerHeight / 2, from = { ...view };
+  const c0 = { x: (W - from.x) / from.k, y: (H - from.y) / from.k }, c1 = { x: (W - target.x) / target.k, y: (H - target.y) / target.k };
+  const hop = Math.hypot(c1.x - c0.x, c1.y - c0.y) * Math.min(from.k, target.k) / Math.max(W, H);
+  const lift = Math.min(0.45, Math.max(0, hop - 0.6) * 0.25);
+  const dur = Math.min(900, 480 + hop * 120), t0 = performance.now();
   const step = now => {
     const p = Math.min(1, (now - t0) / dur);
-    // critically-damped spring-ish ease with a whisper of overshoot
-    const e = 1 - Math.exp(-7 * p) * (1 + 7 * p) * (1 - p * .02) ;
-    const kk = from.k * Math.pow(target.k / from.k, e);
-    view.k = kk; view.x = from.x + (target.x - from.x) * e; view.y = from.y + (target.y - from.y) * e;
+    const e = 1 - Math.exp(-7 * p) * (1 + 7 * p);          // critically damped, no overshoot
+    const k = from.k * Math.pow(target.k / from.k, e) * (1 - lift * Math.sin(Math.PI * e));
+    const cx = c0.x + (c1.x - c0.x) * e, cy = c0.y + (c1.y - c0.y) * e;
+    view.k = k; view.x = W - cx * k; view.y = H - cy * k;
     if (p < 1) { moving = true; apply(); anim = requestAnimationFrame(step); } else { moving = false; Object.assign(view, target); render(); }
   };
   anim = requestAnimationFrame(step);
@@ -1608,6 +1639,7 @@ function setFloor(f, quiet) {
   if (!f || f === floor) return;
   floor = f; svg.dataset.floor = f;
   document.querySelectorAll('#floorCap [data-floor]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.floor === f)));
+  $('#floorCap').style.setProperty('--i', f === 'lo' ? 1 : 0);
   if (routeDrawn >= 1) drawRoute(1);
   if (committed) render();
   if (!quiet) { buzz(5); toast(FLOOR_NAME[f]); }
@@ -1629,9 +1661,9 @@ const toastEl = $('#toast');
 let toastTimer = null;
 function toast(msg, action, label = 'Settings') {
   $('#toastMsg').textContent = msg;
-  const b = $('#toastAct'); b.hidden = !action; b.textContent = label; b.onclick = () => { toastEl.hidden = true; action(); };
-  toastEl.hidden = false; replay(toastEl);
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => { toastEl.hidden = true; }, action ? 7000 : 4200);
+  const b = $('#toastAct'); b.hidden = !action; b.textContent = label; b.onclick = () => { fade(toastEl, false); action(); };
+  if (toastEl.hidden) fade(toastEl, true); else bump(toastEl);
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => fade(toastEl, false), action ? 7000 : 4200);
 }
 const toMap = (lat, lon) => ({ x: (lon - GEO.lon0) * GEO.kx, y: -(lat - GEO.lat0) * GEO.ky });
 const locBtn = $('#locate');
@@ -1781,13 +1813,31 @@ layersEl.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => {
   const on = b.getAttribute('aria-pressed') === 'true';
   b.setAttribute('aria-pressed', String(!on)); svg.classList.toggle('hide-' + b.dataset.cat, on); buzz(5); cullLabels();
 });
-function openLayers(open) { layersEl.hidden = !open; layersBtn.setAttribute('aria-expanded', String(open)); }
-layersBtn.onclick = () => { buzz(5); openLayers(layersEl.hidden); };
+function openLayers(open) { if (open) stagger(layersEl, 'button'); fade(layersEl, open); layersBtn.setAttribute('aria-expanded', String(open)); }
+layersBtn.onclick = () => { buzz(5); openLayers(layersEl.hidden || layersEl.classList.contains('leaving')); };
 document.addEventListener('pointerdown', e => { if (!layersEl.hidden && !e.target.closest('#layers, #layersBtn')) openLayers(false); }, true);
 $('#q').placeholder = `Search ${AP.short}`;
 
 // ---------- Tabs ----------
 function replay(node) { if (reduced) return; node.classList.remove('enter'); void node.offsetWidth; node.classList.add('enter'); }
+// Show or hide a popover, letting it fade out rather than vanish
+function fade(node, show) {
+  clearTimeout(node._fade);
+  if (show) { node.classList.remove('leaving'); node.hidden = false; return; }
+  if (node.hidden || reduced) { node.hidden = true; node.classList.remove('leaving'); return; }
+  node.classList.add('leaving');
+  node._fade = setTimeout(() => { node.hidden = true; node.classList.remove('leaving'); }, 160);
+}
+function bump(node) { if (reduced) return; node.classList.remove('bump'); void node.offsetWidth; node.classList.add('bump'); }
+// stagger the rows of a list as it opens
+function stagger(node, sel) { node.querySelectorAll(sel).forEach((r, i) => r.style.setProperty('--n', Math.min(i, 10))); }
+// the big minutes figure nudges when the time changes
+let heroMins = null;
+new MutationObserver(() => {
+  const n = $('#hero .num'), v = n && n.firstChild ? n.firstChild.textContent : null;
+  if (n && heroMins !== null && v !== heroMins) bump(n);
+  heroMins = v;
+}).observe($('#hero'), { childList: true });
 const TAB_TITLES = { dir: 'Directions', kill: 'Pass the time', air: 'Airlines' };
 let tab = 'dir';
 function setTab(name, quiet) {
@@ -2041,6 +2091,7 @@ function updateArrival(fit) {
 function setMode(m, quiet) {
   mode = m;
   document.querySelectorAll('#modeSw [data-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === m)));
+  $('#modeSw').style.setProperty('--i', m === 'arr' ? 1 : 0);
   const arr = m === 'arr';
   $('#arrForm').hidden = !arr;
   document.querySelector('#pane-dir .fromto').hidden = arr;
@@ -2287,7 +2338,7 @@ function suggestions() {
   hits = [...recent.map(itemHit), ...popular.map(itemHit)]; active = -1;
   results.innerHTML = `<div class="sec">Airlines</div><div class="airline-row">${AIRLINES.map((a, i) => `<button data-air="${i}">${badgeSvg(a.con, 24)}${esc(a.name)}</button>`).join('')}</div>`
     + renderHits([['Recent', recent.map(itemHit)], ['Popular', popular.map(itemHit)]]);
-  results.hidden = false; wireResults();
+  results.classList.toggle('fresh', results.hidden); if (results.hidden) stagger(results, ':scope > button'); results.hidden = false; wireResults();
 }
 function runSearch() {
   const s = q.value.trim().toLowerCase();
@@ -2312,7 +2363,7 @@ function runSearch() {
   hits = sections.flatMap(([, l]) => l); active = 0;
   results.innerHTML = hits.length ? renderHits(sections, s.length > 1 || !gates.length ? s : '')
     : `<div class="empty">No results for “${esc(q.value.trim())}”. Try a gate like B6, an airline, or “coffee”.</div>`;
-  results.hidden = false; wireResults();
+  results.classList.toggle('fresh', results.hidden); if (results.hidden) stagger(results, ':scope > button'); results.hidden = false; wireResults();
 }
 function wireResults() {
   results.querySelectorAll('[data-i]').forEach(b => b.onclick = () => pick(+b.dataset.i));
@@ -2339,19 +2390,20 @@ document.addEventListener('pointerdown', e => { if (!e.target.closest('.search')
 // ---------- Airport picker ----------
 const apMenu = $('#apMenu'), apBtn = $('#eyebrow');
 function openAirports(open) {
-  apMenu.hidden = !open; apBtn.setAttribute('aria-expanded', String(open));
+  fade(apMenu, open); apBtn.setAttribute('aria-expanded', String(open));
   if (!open) return;
   apMenu.innerHTML = Object.values(AIRPORTS).map(a => `<button role="menuitemradio" aria-checked="${a.code === AP.code}" data-ap="${a.code}">
       <span class="code">${esc(a.code)}</span><span><span>${esc(a.name)}</span><span class="s">${esc(a.city)}</span></span>
       <span style="color:var(--primary)">${a.code === AP.code ? icon('check') : ''}</span></button>`).join('')
     + `<div class="soon">More airports are on the way.</div>`;
+  stagger(apMenu, 'button');
   apMenu.querySelectorAll('[data-ap]').forEach(b => b.onclick = () => {
     if (b.dataset.ap === AP.code) return openAirports(false);
     try { localStorage.setItem('cw.airport', b.dataset.ap); } catch (e) {}
     location.reload();
   });
 }
-apBtn.addEventListener('click', () => { if (!placeMode) { buzz(5); openAirports(apMenu.hidden); } });
+apBtn.addEventListener('click', () => { if (!placeMode) { buzz(5); openAirports(apMenu.hidden || apMenu.classList.contains('leaving')); } });
 document.addEventListener('pointerdown', e => { if (!apMenu.hidden && !e.target.closest('#apMenu, #eyebrow')) openAirports(false); });
 
 // Android back button: close overlays before leaving the app
