@@ -30,6 +30,10 @@ class MainActivity : Activity() {
 
     // A location request from the page waiting on the Android permission dialog
     private var pendingGeo: Pair<String, GeolocationPermissions.Callback>? = null
+    // Fused location and compass for the map's blue dot (see NativeLocation)
+    private val nativeLoc by lazy { NativeLocation(this) { js -> runOnUiThread { web.evaluateJavascript(js, null) } } }
+    private var locWanted = false
+    private var pendingNativeLoc = false
 
     // Serve the bundled page from a secure https origin; WebView only allows GPS on secure pages.
     private val assets by lazy {
@@ -128,6 +132,10 @@ class MainActivity : Activity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode != REQ_LOCATION) return
         val granted = grantResults.any { it == PackageManager.PERMISSION_GRANTED }
+        if (pendingNativeLoc) {
+            pendingNativeLoc = false
+            if (granted) { locWanted = true; nativeLoc.start() } else web.evaluateJavascript("window.cleLocationError && cleLocationError(1)", null)
+        }
         pendingGeo?.let { (origin, callback) -> callback.invoke(origin, granted, false) }
         pendingGeo = null
     }
@@ -144,6 +152,19 @@ class MainActivity : Activity() {
 
         @JavascriptInterface
         fun cancelReminder() = ReminderReceiver.cancel(this@MainActivity)
+
+        /** Start the blue dot: fused location and compass, sent to window.cleLocation / cleHeading. */
+        @JavascriptInterface
+        fun startLocation() = runOnUiThread {
+            if (hasLocationPermission()) { locWanted = true; nativeLoc.start() }
+            else {
+                pendingNativeLoc = true
+                requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), REQ_LOCATION)
+            }
+        }
+
+        @JavascriptInterface
+        fun stopLocation() = runOnUiThread { locWanted = false; nativeLoc.stop() }
 
         /** The trip for the home-screen widget, as JSON (see TripWidget). */
         @JavascriptInterface
@@ -202,7 +223,19 @@ class MainActivity : Activity() {
         web.saveState(outState)
     }
 
+    // no location or compass while the app is in the background
+    override fun onPause() {
+        super.onPause()
+        if (locWanted) nativeLoc.stop()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (locWanted && hasLocationPermission()) nativeLoc.start()
+    }
+
     override fun onDestroy() {
+        nativeLoc.stop()
         web.destroy()
         super.onDestroy()
     }
