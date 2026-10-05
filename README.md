@@ -1,6 +1,8 @@
-# ClearMap: CLE Gate Finder
+# Clearway
 
-An interactive map of Cleveland Hopkins International Airport (CLE). It runs as an Android app, and the same map is a self-contained web page, `index.html`, that opens in any browser.
+*Your clear way through the airport.* (Formerly CLE Gate Finder.)
+
+Clearway is an interactive airport map. It starts with Cleveland Hopkins International (CLE) and is built so more airports can be added. It runs as an Android app, and the same map is a self-contained web page, `index.html`, that opens in any browser.
 
 **Design:** iOS sets the structure and Material 3 Expressive sets the character.
 - **iOS:** a full-screen map, frosted-glass controls, a draggable bottom sheet with peek, half and full heights (a sidebar on wide screens), a segmented control, inset grouped lists, and Apple-Maps-style dotted walking routes with a moving puck.
@@ -52,3 +54,23 @@ The release build is signed with the Android debug key so it installs right away
 ## Map data
 
 The base map comes from [OpenStreetMap](https://www.openstreetmap.org/copyright) and is © OpenStreetMap contributors, available under the Open Database License. To regenerate it, run `python3 tools/build_basemap.py`. The script downloads the CLE area and writes `basemap.js`. Paste that between the `BASEMAP:start` and `BASEMAP:end` markers in `index.html`.
+
+## Project layout
+
+| Path | What it is |
+|---|---|
+| `src/shell.html` | Page markup, styles and the script prelude |
+| `src/engine.js` | Routing engine (works for any airport) |
+| `src/ui.js` | The app (works for any airport) |
+| `airports/<code>/airport.js` | One airport's data: gates, walkways, places, hours, airlines, map labels, arrival tips, time zone |
+| `airports/<code>/basemap.js` | That airport's OpenStreetMap layers |
+| `tools/build.py` | Builds `index.html` from all of the above |
+| `tools/build_basemap.py` | Regenerates an airport's base map from OpenStreetMap |
+
+Edit the files in `src/` and `airports/`, then run `python3 tools/build.py`. Don't edit `index.html` by hand; it's generated. The Android app packages the built `index.html`.
+
+## Adding an airport
+
+1. Create `airports/<code>/` and generate `basemap.js` for it with `tools/build_basemap.py` (adjust the origin, crop and terminal names).
+2. Copy `airports/cle/airport.js` and replace its data: walkway graph (`V`, `EDGES`, `SPINES`), gates, places, amenities, hours, airlines, labels, arrival tips and time zone. Register it as `AIRPORTS.<CODE>`.
+3. Run `python3 tools/build.py`. The new airport appears in the airport picker (tap the airport name above the sheet title).

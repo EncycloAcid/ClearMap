@@ -2,9 +2,9 @@ name: Android APK
 
 on:
   push:
-    paths: ["index.html", "android/**", ".github/workflows/android.yml"]
+    paths: ["index.html", "src/**", "airports/**", "tools/**", "android/**", ".github/workflows/android.yml"]
   pull_request:
-    paths: ["index.html", "android/**", ".github/workflows/android.yml"]
+    paths: ["index.html", "src/**", "airports/**", "tools/**", "android/**", ".github/workflows/android.yml"]
   workflow_dispatch:
 
 jobs:
@@ -15,6 +15,9 @@ jobs:
         working-directory: android
     steps:
       - uses: actions/checkout@v4
+      - name: Check index.html is built from src/ and airports/
+        working-directory: .
+        run: python3 tools/build.py && git diff --exit-code index.html
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -23,5 +26,5 @@ jobs:
       - run: ./gradlew assembleRelease --no-daemon
       - uses: actions/upload-artifact@v4
         with:
-          name: cle-gate-finder-apk
+          name: clearway-apk
           path: android/app/build/outputs/apk/release/app-release.apk

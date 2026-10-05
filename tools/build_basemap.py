@@ -9,6 +9,9 @@ index.html embeds between the BASEMAP markers.
 Map data © OpenStreetMap contributors, ODbL 1.0.
 
 Usage: python3 tools/build_basemap.py [path/to/cle.osm]
+Writes airports/cle/basemap.js (BASEMAP_CLE); then run tools/build.py.
+To add another airport, copy this script's settings (origin, crop, OSM bbox,
+terminal names) for it and write airports/<code>/basemap.js the same way.
 Needs shapely (pip install shapely) to pave the ramp around the concourses.
 """
 import json, math, os, sys, urllib.request
@@ -127,9 +130,10 @@ def main():
     L['ramp'] = [path(list(g.exterior.coords)[:-1], True) + ''.join(path(list(i.coords)[:-1], True) for i in g.interiors) for g in geoms]
     out = {k: ''.join(v) for k, v in L.items()}
     out['planes'] = planes
-    js = 'const BASEMAP = ' + json.dumps(out, separators=(',', ':')) + ';\n'
-    open('basemap.js', 'w').write(js)
-    print('basemap.js', len(js) // 1024, 'KB', {k: len(v) for k, v in L.items()}, 'planes', len(planes))
+    js = 'const BASEMAP_CLE = ' + json.dumps(out, separators=(',', ':')) + ';\n'
+    dest = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'airports', 'cle', 'basemap.js')
+    open(dest, 'w').write(js)
+    print(dest, len(js) // 1024, 'KB', {k: len(v) for k, v in L.items()}, 'planes', len(planes))
 
 if __name__ == '__main__':
     main()

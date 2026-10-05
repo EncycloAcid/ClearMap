@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">CLE Gate Finder</string>
+    <string name="app_name">Clearway</string>
     <string name="sc_restroom_short">Restroom</string>
     <string name="sc_restroom_long">Nearest restroom</string>
     <string name="sc_coffee_short">Coffee</string>

@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Clearway</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wdth,wght@8..144,25..151,100..1000&display=swap">
+<style>
+/* Layout: full-bleed map; floating glass search + control capsules; iOS-style draggable sheet (left sidebar on wide screens). */
+:root {
+  /* iOS system surfaces */
+  --map: #eef0ec; --corridor: #d5dce7; --stairs: #8d99aa; --grass: #d7ead0; --wood: #c6e0bd; --water: #b6d4f2; --apron-pave: #e2e4ea; --taxi: #d8dbe2; --taxi-line: #e2bd3c; --runway: #c3c7cf; --road-case: #d0d5dc; --road-fill: #ffffff; --mway-case: #e3bf6b; --mway-fill: #fde8ad; --rail: #aab2bd; --lot: #e6e8ec; --other-bldg: #e0e2e7; --term-closed: #e7e8ec; --map-grid: #e2e6eb; --bldg: #ffffff; --bldg-edge: #cbd2da; --road: #d6dce3; --walk: #d3d9e0; --bldg-shadow: rgba(30, 45, 70, .13); --plane: #cdd4dc; --bridge: #c3ccd6; --garage: #dfe3e8;
+  --glass: rgba(250, 250, 252, .96); --sheet-bg: rgba(247, 247, 250, .97); --glass-hi: rgba(255, 255, 255, .55); --hairline: rgba(60, 60, 67, .16);
+  --card: rgba(255, 255, 255, .92); --solid: #fbfbfd; --fill: rgba(118, 118, 128, .12); --fill-2: rgba(118, 118, 128, .2);
+  --label: #101318; --label-2: rgba(60, 60, 67, .64); --label-3: rgba(60, 60, 67, .34);
+  --shadow: 0 10px 30px rgba(16, 24, 40, .14), 0 1px 3px rgba(16, 24, 40, .08);
+  /* Material 3 tonal roles (seed: Hopkins blue) */
+  --primary: #2f50d0; --on-primary: #ffffff; --primary-c: #dee3ff; --on-primary-c: #0c1a66;
+  --tertiary-c: #ffe07d; --on-tertiary-c: #3b2c00;
+  --route: #1f6bff; --route-case: #ffffff;
+  /* Concourse identity: A circle, B clover, C cookie */
+  --conA: #64798a; --conB: #2563d8; --conC: #7a4cd6;
+  --c-food: #ec7a1c; --c-coffee: #a0663e; --c-bar: #d23f86; --c-shop: #e5383b; --c-play: #2fa84f; --c-service: #11998e; --c-rest: #4a6cff;
+  --ok: #1d8a4a; --warn: #a86400; --no: #c4352f;
+  --font-display: "Roboto Flex", "Google Sans", Roboto, system-ui, sans-serif;
+  --font-text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Roboto Flex", Roboto, "Segoe UI", sans-serif;
+  --spring: cubic-bezier(.2, 1.35, .35, 1);
+  --spring-slow: cubic-bezier(.25, 1.15, .4, 1);
+  --safe-top: var(--sat, env(safe-area-inset-top, 0px));
+  --safe-bottom: var(--sab, env(safe-area-inset-bottom, 0px));
+  --safe-left: var(--sal, env(safe-area-inset-left, 0px));
+  --safe-right: var(--sar, env(safe-area-inset-right, 0px));
+  color-scheme: light;
+}
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    --spring: linear(0, .013 1%, .053 2.1%, .212 4.6%, .742 11.6%, .95 15%, 1.054 18.6%, 1.104 22.3%, 1.112 24.6%, 1.1 27.4%, 1.034 34.6%, .998 41.2%, .989 46.9%, .996 59.5%, 1.001 72.5%, 1);
+    --spring-slow: linear(0, .009 1.4%, .037 2.9%, .146 6%, .53 14.1%, .793 20.5%, .953 26.9%, 1.033 33.3%, 1.059 38.9%, 1.054 44.6%, 1.012 58.3%, .997 72%, 1);
+  }
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --map: #121612; --corridor: #3a434e; --stairs: #7a8696; --grass: #1b2a1f; --wood: #1d2f21; --water: #14283d; --apron-pave: #1c2026; --taxi: #23272e; --taxi-line: #8a7323; --runway: #2b3038; --road-case: #2e343c; --road-fill: #3a414b; --mway-case: #5a4a24; --mway-fill: #6b5a2c; --rail: #4a525d; --lot: #1f242a; --other-bldg: #252a31; --term-closed: #20252b; --map-grid: #1a1e24; --bldg: #262b33; --bldg-edge: #3b424d; --road: #2a3038; --walk: #3a424d; --bldg-shadow: rgba(0, 0, 0, .5); --plane: #323a44; --bridge: #3b444f; --garage: #1d2228;
+    --glass: rgba(34, 34, 38, .95); --sheet-bg: rgba(29, 29, 33, .97); --glass-hi: rgba(255, 255, 255, .07); --hairline: rgba(84, 84, 88, .55);
+    --card: rgba(44, 44, 48, .88); --solid: #242428; --fill: rgba(118, 118, 128, .24); --fill-2: rgba(118, 118, 128, .34);
+    --label: #f3f4f8; --label-2: rgba(235, 235, 245, .62); --label-3: rgba(235, 235, 245, .3);
+    --shadow: 0 10px 30px rgba(0, 0, 0, .5), 0 1px 3px rgba(0, 0, 0, .4);
+    --primary: #b9c4ff; --on-primary: #0f1f6e; --primary-c: #2c3f9c; --on-primary-c: #e0e5ff;
+    --tertiary-c: #5a4600; --on-tertiary-c: #ffe07d;
+    --route: #4d8dff; --route-case: #0c0f13;
+    --conA: #93a6b4; --conB: #5f97f2; --conC: #a989ee;
+    --c-food: #ff9a45; --c-coffee: #c98d63; --c-bar: #f06aa9; --c-shop: #ff6366; --c-play: #4fd07a; --c-service: #33c2b6; --c-rest: #7f99ff;
+    --ok: #4fd07a; --warn: #f0b04a; --no: #ff6b63;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --map: #121612; --corridor: #3a434e; --stairs: #7a8696; --grass: #1b2a1f; --wood: #1d2f21; --water: #14283d; --apron-pave: #1c2026; --taxi: #23272e; --taxi-line: #8a7323; --runway: #2b3038; --road-case: #2e343c; --road-fill: #3a414b; --mway-case: #5a4a24; --mway-fill: #6b5a2c; --rail: #4a525d; --lot: #1f242a; --other-bldg: #252a31; --term-closed: #20252b; --map-grid: #1a1e24; --bldg: #262b33; --bldg-edge: #3b424d; --road: #2a3038; --walk: #3a424d; --bldg-shadow: rgba(0, 0, 0, .5); --plane: #323a44; --bridge: #3b444f; --garage: #1d2228;
+  --glass: rgba(34, 34, 38, .95); --sheet-bg: rgba(29, 29, 33, .97); --glass-hi: rgba(255, 255, 255, .07); --hairline: rgba(84, 84, 88, .55);
+  --card: rgba(44, 44, 48, .88); --solid: #242428; --fill: rgba(118, 118, 128, .24); --fill-2: rgba(118, 118, 128, .34);
+  --label: #f3f4f8; --label-2: rgba(235, 235, 245, .62); --label-3: rgba(235, 235, 245, .3);
+  --shadow: 0 10px 30px rgba(0, 0, 0, .5), 0 1px 3px rgba(0, 0, 0, .4);
+  --primary: #b9c4ff; --on-primary: #0f1f6e; --primary-c: #2c3f9c; --on-primary-c: #e0e5ff;
+  --tertiary-c: #5a4600; --on-tertiary-c: #ffe07d;
+  --route: #4d8dff; --route-case: #0c0f13;
+  --conA: #93a6b4; --conB: #5f97f2; --conC: #a989ee;
+  --c-food: #ff9a45; --c-coffee: #c98d63; --c-bar: #f06aa9; --c-shop: #ff6366; --c-play: #4fd07a; --c-service: #33c2b6; --c-rest: #7f99ff;
+  --ok: #4fd07a; --warn: #f0b04a; --no: #ff6b63;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0; overflow: hidden; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; background: var(--map); color: var(--label);
+  font: 16px/1.35 var(--font-text); letter-spacing: -.01em;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select { font: inherit; color: inherit; letter-spacing: inherit; }
+input, select { -webkit-user-select: text; user-select: text; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+.ico { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.glass {
+  background: var(--glass);
+  box-shadow: var(--shadow), inset 0 1px 0 var(--glass-hi);
+  border: .5px solid var(--hairline);
+}
+
+/* ---------- Map ---------- */
+#stage { position: fixed; inset: 0; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+#base, svg#map { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touch-action: none; }
+.apron { fill: none; pointer-events: all; }
+.grid-line { stroke: var(--map-grid); }
+.bldg { fill: var(--bldg); stroke: var(--bldg-edge); }
+.bldg-stroke { stroke: var(--bldg-edge); fill: none; }
+.bldg-fill { stroke: var(--bldg); fill: none; }
+.road { stroke: var(--road); fill: none; }
+.bm-grass { fill: var(--grass); } .bm-wood { fill: var(--wood); } .bm-water { fill: var(--water); }
+.bm-apron { fill: var(--apron-pave); } .bm-lot { fill: var(--lot); }
+.bm-ramp { fill: var(--apron-pave); fill-rule: evenodd; }
+.bm-taxi { fill: none; stroke: var(--taxi); }
+.bm-runway { fill: none; stroke: var(--runway); }
+.bm-taxi-line { fill: none; stroke: var(--taxi-line); stroke-width: 1.1px; }
+.bm-road-case { fill: none; stroke: var(--road-case); } .bm-road { fill: none; stroke: var(--road-fill); }
+.bm-mway-case { fill: none; stroke: var(--mway-case); } .bm-mway { fill: none; stroke: var(--mway-fill); }
+.bm-rail { fill: none; stroke: var(--rail); stroke-dasharray: 6 4; }
+.bm-bldg { fill: var(--other-bldg); stroke: var(--bldg-edge); stroke-width: .6; }
+.bm-garage { fill: var(--garage); stroke: var(--bldg-edge); stroke-width: .8; }
+.bm-term { fill: var(--bldg); stroke: var(--bldg-edge); stroke-width: 1; stroke-linejoin: round; }
+.bm-term.con-fill.A { fill: var(--bldg); fill: color-mix(in srgb, var(--conA) 9%, var(--bldg)); stroke: var(--bldg-edge); }
+.bm-term.con-fill.B { fill: var(--bldg); fill: color-mix(in srgb, var(--conB) 8%, var(--bldg)); stroke: var(--bldg-edge); }
+.bm-term.con-fill.C { fill: var(--bldg); fill: color-mix(in srgb, var(--conC) 8%, var(--bldg)); stroke: var(--bldg-edge); }
+.bm-term-closed { fill: var(--term-closed); stroke: var(--bldg-edge); stroke-width: .8; stroke-dasharray: 3 2; }
+.bridge { fill: none; }
+.bldg-shadow path, .bldg-shadow circle { fill: var(--bldg-shadow); }
+.bldg-shadow polyline { stroke: var(--bldg-shadow); fill: none; }
+.con-fill.A { stroke: var(--bldg); stroke: color-mix(in srgb, var(--conA) 9%, var(--bldg)); }
+.con-fill.B { stroke: var(--bldg); stroke: color-mix(in srgb, var(--conB) 8%, var(--bldg)); }
+.con-fill.C { stroke: var(--bldg); stroke: color-mix(in srgb, var(--conC) 8%, var(--bldg)); }
+.rot-fill { fill: var(--bldg); fill: color-mix(in srgb, var(--conC) 8%, var(--bldg)); }
+.bridge { stroke: var(--bridge); }
+.plane { fill: var(--plane); }
+.garage { fill: var(--garage); stroke: var(--road); stroke-width: 1; }
+.route-start circle { fill: var(--route-case); stroke: var(--route); stroke-width: 2.6; }
+.route-start .core { fill: var(--route); stroke: none; }
+.route-endpt circle { fill: var(--route); stroke: var(--route-case); stroke-width: 2.4; }
+.route-endpt .core { fill: var(--route-case); stroke: none; }
+.eta rect, .eta path { fill: var(--route); }
+.eta text { font: 800 9px var(--font-display); font-variation-settings: "wdth" 108; fill: #fff; text-anchor: middle; dominant-baseline: central; }
+.pin-shadow { fill: rgba(0, 0, 0, .25); }
+.pin-body { stroke: var(--bldg); stroke-width: 1.6; fill: var(--label); }
+.pin[data-cat="food"] .pin-body { fill: var(--c-food); } .pin[data-cat="coffee"] .pin-body { fill: var(--c-coffee); }
+.pin[data-cat="bar"] .pin-body { fill: var(--c-bar); } .pin[data-cat="shop"] .pin-body { fill: var(--c-shop); }
+.pin[data-cat="play"] .pin-body { fill: var(--c-play); } .pin[data-cat="service"] .pin-body { fill: var(--c-service); }
+.pin[data-cat="rest"] .pin-body { fill: var(--c-rest); }
+.pin-ico { fill: none; stroke: #fff; stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; color: #fff; }
+.pin[data-cat="place"] .pin-ico { stroke: var(--map); color: var(--map); }
+.pin-inner { transform-box: fill-box; transform-origin: 50% 100%; }
+.pin.drop .pin-inner { animation: pin-drop .6s var(--spring) both; }
+.pin.drop .pin-shadow { animation: pin-shadow .6s ease-out both; }
+@keyframes pin-drop { from { transform: translateY(-14px) scale(.35); opacity: 0; } }
+@keyframes pin-shadow { from { opacity: 0; } }
+#map .amen.sel .pop, #map .place.sel .pop { transform: scale(.75); }
+@media (hover: hover) { #map .mk:hover .pop { transform: scale(1.3); } }
+.walk { stroke: var(--walk); fill: none; stroke-dasharray: 2 3; }
+.area-lbl[data-off] { display: none; }
+.map-lbl { font: 650 8.5px var(--font-display); fill: var(--label-2); letter-spacing: .08em; text-transform: uppercase; }
+.con-letter { font: 800 14px var(--font-display); font-variation-settings: "wdth" 110; fill: #fff; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.con-shape.A, .gate.A .pill { fill: var(--conA); }
+.con-shape.B, .gate.B .pill { fill: var(--conB); }
+.con-shape.C, .gate.C .pill { fill: var(--conC); }
+.mk { cursor: pointer; }
+.mk .pop { transition: transform .45s var(--spring); transform-box: fill-box; transform-origin: center; }
+.mk.sel .pop { transform: scale(1.55); }
+.gate .pill { stroke: var(--bldg); stroke-width: 1; }
+.gate text { font: 700 6.6px var(--font-display); font-variation-settings: "wdth" 85; fill: #fff; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.amen .sym { stroke: var(--bldg); stroke-width: 1.2; }
+.amen text, .place text { font: 600 5.6px var(--font-text); fill: var(--label); paint-order: stroke; stroke: var(--map); stroke-width: 2.2px; stroke-linejoin: round; pointer-events: none; }
+.amen text, .place text { display: none; }
+#map .mk[data-lbl] text { display: block; }
+.place .sym { fill: var(--label); stroke: var(--bldg); stroke-width: 1.2; }
+.place text { font-weight: 700; font-size: 6.2px; }
+[data-cat="food"] .sym { fill: var(--c-food); } [data-cat="coffee"] .sym { fill: var(--c-coffee); }
+[data-cat="bar"] .sym { fill: var(--c-bar); } [data-cat="shop"] .sym { fill: var(--c-shop); }
+[data-cat="play"] .sym { fill: var(--c-play); } [data-cat="service"] .sym { fill: var(--c-service); }
+[data-cat="rest"] .sym { fill: var(--c-rest); }
+#map.hide-food .amen[data-cat="food"], #map.hide-coffee .amen[data-cat="coffee"], #map.hide-bar .amen[data-cat="bar"],
+#map.hide-shop .amen[data-cat="shop"], #map.hide-play .amen[data-cat="play"], #map.hide-service .amen[data-cat="service"],
+#map.hide-rest .amen[data-cat="rest"] { display: none; }
+#map .mk { transition: opacity .3s ease; }
+/* a route softens other places a little; gates stay crisp, and zoomed in everything is full strength */
+#map.focusing .amen:not(.hl), #map.focusing .place:not(.hl) { opacity: .5; }
+#map.focusing[data-z="3"] .mk { opacity: 1; }
+.mk .sz { transform-box: fill-box; transform-origin: center; transition: transform .3s var(--spring); }
+#map[data-z="1"] .amen .sz { transform: scale(.62); }
+#map .amen[data-off] { display: none; }
+#map .amen.closed .sz { opacity: .45; filter: grayscale(1); }
+#map[data-z="1"] .glyph { display: none; }
+.glyph { fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.place .glyph { stroke: var(--map); }
+#map .mk.sel { opacity: 1 !important; }
+#map .mk.sel text { font-size: 7.4px; font-weight: 750; }
+#map .gate text { display: block !important; }
+#map .gate.sel text { font-size: 6.6px; }
+.route-case { stroke: var(--route-case); fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 0 11; }
+.route { stroke: var(--route); fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 0 11; }
+.puck-halo { fill: var(--route); opacity: .22; }
+.puck { fill: var(--route); stroke: var(--route-case); stroke-width: 2.5; }
+
+/* ---------- Top bar ---------- */
+.topbar {
+  position: fixed; z-index: 5; top: calc(var(--safe-top) + 10px);
+  left: calc(var(--safe-left) + 16px); right: calc(var(--safe-right) + 16px);
+  display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+}
+.topbar > * { pointer-events: auto; }
+.search { position: relative; z-index: 2; display: flex; align-items: center; gap: 8px; height: 48px; padding: 0 8px 0 16px; border-radius: 24px; }
+.search .ico { color: var(--label-2); }
+.search input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; outline: none; font-size: 17px; }
+.search input::placeholder { color: var(--label-2); }
+.search input::-webkit-search-cancel-button { display: none; }
+.search .clear { width: 30px; height: 30px; border-radius: 50%; border: 0; background: var(--fill-2); display: grid; place-items: center; color: var(--label-2); }
+.search .clear .ico { width: 14px; height: 14px; stroke-width: 2.6; color: var(--label); }
+.results { position: absolute; top: 56px; left: 0; right: 0; border-radius: 22px; overflow: hidden auto; max-height: min(420px, 60vh); padding: 6px 0; background: var(--solid); box-shadow: var(--shadow); border: .5px solid var(--hairline); }
+.results button { display: grid; grid-template-columns: 32px 1fr; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 8px 16px; background: none; border: 0; }
+.results button.active, .results button:hover { background: var(--fill); }
+.results .k { display: block; font-size: 13px; color: var(--label-2); }
+.results .empty { padding: 12px 16px; color: var(--label-2); }
+.results .sec { padding: 10px 16px 4px; font-size: 13px; font-weight: 600; color: var(--label-2); }
+.results mark { background: none; color: inherit; font-weight: 750; }
+.results .airline-row { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 4px 16px 10px; }
+.results .airline-row::-webkit-scrollbar { display: none; }
+.results .airline-row button {
+  display: inline-flex; width: auto; flex: none; gap: 6px; padding: 6px 12px 6px 6px; border-radius: 18px;
+  background: var(--fill); font-size: 14px; font-weight: 600; align-items: center;
+}
+.results .airline-row .badge { width: 24px; height: 24px; }
+.chips {
+  display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px 6px;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 22px), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 22px), transparent);
+}
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px 0 8px; border-radius: 17px;
+  font-size: 14px; font-weight: 600; border: .5px solid var(--hairline); background: var(--card); box-shadow: 0 2px 8px rgba(16, 24, 40, .1);
+  transition: border-radius .4s var(--spring), background-color .2s, transform .35s var(--spring);
+}
+.chip:active { transform: scale(.94); }
+.chip .tile { width: 22px; height: 22px; border-radius: 11px; display: grid; place-items: center; color: #fff; transition: border-radius .4s var(--spring); }
+.chip .tile .ico { width: 13px; height: 13px; stroke-width: 2.4; }
+.chip[aria-pressed="true"] { border-radius: 11px; }
+.chip[aria-pressed="true"] .tile { border-radius: 7px; }
+.chip[aria-pressed="false"] { color: var(--label-2); }
+.chip[aria-pressed="false"] .tile { background: var(--fill-2) !important; color: var(--label-2); }
+
+/* ---------- Airport picker ---------- */
+.ap-btn { border: 0; background: none; padding: 0; text-align: left; cursor: pointer; max-width: 100%; display: block; }
+.ap-btn.can::after { content: " ⌄"; font-weight: 800; }
+.ap-menu { position: absolute; z-index: 3; left: 16px; right: 16px; top: 74px; border-radius: 20px; padding: 6px 0; background: var(--solid); }
+.ap-menu button { display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center; width: 100%; padding: 10px 16px; border: 0; background: none; text-align: left; }
+.ap-menu button:hover, .ap-menu button:focus-visible { background: var(--fill); }
+.ap-menu .code { font: 800 17px var(--font-display); font-variation-settings: "wdth" 110; color: var(--primary); }
+.ap-menu .s { display: block; font-size: 13px; color: var(--label-2); }
+.ap-menu .soon { padding: 10px 16px 8px; font-size: 13px; color: var(--label-2); border-top: .5px solid var(--hairline); margin-top: 4px; }
+.sheet-head { position: relative; }
+
+/* ---------- Floors ---------- */
+.floor button { font: 800 16px var(--font-display); color: var(--label-2); }
+.floor button[aria-pressed="true"] { background: var(--on-primary-c); color: var(--primary-c); }
+#map[data-floor="up"] .mk[data-lv="lo"]:not(.sel), #map[data-floor="lo"] .mk[data-lv="up"]:not(.sel) { display: none; }
+.ghost { opacity: .32; }
+.esc { cursor: pointer; }
+.esc circle { fill: var(--primary); stroke: var(--route-case); stroke-width: 2; }
+.esc .glyph { stroke-width: 2.8; }
+#map[data-z="1"] .esc .glyph { display: block; }
+
+/* ---------- Location ---------- */
+#locate[aria-pressed="true"] { color: var(--route); }
+#locate[aria-pressed="true"] .ico { fill: currentColor; }
+#locate.busy .ico { animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .3; } }
+.me-acc { fill: var(--route); fill-opacity: .12; stroke: var(--route); stroke-opacity: .35; stroke-width: 1px; }
+.me-dot { fill: var(--route); stroke: #fff; stroke-width: 2.6; }
+.me-halo { fill: var(--route); opacity: .2; }
+.me-cone { fill: var(--route); opacity: .35; }
+@keyframes me-pulse { from { transform: scale(.6); opacity: .45; } to { transform: scale(2.2); opacity: 0; } }
+.toast-bar {
+  position: fixed; z-index: 7; left: 50%; top: calc(var(--safe-top) + 116px); translate: -50% 0;
+  max-width: min(440px, calc(100% - 32px)); display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px 10px 16px; border-radius: 18px; font-size: 14px; font-weight: 600;
+  animation: toast-in .45s var(--spring) both;
+}
+@keyframes toast-in { from { opacity: 0; transform: translateY(-8px) scale(.96); } }
+.toast-bar button { border: 0; border-radius: 12px; padding: 6px 12px; background: var(--primary); color: var(--on-primary); font-weight: 700; font-size: 13px; flex: none; }
+.attrib { margin: 8px 16px 0; font-size: 12px; color: var(--label-3); }
+.attrib a { color: inherit; }
+
+/* ---------- Scale bar (shows while zooming) ---------- */
+.scalebar {
+  position: fixed; z-index: 4; left: calc(var(--safe-left) + 18px); top: calc(var(--safe-top) + 112px);
+  display: flex; flex-direction: column; gap: 2px; pointer-events: none;
+  font: 700 11px var(--font-text); color: var(--label); opacity: 0; transition: opacity .35s ease;
+  text-shadow: 0 0 3px var(--map), 0 0 3px var(--map);
+}
+.scalebar.show { opacity: 1; transition-duration: .1s; }
+.scalebar .bar { height: 5px; border: 2px solid var(--label); border-top: 0; border-radius: 0 0 2px 2px; box-shadow: 0 1px 0 var(--map); transition: width .15s; }
+
+/* ---------- Map controls (right capsules) ---------- */
+.controls { position: fixed; z-index: 4; right: calc(var(--safe-right) + 16px); top: calc(var(--safe-top) + 114px); display: flex; flex-direction: column; gap: 10px; }
+.cap { display: flex; flex-direction: column; border-radius: 22px; overflow: hidden; }
+.cap button { width: 44px; height: 44px; border: 0; background: none; display: grid; place-items: center; color: var(--label); transition: transform .35s var(--spring); }
+.cap button:active { transform: scale(.86); }
+.cap button + button { border-top: .5px solid var(--hairline); }
+.cap .shape-btn svg { width: 28px; height: 28px; }
+
+/* ---------- Sheet ---------- */
+.sheet {
+  position: fixed; z-index: 6; left: 0; right: 0; bottom: 0;
+  height: calc(100% - var(--safe-top) - 58px);
+  border-radius: 28px 28px 0 0; display: flex; flex-direction: column;
+  transform: translateY(var(--y, 50%)); will-change: transform;
+  border-bottom: 0;
+}
+.sheet.glass { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--sheet-bg); }
+.sheet.snapping { transition: transform .55s var(--spring-slow); }
+.sheet-head { padding: 6px 16px 10px; touch-action: none; cursor: grab; flex: none; }
+.grabber { width: 38px; height: 5px; border-radius: 3px; background: var(--label-3); margin: 0 auto 10px; }
+.titlebar { display: flex; align-items: flex-start; gap: 12px; min-height: 44px; }
+.titlebar > div { flex: 1; min-width: 0; }
+.eyebrow { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; font-weight: 600; color: var(--label-2); letter-spacing: 0; }
+h1 {
+  margin: 0; font: 800 30px/1.05 var(--font-display); font-variation-settings: "wdth" 112, "opsz" 40;
+  letter-spacing: -.02em; text-wrap: balance;
+}
+.iconbtn { width: 32px; height: 32px; border-radius: 50%; border: 0; background: var(--fill-2); display: grid; place-items: center; color: var(--label-2); flex: none; transition: transform .35s var(--spring); }
+.iconbtn:active { transform: scale(.85); }
+.iconbtn .ico { width: 15px; height: 15px; stroke-width: 2.8; color: var(--label-2); }
+
+/* iOS segmented control */
+.seg { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 12px; padding: 2px; border-radius: 10px; background: var(--fill); }
+.seg .thumb {
+  position: absolute; top: 2px; bottom: 2px; left: 2px; width: calc((100% - 4px) / 3); border-radius: 8px;
+  background: var(--card); box-shadow: 0 3px 8px rgba(0, 0, 0, .12), 0 0 0 .5px rgba(0, 0, 0, .04);
+  transform: translateX(calc(var(--i, 0) * 100%)); transition: transform .5s var(--spring);
+}
+.seg button { position: relative; z-index: 1; height: 32px; border: 0; background: none; font-size: 14px; font-weight: 600; color: var(--label-2); transition: color .2s; }
+.seg button[aria-selected="true"] { color: var(--label); }
+
+.sheet-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 16px calc(var(--pad-b, 0px) + var(--safe-bottom) + 24px); }
+.pane { display: flex; flex-direction: column; gap: 16px; }
+.pane.enter { animation: pane-in .42s var(--spring-slow) both; }
+@keyframes pane-in { from { opacity: 0; transform: translateY(10px) scale(.985); } }
+h1.enter { animation: title-in .38s var(--spring-slow) both; }
+@keyframes title-in { from { opacity: 0; transform: translateY(6px); } }
+
+/* iOS inset grouped list */
+.group { background: var(--card); border-radius: 16px; overflow: hidden; }
+.group-title { font-size: 13px; font-weight: 600; color: var(--label-2); text-transform: uppercase; letter-spacing: .02em; padding: 0 16px; margin-bottom: -10px; display: flex; align-items: center; gap: 8px; }
+.row {
+  position: relative; display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 8px 16px; width: 100%;
+  background: none; border: 0; text-align: left;
+}
+.row + .row::before { content: ""; position: absolute; top: 0; right: 0; left: var(--inset, 16px); border-top: .5px solid var(--hairline); }
+button.row:active, label.row:active { background: var(--fill); }
+.row .grow { flex: 1; min-width: 0; }
+.row .t { display: block; font-weight: 500; }
+.row .s { display: block; font-size: 13px; color: var(--label-2); }
+.row .chev { width: 14px; height: 14px; color: var(--label-3); stroke-width: 2.6; }
+.row select {
+  flex: 1; min-width: 0; appearance: none; -webkit-appearance: none; border: 0; background: none; outline: none;
+  text-align: right; text-align-last: right; color: var(--label-2); padding: 0; text-overflow: ellipsis;
+}
+.row .rl { font-weight: 500; }
+.tile { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; color: #fff; flex: none; }
+.tile .ico { width: 17px; height: 17px; stroke-width: 2.2; }
+.tile.food { background: var(--c-food); } .tile.coffee { background: var(--c-coffee); } .tile.bar { background: var(--c-bar); }
+.tile.shop { background: var(--c-shop); } .tile.play { background: var(--c-play); } .tile.service { background: var(--c-service); }
+.tile.rest { background: var(--c-rest); } .tile.gate { background: var(--label-2); } .tile.place { background: var(--label); color: var(--map); }
+.tile.A { background: var(--conA); } .tile.B { background: var(--conB); } .tile.C { background: var(--conC); }
+.badge { width: 30px; height: 30px; flex: none; }
+.badge text { font: 800 9px var(--font-display); fill: #fff; text-anchor: middle; dominant-baseline: central; }
+
+/* From / To card with swap */
+.fromto { position: relative; --inset: 50px; }
+.fromto .pt { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+.fromto .pt.a { background: var(--fill-2); } .fromto .pt.a::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--label-2); }
+.fromto .pt.b { background: var(--route); } .fromto .pt.b::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #fff; }
+.fromto .row { padding-right: 64px; }
+.swap {
+  position: absolute; right: 12px; top: 50%; translate: 0 -50%; z-index: 2; width: 44px; height: 44px; border: 0;
+  border-radius: 14px; background: var(--primary-c); color: var(--on-primary-c); display: grid; place-items: center;
+  transition: border-radius .45s var(--spring), rotate .5s var(--spring);
+}
+.swap:active { border-radius: 22px; }
+.swap.spin { rotate: 180deg; }
+
+/* M3 Expressive hero */
+.hero {
+  display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 16px; padding: 18px 20px;
+  background: var(--primary-c); color: var(--on-primary-c); border-radius: 32px 32px 32px 12px;
+}
+.hero .num { font: 900 64px/0.85 var(--font-display); font-variation-settings: "wdth" 125, "opsz" 96; letter-spacing: -.04em; font-variant-numeric: tabular-nums; grid-row: span 2; }
+.hero .num small { font-size: 22px; font-weight: 750; letter-spacing: 0; margin-left: 4px; font-variation-settings: "wdth" 100; }
+.hero .m1 { font: 700 17px var(--font-display); font-variation-settings: "wdth" 105; align-self: end; }
+.hero .m2 { font-size: 14px; opacity: .8; align-self: start; }
+.hero.same .num { font-size: 40px; }
+.hero { position: relative; }
+.hero-x {
+  position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; border-radius: 50%; border: 0;
+  display: grid; place-items: center; background: color-mix(in srgb, var(--on-primary-c) 12%, transparent); color: var(--on-primary-c);
+  transition: transform .35s var(--spring);
+}
+.hero-x:active { transform: scale(.85); }
+.hero-x .ico { width: 14px; height: 14px; stroke-width: 2.8; }
+.hero.empty { grid-template-columns: 1fr; }
+.hero.empty .m1 { font: 800 30px/1.05 var(--font-display); font-variation-settings: "wdth" 115; }
+
+/* Transit-line steps */
+.line { list-style: none; margin: 0; padding: 14px 16px; }
+.line li { position: relative; display: grid; grid-template-columns: 22px 1fr; gap: 12px; padding: 0 0 16px; }
+.line li:last-child { padding-bottom: 0; }
+.line li::before { content: ""; position: absolute; left: 9px; top: 14px; bottom: -2px; width: 4px; border-radius: 2px; background: var(--route); opacity: .9; }
+.line li:last-child::before, .line li.end::before, .line li.passing::before { display: none; }
+.line .stop { width: 22px; height: 22px; border-radius: 50%; background: var(--card); border: 4px solid var(--route); position: relative; z-index: 1; }
+.line li.end .stop { background: var(--route); box-shadow: 0 0 0 4px color-mix(in srgb, var(--route) 25%, transparent); }
+.line .t { font-weight: 600; }
+.line .n { display: block; font-size: 14px; color: var(--label-2); }
+.line li[data-node] { cursor: pointer; border-radius: 12px; }
+.line li[data-node] > span:last-child { transition: transform .35s var(--spring); }
+.line li[data-node]:active > span:last-child { transform: translateX(4px); }
+.line li.passing { grid-template-columns: 1fr; padding-top: 4px; font-size: 14px; color: var(--label-2); border-top: .5px solid var(--hairline); padding-top: 12px; }
+.foot { margin: -4px 16px 0; font-size: 13px; color: var(--label-2); }
+
+/* Expressive slider */
+.slider-card { padding: 16px; }
+.slider-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.slider-top output { font: 900 40px/1 var(--font-display); font-variation-settings: "wdth" 120; letter-spacing: -.03em; font-variant-numeric: tabular-nums; color: var(--primary); }
+.slider-top output small { font-size: 17px; font-weight: 700; margin-left: 3px; letter-spacing: 0; }
+input[type="range"].xs { -webkit-appearance: none; appearance: none; width: 100%; height: 44px; background: none; margin: 0; --p: 30%; }
+input.xs::-webkit-slider-runnable-track { height: 16px; border-radius: 8px; background: linear-gradient(90deg, var(--primary) 0 calc(var(--p) - 6px), transparent calc(var(--p) - 6px) calc(var(--p) + 6px), var(--primary-c) calc(var(--p) + 6px)); }
+input.xs::-webkit-slider-thumb { -webkit-appearance: none; width: 4px; height: 44px; margin-top: -14px; border-radius: 2px; background: var(--primary); transition: width .3s var(--spring); }
+input.xs:active::-webkit-slider-thumb { width: 2px; }
+input.xs::-moz-range-track { height: 16px; border-radius: 8px; background: var(--primary-c); }
+input.xs::-moz-range-progress { height: 16px; border-radius: 8px; background: var(--primary); }
+input.xs::-moz-range-thumb { width: 4px; height: 44px; border: 0; border-radius: 2px; background: var(--primary); }
+.slider-clock { margin: -8px 0 6px; font-size: 14px; color: var(--label-2); font-variant-numeric: tabular-nums; }
+.slider-scale { display: flex; justify-content: space-between; font-size: 12px; color: var(--label-2); font-variant-numeric: tabular-nums; }
+.filter, .quick { margin: 0 -16px; padding: 0 16px 2px; }
+.quick .chip { background: var(--card); box-shadow: none; color: var(--label); }
+.leave { margin: -2px 0 8px; font-size: 15px; font-weight: 650; color: var(--label); }
+.leave b { color: var(--primary); }
+.tonal-btn {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 18px 0 14px; border: 0;
+  border-radius: 22px; background: var(--primary-c); color: var(--on-primary-c);
+  font: 700 15px var(--font-display); font-variation-settings: "wdth" 105;
+  transition: border-radius .45s var(--spring), transform .4s var(--spring);
+}
+.tonal-btn:active { border-radius: 12px; transform: scale(.97); }
+.titlebar > .mode { flex: none; }
+.mode { display: flex; gap: 2px; padding: 2px; border-radius: 12px; background: var(--fill); flex: none; align-self: center; }
+.mode button { height: 30px; padding: 0 10px; border: 0; border-radius: 10px; background: none; font-size: 13px; font-weight: 700; color: var(--label-2);
+  transition: background-color .25s, color .25s, border-radius .4s var(--spring); }
+.mode button[aria-pressed="true"] { background: var(--on-primary-c); color: var(--primary-c); border-radius: 8px; }
+/* iOS-style switch */
+input.switch { -webkit-appearance: none; appearance: none; width: 51px; height: 31px; border-radius: 16px; background: var(--fill-2); position: relative; flex: none; margin: 0; cursor: pointer; transition: background-color .25s; }
+input.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.2); transition: transform .4s var(--spring); }
+input.switch:checked { background: var(--ok); }
+input.switch:checked::after { transform: translateX(20px); }
+.car-in { width: 64px; height: 34px; border: 0; border-radius: 10px; background: var(--fill); text-align: center; font-weight: 700; font-size: 17px; outline: none; }
+.tonal-btn[aria-pressed="true"] { background: var(--on-primary-c); color: var(--primary-c); }
+.filter .chip { background: var(--card); box-shadow: none; }
+.filter .chip[aria-pressed="true"] { background: var(--on-primary-c); color: var(--primary-c); border-color: transparent; padding-left: 14px; }
+.filter .chip[aria-pressed="false"] { color: var(--label); }
+
+/* Extended FAB with shape morph */
+.fab {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 10px; height: 56px; padding: 0 22px 0 18px; border: 0;
+  border-radius: 18px; background: var(--tertiary-c); color: var(--on-tertiary-c);
+  font: 750 17px var(--font-display); font-variation-settings: "wdth" 110;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, .12);
+  transition: border-radius .5s var(--spring), transform .45s var(--spring);
+}
+.fab:active { border-radius: 28px; transform: scale(.96); }
+.fab .ico { width: 22px; height: 22px; }
+.status { font: 700 12px/1 var(--font-text); padding: 6px 10px; border-radius: 99px; white-space: nowrap; flex: none; }
+.status.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 15%, transparent); }
+.status.warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 17%, transparent); }
+.status.no { color: var(--no); background: color-mix(in srgb, var(--no) 13%, transparent); }
+.toast { font-size: 14px; color: var(--label-2); margin: 0 16px; }
+
+/* M3 Expressive connected button group */
+.bgroup { display: flex; gap: 4px; }
+.bgroup button {
+  flex: 1 1 0; height: 52px; border: 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font: 700 16px var(--font-display); font-variation-settings: "wdth" 105;
+  background: var(--card); color: var(--label); border-radius: 8px;
+  transition: flex-grow .45s var(--spring), border-radius .45s var(--spring), transform .4s var(--spring);
+}
+.bgroup button:first-child { border-radius: 26px 8px 8px 26px; }
+.bgroup button:last-child { border-radius: 8px 26px 26px 8px; }
+.bgroup button.primary { background: var(--primary); color: var(--on-primary); }
+.bgroup button:active { flex-grow: 1.35; border-radius: 26px; }
+.bgroup .ico { width: 19px; height: 19px; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 16px; }
+.tag { font-size: 14px; font-weight: 600; padding: 6px 12px; border-radius: 10px; background: var(--fill); }
+
+/* Desktop / tablet: sheet becomes a floating sidebar */
+@media (min-width: 760px) {
+  .sheet {
+    left: calc(var(--safe-left) + 16px); right: auto; top: calc(var(--safe-top) + 16px); bottom: 16px;
+    width: 392px; height: auto; border-radius: 28px; transform: none !important; border-bottom: .5px solid var(--hairline);
+  }
+  .sheet-head { cursor: default; padding-top: 18px; }
+  .grabber { display: none; }
+  .sheet-body { padding-bottom: 24px; }
+  .topbar { left: calc(var(--safe-left) + 424px); right: calc(var(--safe-right) + 76px); }
+  .search { max-width: 420px; }
+  .controls { top: auto; bottom: 16px; }
+  .scalebar { left: calc(var(--safe-left) + 426px); top: auto; bottom: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: .01ms !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="M8 4v15M8 4L4.5 7.5M8 4l3.5 3.5M16 20V5M16 20l-3.5-3.5M16 20l3.5-3.5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="i-fit" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+  <symbol id="i-locate" viewBox="0 0 24 24"><path d="M20.5 3.5L3.5 10.6l7.2 2.7 2.7 7.2z"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0"/></symbol>
+  <symbol id="i-lift" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9.5 9.5L12 7l2.5 2.5M9.5 14.5L12 17l2.5-2.5"/></symbol>
+  <symbol id="i-water" viewBox="0 0 24 24"><path d="M12 3.5s6 6.6 6 10.5a6 6 0 0 1-12 0c0-3.9 6-10.5 6-10.5z"/></symbol>
+  <symbol id="i-access" viewBox="0 0 24 24"><circle cx="11" cy="4.5" r="1.8"/><path d="M11 7.5v6h5l2.5 5.5M11 10.5h5M8 10.2a5.5 5.5 0 1 0 7.6 7.9"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+  <symbol id="i-walk" viewBox="0 0 24 24"><circle cx="13" cy="4.5" r="1.8"/><path d="M10 21l2.5-6.5L15 17v4M12.5 14.5L11 9l-3 2v4M11 9l3.5-.5 2 3.5 2.5 1"/></symbol>
+  <symbol id="i-dice" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="9" cy="9" r=".6" fill="currentColor"/><circle cx="15" cy="15" r=".6" fill="currentColor"/><circle cx="15" cy="9" r=".6" fill="currentColor"/><circle cx="9" cy="15" r=".6" fill="currentColor"/><circle cx="12" cy="12" r=".6" fill="currentColor"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M6 21V4M6 4h11l-2.5 4L17 12H6"/></symbol>
+  <symbol id="i-food" viewBox="0 0 24 24"><path d="M7 3v18M4.5 3v5a2.5 2.5 0 0 0 5 0V3M17 21V3c-2.5 1.5-3 5-3 8h3"/></symbol>
+  <symbol id="i-coffee" viewBox="0 0 24 24"><path d="M4 9h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM16 10.5h1.5a2.5 2.5 0 0 1 0 5H16M8 3.5v2.5M12 3.5v2.5"/></symbol>
+  <symbol id="i-bar" viewBox="0 0 24 24"><path d="M5 4h14l-7 8zM12 12v8M8 20h8"/></symbol>
+  <symbol id="i-shop" viewBox="0 0 24 24"><path d="M5 8h14l-1 13H6zM9 8V6.5a3 3 0 0 1 6 0V8"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M12 3l2.2 6.3L20.5 12l-6.3 2.2L12 21l-2.2-6.8L3.5 12l6.3-2.7z"/></symbol>
+  <symbol id="i-service" viewBox="0 0 24 24"><path d="M13 2.5L5.5 13.5h6l-1 8 8-11.5h-6z"/></symbol>
+  <symbol id="i-rest" viewBox="0 0 24 24"><circle cx="12" cy="4.5" r="2"/><path d="M8.5 21v-6.5L7.5 9h9l-1 5.5V21"/></symbol>
+  <symbol id="i-gate" viewBox="0 0 24 24"><path d="M3 15.5l8-2.5V6a1.5 1.5 0 0 1 3 0v7l8 2.5M11 13v5l-2.5 2h7L13 18v-5"/></symbol>
+  <symbol id="i-place" viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11.5a7 7 0 0 0-14 0C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></symbol>
+</svg>
+
+<div id="stage">
+<canvas id="base" aria-hidden="true"></canvas>
+<svg id="map" role="img" aria-label="Map of Cleveland Hopkins terminal and concourses">
+  <g id="world">
+    <rect x="-3000" y="-3000" width="7000" height="7000" class="apron"/>
+  </g>
+</svg>
+</div>
+
+<div class="topbar">
+  <div class="search glass">
+    <svg class="ico"><use href="#i-search"/></svg>
+    <input type="search" id="q" placeholder="Search gates, airlines, food" autocomplete="off" aria-label="Search the map" enterkeyhint="search">
+    <button class="clear" id="qClear" aria-label="Clear search" hidden><svg class="ico"><use href="#i-x"/></svg></button>
+    <div class="results" id="results" hidden></div>
+  </div>
+  <div class="chips" id="chips" aria-label="Show on map"></div>
+</div>
+
+<div class="toast-bar glass" id="toast" role="status" aria-live="polite" hidden><span id="toastMsg"></span><button id="toastAct" hidden></button></div>
+<div class="scalebar" id="scalebar" aria-hidden="true"><span class="txt"></span><span class="bar"></span></div>
+
+<div class="controls">
+  <div class="cap glass floor" id="floorCap" role="group" aria-label="Floor">
+    <button data-floor="up" aria-pressed="true" title="Upper level: gates, security, ticketing" aria-label="Upper level">U</button>
+    <button data-floor="lo" aria-pressed="false" title="Lower level: baggage claim, ground transportation, RTA" aria-label="Lower level">L</button>
+  </div>
+  <div class="cap glass">
+    <button id="locate" aria-label="Show my location" aria-pressed="false"><svg class="ico"><use href="#i-locate"/></svg></button>
+    <button id="zin" aria-label="Zoom in"><svg class="ico"><use href="#i-plus"/></svg></button>
+    <button id="zout" aria-label="Zoom out"><svg class="ico"><use href="#i-minus"/></svg></button>
+    <button id="zfit" aria-label="Show whole airport"><svg class="ico"><use href="#i-fit"/></svg></button>
+  </div>
+  <div class="cap glass" id="conCap"></div>
+</div>
+
+<section class="sheet glass" id="sheet" aria-label="Trip tools">
+  <div class="sheet-head" id="sheetHead">
+    <div class="grabber" aria-hidden="true"></div>
+    <div class="titlebar">
+      <div><button class="eyebrow ap-btn" id="eyebrow" aria-haspopup="menu" aria-expanded="false">Airport</button><h1 id="title">Directions</h1></div>
+      <div class="mode" id="modeSw" role="group" aria-label="Trip direction">
+        <button data-mode="dep" aria-pressed="true">Depart</button><button data-mode="arr" aria-pressed="false">Arrive</button>
+      </div>
+      <button class="iconbtn" id="closePlace" aria-label="Close" hidden><svg class="ico"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="ap-menu glass" id="apMenu" role="menu" hidden></div>
+    <div class="seg" role="tablist" id="seg">
+      <span class="thumb" aria-hidden="true"></span>
+      <button role="tab" id="tab-dir" aria-selected="true" aria-controls="pane-dir">Directions</button>
+      <button role="tab" id="tab-kill" aria-selected="false" aria-controls="pane-kill">Pass Time</button>
+      <button role="tab" id="tab-air" aria-selected="false" aria-controls="pane-air">Airlines</button>
+    </div>
+  </div>
+
+  <div class="sheet-body" id="sheetBody">
+    <div class="pane" id="pane-dir" role="tabpanel" aria-labelledby="tab-dir">
+      <div class="hero" id="hero"></div>
+      <div class="chips quick" id="quick" role="group" aria-label="Go to the nearest"></div>
+      <div class="group" id="arrForm" hidden>
+        <label class="row"><span class="tile gate"><svg class="ico"><use href="#i-gate"/></svg></span><span class="rl">Arrived at</span><select id="arrGate" aria-label="Arrival gate"></select></label>
+        <label class="row"><span class="tile place"><svg class="ico"><use href="#i-place"/></svg></span><span class="rl">Going to</span><select id="arrDest" aria-label="Going to"></select></label>
+        <label class="row"><span class="tile rest" style="background:var(--c-shop)"><svg class="ico"><use href="#i-shop"/></svg></span><span class="rl grow">Checked bags</span><input type="checkbox" class="switch" id="arrBags" checked></label>
+        <label class="row" id="carRow"><span class="tile" style="background:var(--label-2)"><svg class="ico"><use href="#i-fit"/></svg></span><span class="rl grow">Carousel <span class="s" style="display:inline">(if you know it)</span></span><input type="number" inputmode="numeric" min="1" max="20" id="arrCarousel" class="car-in" placeholder="—" aria-label="Carousel number"></label>
+      </div>
+      <div class="group fromto">
+        <label class="row"><span class="pt a"></span><span class="rl">From</span><select id="from" aria-label="From"></select></label>
+        <label class="row"><span class="pt b"></span><span class="rl">To</span><select id="to" aria-label="To"></select></label>
+        <button class="swap" id="swap" aria-label="Swap start and destination"><svg class="ico"><use href="#i-swap"/></svg></button>
+      </div>
+      <div class="group" id="sfGroup">
+        <label class="row"><span class="tile" style="background:var(--conB)"><svg class="ico"><use href="#i-access"/></svg></span>
+          <span class="grow"><span class="t">Step-free route</span><span class="s">Elevators instead of escalators</span></span>
+          <input type="checkbox" class="switch" id="stepFree" aria-label="Step-free route"></label>
+      </div>
+      <ol class="group line" id="steps"></ol>
+      <p class="foot" id="sfNote" hidden>Need a wheelchair or help getting to your gate? Ask your airline. They arrange assistance at check-in or when you book.</p>
+      <p class="foot">Tap a step to see it on the map. Walking times assume about 75 m a minute. Allow 15–30 minutes for the TSA checkpoint when it’s busy.</p>
+    </div>
+
+    <div class="pane" id="pane-kill" role="tabpanel" aria-labelledby="tab-kill" hidden>
+      <div class="group">
+        <label class="row"><span class="tile gate"><svg class="ico"><use href="#i-gate"/></svg></span><span class="rl">My gate</span><select id="ktGate" aria-label="My gate"></select></label>
+      </div>
+      <div class="group slider-card">
+        <div class="slider-top"><span class="rl">Boarding starts in</span><output id="ktOut" for="ktMin">55<small>min</small></output></div>
+        <div class="slider-clock" id="ktClock"></div>
+        <div class="leave" id="ktLeave"></div>
+        <input type="range" class="xs" id="ktMin" min="10" max="150" step="5" value="55" aria-label="Minutes until boarding">
+        <div class="slider-scale"><span>10 min</span><span>2½ hr</span></div>
+      </div>
+      <div class="chips filter" id="ktCats" role="group" aria-label="Kind of place"></div>
+      <button class="tonal-btn" id="remind" hidden><svg class="ico"><use href="#i-bell"/></svg><span>Remind me when to leave</span></button>
+      <button class="fab" id="surprise"><svg class="ico"><use href="#i-dice"/></svg>Surprise me</button>
+      <p class="toast" id="ktToast">Keeps a 10-minute buffer before boarding.</p>
+      <div class="group" id="ideas"></div>
+    </div>
+
+    <div class="pane" id="pane-air" role="tabpanel" aria-labelledby="tab-air" hidden>
+      <p class="foot" style="margin-top:0">Tap an airline to light up its gates. All three concourses connect past security.</p>
+      <div class="pane" id="airlines"></div>
+      <p class="foot">International arrivals clear U.S. Customs near gate A5. Concourse D has been closed since 2014. Gate assignments change, so check your boarding pass and the departure screens.</p>
+    </div>
+
+    <div class="pane" id="pane-place" hidden></div>
+    <p class="attrib">Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors</p>
+  </div>
+</section>
+
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const NS = 'http://www.w3.org/2000/svg';
+const M_PER_UNIT = 1, M_PER_MIN = 75;   // map units are metres
+const APP_NAME = 'Clearway';
+// Airport packs register themselves here (see airports/*/airport.js); the last one picked is remembered
+const AIRPORTS = {};
+const ACTIVE_AIRPORT = (() => { try { return localStorage.getItem('cw.airport') || 'CLE'; } catch (e) { return 'CLE'; } })();
