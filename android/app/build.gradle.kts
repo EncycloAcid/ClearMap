@@ -22,8 +22,8 @@ android {
         applicationId = "io.github.encycloacid.clearmap"
         minSdk = 26
         targetSdk = 36
-        versionCode = 35
-        versionName = "6.3"
+        versionCode = 36
+        versionName = "6.4"
     }
 
     signingConfigs {
