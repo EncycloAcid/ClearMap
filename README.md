@@ -81,3 +81,7 @@ Two airports are included: Cleveland Hopkins (CLE) and Hartsfield–Jackson Atla
 ## Publishing
 
 See [STORE.md](STORE.md) for releasing on Google Play: signing, the app bundle, the store listing and the privacy policy.
+
+## Live data
+
+Live flight status and security wait times come from a small Cloudflare Worker in `server/` that holds the data providers' keys. See [server/README.md](server/README.md) to deploy it and connect the app.

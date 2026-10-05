@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Live flight status and security waits, only when you track a flight (the map itself works offline) -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- Light haptic taps when the sheet snaps or a control is pressed -->
     <uses-permission android:name="android.permission.VIBRATE" />
     <!-- Shows your position on the terminal map; only asked for when you tap the location button -->

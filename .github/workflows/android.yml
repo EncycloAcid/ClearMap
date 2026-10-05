@@ -18,6 +18,12 @@ jobs:
       - name: Check index.html is built from src/ and airports/
         working-directory: .
         run: python3 tools/build.py && git diff --exit-code index.html
+      - name: Connect live data (if the CLEARWAY_LIVE_API repository variable is set)
+        if: vars.CLEARWAY_LIVE_API != ''
+        working-directory: .
+        run: python3 tools/build.py
+        env:
+          CLEARWAY_LIVE_API: ${{ vars.CLEARWAY_LIVE_API }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

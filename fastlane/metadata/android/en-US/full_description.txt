@@ -19,13 +19,19 @@ PASS THE TIME
 • Opening hours, so you don't walk to somewhere that's closed (Cleveland)
 • A reminder when it's time to head to your gate
 
+LIVE FLIGHT STATUS
+• Enter your flight number and Clearway fills in your gate, boarding time, arrival gate and baggage carousel
+• Delays and gate changes as they happen, with a heads-up when your gate moves
+• Live security wait times, added to your walk and your leave-by time
+
 FIND ANYTHING
 • Search gates, airlines and places, even with everyday words like "pizza" or "bathroom"
 • Nearest restroom, coffee or food in one tap
 • Every airline and which concourse it uses
 
 PRIVATE BY DESIGN
-• Works fully offline: the app doesn't use the internet at all
+• Maps, directions and search work offline
+• Live status uses only your flight number, never your name or location
 • No account, no ads, no tracking
 • Your location, if you turn it on, stays on your phone
 

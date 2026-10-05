@@ -8,6 +8,8 @@
   src/ui.js               the app (airport-independent)
 
 Usage: python3 tools/build.py   (run from anywhere)
+Set CLEARWAY_LIVE_API to the Clearway Live server's URL (server/README.md) to switch on live flight
+status and security waits; without it those features say they aren't connected.
 """
 import glob, os
 
@@ -21,5 +23,9 @@ for d in sorted(glob.glob(os.path.join(ROOT, 'airports', '*', ''))):
     parts.append(read(f'airports/{code}/basemap.js'))
     parts.append(read(f'airports/{code}/airport.js'))
 parts += [read('src/engine.js'), read('src/ui.js')]
+live = os.environ.get('CLEARWAY_LIVE_API', '').strip().rstrip('/')
+if live:
+    assert live.startswith('https://') and "'" not in live, 'CLEARWAY_LIVE_API must be an https URL'
+    parts[0] = parts[0].replace("const LIVE_API = '';", f"const LIVE_API = '{live}';", 1)
 open(os.path.join(ROOT, 'index.html'), 'w', encoding='utf-8').write(''.join(parts))
 print('index.html', sum(len(p) for p in parts) // 1024, 'KB from', len(parts), 'parts')

@@ -57,11 +57,21 @@ Regenerate the images after UI changes with `node tools/store_assets.js` (needs 
 
 - **Category**: Travel & Local. Tags: Maps, Navigation, Travel.
 - **Ads**: No.
-- **Data safety**: *Does your app collect or share any of the required user data types?* **No.** Location is used on the device only and never leaves it (the app has no internet permission), so under Google's definitions it isn't "collected". Data encrypted in transit: not applicable. Account deletion: not applicable (no accounts).
+- **Data safety**: location is used on the device only and never leaves it, so it isn't "collected". Flight tracking sends the **flight number** (with the date and airport code) to the Clearway Live server and on to AeroDataBox. Declare: *Data collected* → **App activity › Other actions** (or *Other user-generated content*, whichever the form offers for "a flight number you type"), **processed ephemerally: yes**, **required: no** (optional feature), purpose **App functionality**; *Data shared*: **No** (sending data to a service provider that acts for you isn't "sharing" under Google's definitions). *Encrypted in transit*: **Yes**. *Can users request deletion*: there is nothing stored to delete; say no data is retained. Account deletion: not applicable (no accounts).
 - **Content rating** (IARC questionnaire): category *Reference, News or Educational* or *Utility*; answer No to everything (no violence, user content, purchases or location sharing with others). Expect *Everyone / PEGI 3*.
 - **Target audience**: 18+ is simplest (13+ also fine); the app isn't designed for children.
 - **Government app / financial / health**: No.
 - **Permissions**: location (foreground only, shown on the map when you tap the location button) and notifications (gate reminders). No background location, so no extra declaration.
+
+## Live flight status and security waits
+
+Set up the Clearway Live server first (`server/README.md`): it holds the AeroDataBox and TSAWaitTimes.com keys and the app talks only to it. Build with its URL:
+
+```sh
+CLEARWAY_LIVE_API=https://clearway-live.<you>.workers.dev python3 tools/build.py
+```
+
+or set the repository variable `CLEARWAY_LIVE_API` for GitHub Actions. A build without it still works; the flight box says live status isn't connected and no wait times are shown. Don't commit an `index.html` built with the URL (CI checks `index.html` is built without it).
 
 ## 4. Host the privacy policy
 

@@ -978,6 +978,8 @@ function showPlace(it, fromMap) {
   const hs = hoursStatus(it);
   const summary = [];
   if (hs) summary.push(`<span class="${hs.state === 'open' ? 'ok' : hs.state === 'closed' ? 'no' : 'warn'}">${esc(hs.text)}</span>`);
+  const wm = it.id === CHK ? waitMin() : null;
+  if (wm != null) summary.push(`<span class="${wm >= 30 ? 'no' : wm >= 15 ? 'warn' : 'ok'}">~${wm} min wait</span>`);
   if (it.kind === 'amen') summary.push(`<span>${esc(it.near)}</span>`);
   if (it.kind === 'gate') summary.push(`<span class="marks">${AIRLINES.filter(a => a.cons.includes(it.con)).slice(0, 5).map(a => airMark(a, 20)).join('')}</span>`);
   if (it.zone === 'L' || it.kind === 'place') summary.push(`<span>${it.lvl === 'lo' ? 'Lower level' : 'Upper level'}</span>`);
@@ -990,6 +992,7 @@ function showPlace(it, fromMap) {
   if (tip) html += `<div class="group tip">${tileFor(it)}<span>${esc(tip[2])}</span></div>`;
   const rows = [];
   if (it.note) rows.push(['About', esc(it.note)]);
+  if (wm != null) rows.push(['Security wait', `About ${wm} min${live.wait.precheck ? ' · PreCheck open' : ''} · ${ago(live.wait.updated)}`]);
   if (it.hours) rows.push(['Schedule', esc(hoursLine(it))]);
   if (it.kind === 'amen' && it.cat !== 'rest') rows.push(['Typical visit', `About ${it.dwell} min`]);
   if (walk && walk.path && fromIt.id !== CHK) rows.push([`From ${esc(fromIt.label || fromIt.name)}`, `${minutes(walk.units)} min · ${meters(walk.len)} m`]);
@@ -1267,10 +1270,14 @@ function updateRoute(fit) {
   const { path, units, len, lift } = route(a, b);
   setRoute(path, minutes(units));
   const { steps, passed, via } = describe(path, a, b);
+  // going through security: add the live wait, and say it on the checkpoint step
+  const ci = path.indexOf(ROLE.checkpoint), sec = ci >= 0 && path.indexOf(ROLE.hub) > ci ? waitMin() : null;
+  if (sec != null) { const s = steps.find(x => x.node === ROLE.checkpoint); if (s) s.n = `Security wait about ${sec} min right now${s.n && s.n !== 'Start' ? '. ' + s.n : ''}`; }
+  const total = minutes(units) + (sec || 0);
   $('#hero').className = 'hero';
-  $('#hero').innerHTML = `<button class="hero-x" id="clearRoute" aria-label="Clear route">${icon('x')}</button><span class="num">${minutes(units)}<small>min</small></span>
-    <span class="m1">${meters(len)} m walk${lift ? ' · elevator' : ''}</span>
-    <span class="m2">Arrive ${clock(Date.now() + minutes(units) * 60000)}${via.length ? ' via ' + listJoin(via.slice(0, 3).map(esc)) : ''}</span>
+  $('#hero').innerHTML = `<button class="hero-x" id="clearRoute" aria-label="Clear route">${icon('x')}</button><span class="num">${total}<small>min</small></span>
+    <span class="m1">${meters(len)} m walk${lift ? ' · elevator' : ''}${sec != null ? ` + ~${sec} min security` : ''}</span>
+    <span class="m2">Arrive ${clock(Date.now() + total * 60000)}${via.length ? ' via ' + listJoin(via.slice(0, 3).map(esc)) : ''}</span>
     <button class="go" data-go>${icon('walk')}Go</button>`;
   renderSteps(steps, passed);
   $('#clearRoute').onclick = () => { buzz(5); $('#to').value = ''; updateRoute(false); saveTrip(); };
@@ -1332,7 +1339,7 @@ function setMode(m, quiet) {
   document.querySelectorAll('#modeSw [data-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === m)));
   $('#modeSw').style.setProperty('--i', m === 'arr' ? 1 : 0);
   const arr = m === 'arr';
-  $('#arrForm').hidden = !arr;
+  $('#arrForm').hidden = !arr; $('#flightArr').hidden = !arr;
   document.querySelector('#pane-dir .fromto').hidden = arr;
   $('#quick').hidden = arr;
   if (tab === 'dir' && !placeMode) $('#title').textContent = arr ? 'Arrivals' : TAB_TITLES.dir;
@@ -1447,20 +1454,22 @@ for (const [cat, label] of [['all', 'Everything'], ...Object.entries(CATS).filte
 }
 // Boarding is kept as a clock time, so "55 min" counts down instead of resetting each launch
 let boardAt = Date.now() + 55 * 60000, reminderAt = 0;
-const clock = t => new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+// times are shown in the airport's time zone, like the boards and your boarding pass
+const clock = t => new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZone: AP.tz });
 const minsLeft = () => Math.max(0, Math.round((boardAt - Date.now()) / 60000));
 function leavePlan() {
   // walk from where you are (or the Directions start) to your gate, plus 5 minutes' slack
   const gate = ITEMS[$('#ktGate').value], from = ITEMS['v:me'] || ITEMS[$('#from').value];
   const walk = from && from !== gate ? minutes(route(from, gate).units) : 0;
-  return { gate, from, walk, at: boardAt - (walk + 5) * 60000 };
+  const sec = from && (from.zone === 'L' || from.id === CHK) && gate.zone !== 'L' && typeof waitMin === 'function' ? waitMin() || 0 : 0;
+  return { gate, from, walk, sec, at: boardAt - (walk + sec + 5) * 60000 };
 }
 function updateClock() {
   $('#ktClock').textContent = 'Boarding at about ' + clock(boardAt);
   const p = leavePlan();
   const where = p.from && p.from.id === 'v:me' ? 'from where you are' : p.from ? 'from ' + p.from.name : '';
   $('#ktLeave').innerHTML = (p.at <= Date.now() ? `Head to ${esc(p.gate.name)} <b>now</b>` : `Head to ${esc(p.gate.name)} by <b>${clock(p.at)}</b>`)
-    + `<small>${p.walk} min walk ${esc(where)}</small>`;
+    + `<small>${p.walk} min walk ${esc(where)}${p.sec ? ` + ~${p.sec} min security` : ''}</small>`;
   const rb = $('#remind');
   rb.hidden = !(window.CLEApp && CLEApp.scheduleReminder);
   const on = reminderAt > Date.now();
@@ -1781,6 +1790,139 @@ window.cleBack = () => {
   return false;
 };
 
+// ---------- Live: my flight and security waits (from the Clearway Live server, see server/) ----------
+const live = { flight: null, track: null, err: '', busy: false, wait: null, fetched: 0 };
+const FLIGHT_KEY = 'flight.' + AP.code;
+async function liveGet(path) {
+  if (!LIVE_API) throw Object.assign(new Error('off'), { off: true });
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 12000);
+  try {
+    const r = await fetch(LIVE_API + path, { signal: ctl.signal, cache: 'no-store' });
+    const body = await r.json().catch(() => ({}));
+    if (!r.ok) throw Object.assign(new Error(body.error || 'HTTP ' + r.status), { status: r.status });
+    return body;
+  } finally { clearTimeout(timer); }
+}
+const localDate = (t = Date.now()) => new Intl.DateTimeFormat('en-CA', { timeZone: AP.tz }).format(t);   // YYYY-MM-DD at the airport
+const tclock = iso => iso ? new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZone: AP.tz }) : '–';
+const normFlightNo = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+const ago = iso => { const m = Math.round((Date.now() - new Date(iso)) / 60000); return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : `${Math.round(m / 60)} h ago`; };
+// "C22", or "22" in terminal "C", → that gate on the map
+function gateItem(end) {
+  if (!end || !end.gate) return null;
+  let g = end.gate.toUpperCase().replace(/\s+/g, '').replace(/^GATE/, '');
+  if (/^\d/.test(g) && /^[A-Z]$/.test(end.terminal || '')) g = end.terminal + g;
+  return ITEMS['g:' + g] || null;
+}
+const flightSide = f => f.departure && f.departure.airport === AP.code ? 'departure' : f.arrival && f.arrival.airport === AP.code ? 'arrival' : null;
+function flightStatus(f, side) {
+  const e = f[side] || {}, late = e.scheduled && (e.actual || e.estimated) ? Math.round((new Date(e.actual || e.estimated) - new Date(e.scheduled)) / 60000) : 0;
+  switch (f.status) {
+    case 'cancelled': return ['no', 'Cancelled'];
+    case 'diverted': return ['no', 'Diverted'];
+    case 'boarding': return ['info', 'Boarding'];
+    case 'gate-closed': return ['warn', 'Gate closed'];
+    case 'departed': return ['info', side === 'arrival' ? 'In the air' : 'Departed'];
+    case 'arrived': return ['ok', 'Landed'];
+  }
+  if (late >= 15) return ['warn', `Delayed ${late} min`];
+  if (late <= -5) return ['ok', `Early ${-late} min`];
+  return ['ok', 'On time'];
+}
+const BOARD_BEFORE = 35;   // minutes before departure that boarding usually starts
+// Put the flight's gate, boarding time and carousel into the app; say so when the gate changes
+function applyFlight(f, prev) {
+  const side = flightSide(f); if (!side) return;
+  const e = f[side], g = gateItem(e), prevGate = prev && prev.flight === f.flight && prev[side] ? prev[side].gate : null;
+  if (prevGate && e.gate && prevGate !== e.gate) { toast(`Gate change: ${f.flight} is now at gate ${e.gate}`); buzz(40); }
+  if (side === 'departure') {
+    if (g) {
+      const wasGate = $('#ktGate').value;
+      $('#ktGate').value = g.id;
+      if (mode === 'dep' && (!prev || $('#to').value === wasGate || !$('#to').value)) { $('#to').value = g.id; if (tab === 'dir' && !placeMode) updateRoute(!prev); }
+    }
+    const dep = e.estimated || e.scheduled;
+    if (dep) boardAt = new Date(dep).getTime() - BOARD_BEFORE * 60000;
+    updateClock(); if (!$('#pane-kill').hidden) updateIdeas();
+  } else {
+    if (g) $('#arrGate').value = g.id;
+    if (/^\d{1,2}$/.test(e.baggage || '')) $('#arrCarousel').value = e.baggage;
+    if (mode === 'arr') updateArrival(!prev);
+  }
+  saveTrip();
+}
+function flightHtml() {
+  const f = live.flight;
+  if (!f) {
+    const msg = live.busy ? 'Looking up your flight…' : live.err || (LIVE_API ? 'Fills in your gate, boarding time and baggage carousel, and tells you if the gate changes.' : 'Live flight status isn’t connected in this version.');
+    return `<form class="group flight-form" data-fform><span class="tile" style="background:var(--brand)">${icon('plane')}</span>
+      <input name="no" autocomplete="off" autocapitalize="characters" enterkeyhint="go" maxlength="9" placeholder="Flight number, e.g. DL 1234" aria-label="Flight number" value="${esc(live.track ? live.track.number : '')}"${LIVE_API ? '' : ' disabled'}>
+      <button type="submit"${LIVE_API && !live.busy ? '' : ' disabled'}>Track</button></form>
+      <p class="flight-msg${live.err ? ' err' : ''}">${esc(msg)}</p>`;
+  }
+  const side = flightSide(f), a = AIRLINES.find(x => x.code === (f.airline && f.airline.iata));
+  const route = `${esc((f.departure && (f.departure.city || f.departure.airport)) || '')} → ${esc((f.arrival && (f.arrival.city || f.arrival.airport)) || '')}`;
+  const lead = a ? airMark(a, 40) : `<span class="tile" style="width:40px;height:40px;border-radius:12px;background:var(--brand)">${icon('plane')}</span>`;
+  if (!side) return `<div class="group flight-card"><div class="fc-top">${lead}<span class="grow"><span class="t">${esc(f.flight)}</span><span class="s">${route}</span></span></div>
+    <p class="flight-msg err" style="padding:0;margin:0">This flight doesn’t leave from or land at ${esc(AP.code)} today.</p>
+    <div class="fc-foot"><span></span><button data-fstop>Track a different flight</button></div></div>`;
+  const [cls, text] = flightStatus(f, side), e = f[side], g = gateItem(e);
+  const time = (lbl, est, sch) => `<div class="fc-cell"><small>${lbl}</small><b>${tclock(est || sch)}</b>${est && sch && Math.abs(new Date(est) - new Date(sch)) > 4 * 60000 ? `<s>${tclock(sch)}</s>` : '<em>scheduled</em>'}</div>`;
+  const gateCell = g ? `<button class="fc-cell" data-fgate="${g.id}"><small>Gate</small><b>${esc(e.gate)}</b></button>` : `<div class="fc-cell"><small>Gate</small><b>${esc(e.gate || '–')}</b>${e.gate ? '' : '<em>not yet</em>'}</div>`;
+  const cells = side === 'departure'
+    ? gateCell + time('Departs', e.estimated || e.actual, e.scheduled) + `<div class="fc-cell"><small>Boarding</small><b>${(e.estimated || e.scheduled) ? tclock(new Date(new Date(e.estimated || e.scheduled) - BOARD_BEFORE * 60000).toISOString()) : '–'}</b><em>about</em></div>`
+    : gateCell + time('Lands', e.actual || e.estimated, e.scheduled) + `<div class="fc-cell"><small>Bags</small><b>${esc(e.baggage || '–')}</b><em>${e.baggage ? 'carousel' : 'not yet'}</em></div>`;
+  return `<div class="group flight-card"><div class="fc-top">${lead}<span class="grow"><span class="t">${esc(f.flight)}</span><span class="s">${route}</span></span><span class="status ${cls}">${esc(text)}</span></div>
+    <div class="fc-grid">${cells}</div>
+    <div class="fc-foot"><span>${live.busy ? 'Updating…' : live.err ? esc(live.err) : 'Updated ' + ago(live.fetched ? new Date(live.fetched).toISOString() : f.updated)}</span><button data-fstop>Stop tracking</button></div></div>`;
+}
+function renderFlight() {
+  for (const id of ['flightKill', 'flightArr']) {
+    const box = $('#' + id); box.innerHTML = flightHtml();
+    const form = box.querySelector('[data-fform]');
+    if (form) form.onsubmit = ev => { ev.preventDefault(); buzz(); trackFlight(form.elements.no.value); };
+    const stop = box.querySelector('[data-fstop]');
+    if (stop) stop.onclick = () => { buzz(5); live.flight = null; live.track = null; live.err = ''; store.set(FLIGHT_KEY, null); renderFlight(); };
+    const gate = box.querySelector('[data-fgate]');
+    if (gate) gate.onclick = () => { buzz(5); showPlace(ITEMS[gate.dataset.fgate], false); };
+  }
+}
+async function trackFlight(no, quiet) {
+  no = normFlightNo(no);
+  if (!/^[A-Z0-9]{2}\d{1,4}[A-Z]?$/.test(no)) { live.err = 'Enter a flight number like DL 1234.'; renderFlight(); return; }
+  const date = live.track && live.track.number === no ? live.track.date : localDate();
+  live.busy = true; live.err = ''; renderFlight();
+  try {
+    const f = await liveGet(`/flight?number=${no}&date=${date}&airport=${AP.code}`), prev = live.flight;
+    live.flight = f; live.track = { number: no, date }; live.fetched = Date.now();
+    store.set(FLIGHT_KEY, live.track);
+    applyFlight(f, prev);
+  } catch (e) {
+    live.err = e.off ? 'Live flight status isn’t connected in this version.' : e.status === 404 ? `Couldn’t find ${no} today. Check the number on your boarding pass.` : 'Couldn’t reach flight status. Check your connection.';
+    if (!quiet) buzz(30);
+  }
+  live.busy = false; renderFlight();
+}
+// refresh a tracked flight every 2 minutes while the app is open, until it has landed
+setInterval(() => {
+  const f = live.flight;
+  if (!live.track || document.hidden || live.busy) return;
+  if (f && f.status === 'arrived' && f.arrival && Date.now() - new Date(f.arrival.actual || f.arrival.estimated || f.arrival.scheduled) > 3600000) return;
+  trackFlight(live.track.number, true);
+}, 120000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && live.track && Date.now() - live.fetched > 90000) trackFlight(live.track.number, true); });
+
+// Security wait: shown on the checkpoint, added to routes through it and to the leave-by time
+const waitMin = () => live.wait && Number.isFinite(live.wait.minutes) && Date.now() - new Date(live.wait.updated) < 45 * 60000 ? live.wait.minutes : null;
+async function loadWait() {
+  if (!LIVE_API) return;
+  try { live.wait = await liveGet('/wait?airport=' + AP.code); } catch (e) { live.wait = null; }
+  if (tab === 'dir' && !placeMode) updateRoute(false);
+  updateClock();
+  if (placeMode && selected && selected.id === CHK) showPlace(selected, true);
+}
+setInterval(() => { if (!document.hidden) loadWait(); }, 5 * 60000);
+
 // ---------- Remember the trip between launches ----------
 const TRIP_KEY = AP.code === 'CLE' ? 'trip' : 'trip.' + AP.code;
 function saveTrip() {
@@ -1820,6 +1962,9 @@ addEventListener('resize', () => {
   sizeSvg();
   if (wide() !== lastWide) { lastWide = wide(); fitAll(true); } else render();
 });
+renderFlight();
+{ const t = store.get(FLIGHT_KEY, null); if (t && t.date === localDate() && LIVE_API) { live.track = t; trackFlight(t.number, true); } }
+loadWait();
 if (mode === 'arr') setMode('arr', true);
 updateRoute(false);
 setTab(tab, true);

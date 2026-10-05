@@ -1,0 +1,4 @@
+# Clearway Live: deploy with `npx wrangler deploy` (see README.md)
+name = "clearway-live"
+main = "worker.js"
+compatibility_date = "2026-10-01"
