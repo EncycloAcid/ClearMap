@@ -321,6 +321,15 @@ body.navigating .controls { top: auto; bottom: calc(var(--sab, 0px) + 104px); }
 .nav-bar.done .nv-end { background: var(--ok); }
 @media (min-width: 760px) { .nav-banner { left: 16px; right: auto; width: 420px; margin: 0; } .nav-bar { left: 16px; right: auto; width: 420px; margin: 0; } }
 
+/* ---------- Airline marks ---------- */
+.air-mark { flex: none; display: inline-grid; place-items: center; width: var(--as); height: var(--as); border-radius: calc(var(--as) * .3);
+  background: var(--ac); color: var(--ai); font: 850 calc(var(--as) * .4)/1 var(--font-display); font-variation-settings: "wdth" 112; letter-spacing: -.01em;
+  box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .12); }
+#airlines .row { gap: 12px; }
+.air-tag { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 5px; }
+.summary .marks { display: inline-flex; gap: 4px; }
+.summary .marks::before { display: none; }
+
 /* ---------- Layers menu ---------- */
 .layers { position: fixed; z-index: 6; right: calc(var(--safe-right) + 72px); top: calc(var(--safe-top) + 70px); width: min(270px, calc(100% - 104px)); border-radius: 20px; padding: 6px 0; background: var(--solid); }
 .layers .lh { padding: 8px 16px 4px; font-size: 13px; font-weight: 600; color: var(--label-2); }
@@ -465,6 +474,7 @@ button.row:active, label.row:active { background: var(--fill); }
 .tile.food { background: var(--c-food); } .tile.coffee { background: var(--c-coffee); } .tile.bar { background: var(--c-bar); }
 .tile.shop { background: var(--c-shop); } .tile.play { background: var(--c-play); } .tile.service { background: var(--c-service); }
 .tile.rest { background: var(--c-rest); } .tile.gate { background: var(--label-2); } .tile.place { background: var(--p-terminal); color: var(--map); }
+.tile.place.terminal .ico { color: var(--map); stroke: var(--map); }
 .tile.place.bags { background: var(--p-bags); color: #fff; } .tile.place.transit { background: var(--p-transit); color: #fff; } .tile.place.ground { background: var(--p-ground); color: #fff; }
 .tile.A { background: var(--conA); } .tile.B { background: var(--conB); } .tile.C { background: var(--conC); }
 .badge { width: 30px; height: 30px; flex: none; }
@@ -861,18 +871,19 @@ AIRPORTS.CLE = (() => {
   const MAP_BOUNDS = { x0: -262, y0: -470, x1: 345, y1: 330 };
   
   
+  // code: IATA designator; color/ink: the airline's brand colour for its mark
   const AIRLINES = [
-    { name: 'Frontier', con: 'A', note: 'Domestic and international' },
-    { name: 'Spirit', con: 'A' },
-    { name: 'Avelo', con: 'A' },
-    { name: 'Delta', con: 'B' },
-    { name: 'Southwest', con: 'B' },
-    { name: 'United', con: 'C' },
-    { name: 'American', con: 'C' },
-    { name: 'Air Canada', con: 'C', note: 'Toronto' },
-    { name: 'Aer Lingus', con: 'C', note: 'Dublin' },
-    { name: 'Alaska', con: 'C' },
-    { name: 'JetBlue', con: 'C' },
+    { name: 'Frontier', code: 'F9', color: '#0b6b4f', con: 'A', note: 'Domestic and international' },
+    { name: 'Spirit', code: 'NK', color: '#ffe600', ink: '#111', con: 'A' },
+    { name: 'Avelo', code: 'XP', color: '#5b2d8e', con: 'A' },
+    { name: 'Delta', code: 'DL', color: '#c8102e', con: 'B' },
+    { name: 'Southwest', code: 'WN', color: '#304cb2', con: 'B' },
+    { name: 'United', code: 'UA', color: '#005daa', con: 'C' },
+    { name: 'American', code: 'AA', color: '#0078d2', con: 'C' },
+    { name: 'Air Canada', code: 'AC', color: '#d22630', con: 'C', note: 'Toronto' },
+    { name: 'Aer Lingus', code: 'EI', color: '#00806e', con: 'C', note: 'Dublin' },
+    { name: 'Alaska', code: 'AS', color: '#01426a', con: 'C' },
+    { name: 'JetBlue', code: 'B6', color: '#0033a0', con: 'C' },
   ];
   const CON_RANGE = { A: 'A1–A14', B: 'B1–B11', C: 'C2–C29' };
   
@@ -2040,7 +2051,7 @@ function showPlace(it, fromMap) {
   const summary = [];
   if (hs) summary.push(`<span class="${hs.state === 'open' ? 'ok' : hs.state === 'closed' ? 'no' : 'warn'}">${esc(hs.text)}</span>`);
   if (it.kind === 'amen') summary.push(`<span>${esc(it.near)}</span>`);
-  if (it.kind === 'gate') summary.push(`<span>${esc(AIRLINES.filter(a => a.con === it.con).map(a => a.name).slice(0, 3).join(', '))}</span>`);
+  if (it.kind === 'gate') summary.push(`<span class="marks">${AIRLINES.filter(a => a.con === it.con).slice(0, 5).map(a => airMark(a, 20)).join('')}</span>`);
   if (it.zone === 'L' || it.kind === 'place') summary.push(`<span>${it.lvl === 'lo' ? 'Lower level' : 'Upper level'}</span>`);
   let html = summary.length ? `<p class="summary">${summary.join('')}</p>` : '';
   html += `<div class="bgroup">
@@ -2061,7 +2072,7 @@ function showPlace(it, fromMap) {
   if (it.kind === 'gate') rows.push(['Concourse', `${it.con} · ${CON_RANGE[it.con]}`]);
   if (rows.length) html += `<div class="group">${rows.map(([k, v]) => `<div class="row"><span class="rl" style="flex:none">${k}</span><span style="flex:1;min-width:0;color:var(--label-2);text-align:right">${v}</span></div>`).join('')}</div>`;
   if (it.kind === 'gate') {
-    html += `<div class="group-title">Airlines in Concourse ${it.con}</div><div class="group tags">${AIRLINES.filter(a => a.con === it.con).map(a => `<span class="tag">${esc(a.name)}</span>`).join('')}</div>`;
+    html += `<div class="group-title">Airlines in Concourse ${it.con}</div><div class="group tags">${AIRLINES.filter(a => a.con === it.con).map(a => `<span class="tag air-tag">${airMark(a, 22)}${esc(a.name)}</span>`).join('')}</div>`;
   }
   if (it.hours && !it.hours.h24 && !it.hours.close) html += `<p class="foot" style="margin:-6px 16px 0">Opening times from the airport's directory. Closing times aren't published; they follow the last flights.</p>`;
   const near = it.kind !== 'place' ? nearbyItems(it) : [];
@@ -2563,10 +2574,12 @@ $('#surprise').onclick = () => {
 };
 
 // ---------- Airlines ----------
+// an airline's mark: its two-letter code on a tile in its brand colour
+const airMark = (a, size = 30) => `<span class="air-mark" style="--ac:${esc(a.color || 'var(--label-2)')};--ai:${esc(a.ink || '#fff')};--as:${size}px" aria-hidden="true">${esc(a.code || a.name.slice(0, 2).toUpperCase())}</span>`;
 $('#airlines').innerHTML = 'ABC'.split('').map(con => `
   <div class="group-title">${badgeSvg(con, 22)}Concourse ${con} · ${CON_RANGE[con]}</div>
   <div class="group" style="--inset:16px">${AIRLINES.map((a, i) => a.con !== con ? '' : `
-    <button class="row" data-i="${i}">
+    <button class="row" data-i="${i}">${airMark(a, 34)}
       <span class="grow"><span class="t">${esc(a.name)}</span>${a.note ? `<span class="s">${esc(a.note)}</span>` : ''}</span>
       <svg class="ico chev"><use href="#i-chev"/></svg>
     </button>`).join('')}</div>`).join('');
@@ -2607,7 +2620,7 @@ function suggestions() {
     .concat(Object.values(ITEMS).filter(i => i.kind === 'amen' && AP.ui.popularRe.test(i.name)))
     .filter(i => !recent.includes(i)).slice(0, 5);
   hits = [...recent.map(itemHit), ...popular.map(itemHit)]; active = -1;
-  results.innerHTML = `<div class="sec">Airlines</div><div class="airline-row">${AIRLINES.map((a, i) => `<button data-air="${i}">${badgeSvg(a.con, 24)}${esc(a.name)}</button>`).join('')}</div>`
+  results.innerHTML = `<div class="sec">Airlines</div><div class="airline-row">${AIRLINES.map((a, i) => `<button data-air="${i}">${airMark(a, 24)}${esc(a.name)}</button>`).join('')}</div>`
     + renderHits([['Recent', recent.map(itemHit)], ['Popular', popular.map(itemHit)]]);
   results.classList.toggle('fresh', results.hidden); if (results.hidden) stagger(results, ':scope > button'); results.hidden = false; wireResults();
 }
@@ -2616,8 +2629,10 @@ function runSearch() {
   $('#qClear').hidden = !s;
   if (!s) { if (document.activeElement === q) suggestions(); else results.hidden = true; return; }
   const code = s.replace(/^gate\s*/, '').replace(/\s+/g, '');
-  const air = AIRLINES.filter(a => a.name.toLowerCase().includes(s))
-    .map(a => ({ label: a.name, kind: `Airline · Concourse ${a.con} · ${CON_RANGE[a.con]}`, lead: badgeSvg(a.con, 30), go: () => highlightAirline(a) }));
+  // airline codes match too, unless a gate has that number (JetBlue is B6)
+  const isGateCode = Object.values(ITEMS).some(it => it.kind === 'gate' && it.code.toLowerCase() === code);
+  const air = AIRLINES.filter(a => a.name.toLowerCase().includes(s) || (!isGateCode && a.code && a.code.toLowerCase() === s))
+    .map(a => ({ label: a.name, kind: `Airline · Concourse ${a.con} · ${CON_RANGE[a.con]}`, lead: airMark(a, 30), go: () => highlightAirline(a) }));
   const gates = [], places = [], seen = new Set();
   for (const it of Object.values(ITEMS)) {
     if (it.id === 'v:me') continue;

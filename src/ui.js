@@ -880,7 +880,7 @@ function showPlace(it, fromMap) {
   const summary = [];
   if (hs) summary.push(`<span class="${hs.state === 'open' ? 'ok' : hs.state === 'closed' ? 'no' : 'warn'}">${esc(hs.text)}</span>`);
   if (it.kind === 'amen') summary.push(`<span>${esc(it.near)}</span>`);
-  if (it.kind === 'gate') summary.push(`<span>${esc(AIRLINES.filter(a => a.con === it.con).map(a => a.name).slice(0, 3).join(', '))}</span>`);
+  if (it.kind === 'gate') summary.push(`<span class="marks">${AIRLINES.filter(a => a.con === it.con).slice(0, 5).map(a => airMark(a, 20)).join('')}</span>`);
   if (it.zone === 'L' || it.kind === 'place') summary.push(`<span>${it.lvl === 'lo' ? 'Lower level' : 'Upper level'}</span>`);
   let html = summary.length ? `<p class="summary">${summary.join('')}</p>` : '';
   html += `<div class="bgroup">
@@ -901,7 +901,7 @@ function showPlace(it, fromMap) {
   if (it.kind === 'gate') rows.push(['Concourse', `${it.con} · ${CON_RANGE[it.con]}`]);
   if (rows.length) html += `<div class="group">${rows.map(([k, v]) => `<div class="row"><span class="rl" style="flex:none">${k}</span><span style="flex:1;min-width:0;color:var(--label-2);text-align:right">${v}</span></div>`).join('')}</div>`;
   if (it.kind === 'gate') {
-    html += `<div class="group-title">Airlines in Concourse ${it.con}</div><div class="group tags">${AIRLINES.filter(a => a.con === it.con).map(a => `<span class="tag">${esc(a.name)}</span>`).join('')}</div>`;
+    html += `<div class="group-title">Airlines in Concourse ${it.con}</div><div class="group tags">${AIRLINES.filter(a => a.con === it.con).map(a => `<span class="tag air-tag">${airMark(a, 22)}${esc(a.name)}</span>`).join('')}</div>`;
   }
   if (it.hours && !it.hours.h24 && !it.hours.close) html += `<p class="foot" style="margin:-6px 16px 0">Opening times from the airport's directory. Closing times aren't published; they follow the last flights.</p>`;
   const near = it.kind !== 'place' ? nearbyItems(it) : [];
@@ -1403,10 +1403,12 @@ $('#surprise').onclick = () => {
 };
 
 // ---------- Airlines ----------
+// an airline's mark: its two-letter code on a tile in its brand colour
+const airMark = (a, size = 30) => `<span class="air-mark" style="--ac:${esc(a.color || 'var(--label-2)')};--ai:${esc(a.ink || '#fff')};--as:${size}px" aria-hidden="true">${esc(a.code || a.name.slice(0, 2).toUpperCase())}</span>`;
 $('#airlines').innerHTML = 'ABC'.split('').map(con => `
   <div class="group-title">${badgeSvg(con, 22)}Concourse ${con} · ${CON_RANGE[con]}</div>
   <div class="group" style="--inset:16px">${AIRLINES.map((a, i) => a.con !== con ? '' : `
-    <button class="row" data-i="${i}">
+    <button class="row" data-i="${i}">${airMark(a, 34)}
       <span class="grow"><span class="t">${esc(a.name)}</span>${a.note ? `<span class="s">${esc(a.note)}</span>` : ''}</span>
       <svg class="ico chev"><use href="#i-chev"/></svg>
     </button>`).join('')}</div>`).join('');
@@ -1447,7 +1449,7 @@ function suggestions() {
     .concat(Object.values(ITEMS).filter(i => i.kind === 'amen' && AP.ui.popularRe.test(i.name)))
     .filter(i => !recent.includes(i)).slice(0, 5);
   hits = [...recent.map(itemHit), ...popular.map(itemHit)]; active = -1;
-  results.innerHTML = `<div class="sec">Airlines</div><div class="airline-row">${AIRLINES.map((a, i) => `<button data-air="${i}">${badgeSvg(a.con, 24)}${esc(a.name)}</button>`).join('')}</div>`
+  results.innerHTML = `<div class="sec">Airlines</div><div class="airline-row">${AIRLINES.map((a, i) => `<button data-air="${i}">${airMark(a, 24)}${esc(a.name)}</button>`).join('')}</div>`
     + renderHits([['Recent', recent.map(itemHit)], ['Popular', popular.map(itemHit)]]);
   results.classList.toggle('fresh', results.hidden); if (results.hidden) stagger(results, ':scope > button'); results.hidden = false; wireResults();
 }
@@ -1456,8 +1458,10 @@ function runSearch() {
   $('#qClear').hidden = !s;
   if (!s) { if (document.activeElement === q) suggestions(); else results.hidden = true; return; }
   const code = s.replace(/^gate\s*/, '').replace(/\s+/g, '');
-  const air = AIRLINES.filter(a => a.name.toLowerCase().includes(s))
-    .map(a => ({ label: a.name, kind: `Airline · Concourse ${a.con} · ${CON_RANGE[a.con]}`, lead: badgeSvg(a.con, 30), go: () => highlightAirline(a) }));
+  // airline codes match too, unless a gate has that number (JetBlue is B6)
+  const isGateCode = Object.values(ITEMS).some(it => it.kind === 'gate' && it.code.toLowerCase() === code);
+  const air = AIRLINES.filter(a => a.name.toLowerCase().includes(s) || (!isGateCode && a.code && a.code.toLowerCase() === s))
+    .map(a => ({ label: a.name, kind: `Airline · Concourse ${a.con} · ${CON_RANGE[a.con]}`, lead: airMark(a, 30), go: () => highlightAirline(a) }));
   const gates = [], places = [], seen = new Set();
   for (const it of Object.values(ITEMS)) {
     if (it.id === 'v:me') continue;

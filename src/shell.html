@@ -321,6 +321,15 @@ body.navigating .controls { top: auto; bottom: calc(var(--sab, 0px) + 104px); }
 .nav-bar.done .nv-end { background: var(--ok); }
 @media (min-width: 760px) { .nav-banner { left: 16px; right: auto; width: 420px; margin: 0; } .nav-bar { left: 16px; right: auto; width: 420px; margin: 0; } }
 
+/* ---------- Airline marks ---------- */
+.air-mark { flex: none; display: inline-grid; place-items: center; width: var(--as); height: var(--as); border-radius: calc(var(--as) * .3);
+  background: var(--ac); color: var(--ai); font: 850 calc(var(--as) * .4)/1 var(--font-display); font-variation-settings: "wdth" 112; letter-spacing: -.01em;
+  box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .12); }
+#airlines .row { gap: 12px; }
+.air-tag { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 5px; }
+.summary .marks { display: inline-flex; gap: 4px; }
+.summary .marks::before { display: none; }
+
 /* ---------- Layers menu ---------- */
 .layers { position: fixed; z-index: 6; right: calc(var(--safe-right) + 72px); top: calc(var(--safe-top) + 70px); width: min(270px, calc(100% - 104px)); border-radius: 20px; padding: 6px 0; background: var(--solid); }
 .layers .lh { padding: 8px 16px 4px; font-size: 13px; font-weight: 600; color: var(--label-2); }
@@ -465,6 +474,7 @@ button.row:active, label.row:active { background: var(--fill); }
 .tile.food { background: var(--c-food); } .tile.coffee { background: var(--c-coffee); } .tile.bar { background: var(--c-bar); }
 .tile.shop { background: var(--c-shop); } .tile.play { background: var(--c-play); } .tile.service { background: var(--c-service); }
 .tile.rest { background: var(--c-rest); } .tile.gate { background: var(--label-2); } .tile.place { background: var(--p-terminal); color: var(--map); }
+.tile.place.terminal .ico { color: var(--map); stroke: var(--map); }
 .tile.place.bags { background: var(--p-bags); color: #fff; } .tile.place.transit { background: var(--p-transit); color: #fff; } .tile.place.ground { background: var(--p-ground); color: #fff; }
 .tile.A { background: var(--conA); } .tile.B { background: var(--conB); } .tile.C { background: var(--conC); }
 .badge { width: 30px; height: 30px; flex: none; }

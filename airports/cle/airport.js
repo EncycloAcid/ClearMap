@@ -43,18 +43,19 @@ AIRPORTS.CLE = (() => {
   const MAP_BOUNDS = { x0: -262, y0: -470, x1: 345, y1: 330 };
   
   
+  // code: IATA designator; color/ink: the airline's brand colour for its mark
   const AIRLINES = [
-    { name: 'Frontier', con: 'A', note: 'Domestic and international' },
-    { name: 'Spirit', con: 'A' },
-    { name: 'Avelo', con: 'A' },
-    { name: 'Delta', con: 'B' },
-    { name: 'Southwest', con: 'B' },
-    { name: 'United', con: 'C' },
-    { name: 'American', con: 'C' },
-    { name: 'Air Canada', con: 'C', note: 'Toronto' },
-    { name: 'Aer Lingus', con: 'C', note: 'Dublin' },
-    { name: 'Alaska', con: 'C' },
-    { name: 'JetBlue', con: 'C' },
+    { name: 'Frontier', code: 'F9', color: '#0b6b4f', con: 'A', note: 'Domestic and international' },
+    { name: 'Spirit', code: 'NK', color: '#ffe600', ink: '#111', con: 'A' },
+    { name: 'Avelo', code: 'XP', color: '#5b2d8e', con: 'A' },
+    { name: 'Delta', code: 'DL', color: '#c8102e', con: 'B' },
+    { name: 'Southwest', code: 'WN', color: '#304cb2', con: 'B' },
+    { name: 'United', code: 'UA', color: '#005daa', con: 'C' },
+    { name: 'American', code: 'AA', color: '#0078d2', con: 'C' },
+    { name: 'Air Canada', code: 'AC', color: '#d22630', con: 'C', note: 'Toronto' },
+    { name: 'Aer Lingus', code: 'EI', color: '#00806e', con: 'C', note: 'Dublin' },
+    { name: 'Alaska', code: 'AS', color: '#01426a', con: 'C' },
+    { name: 'JetBlue', code: 'B6', color: '#0033a0', con: 'C' },
   ];
   const CON_RANGE = { A: 'A1–A14', B: 'B1–B11', C: 'C2–C29' };
   
