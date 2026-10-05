@@ -1,10 +1,10 @@
-name: Android APK
+name: Android
 
 on:
   push:
-    paths: ["index.html", "src/**", "airports/**", "tools/**", "android/**", ".github/workflows/android.yml"]
+    paths: ["index.html", "src/**", "airports/**", "tools/**", "android/**", "fastlane/**", ".github/workflows/android.yml"]
   pull_request:
-    paths: ["index.html", "src/**", "airports/**", "tools/**", "android/**", ".github/workflows/android.yml"]
+    paths: ["index.html", "src/**", "airports/**", "tools/**", "android/**", "fastlane/**", ".github/workflows/android.yml"]
   workflow_dispatch:
 
 jobs:
@@ -23,8 +23,23 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: android-actions/setup-android@v3
-      - run: ./gradlew assembleRelease --no-daemon
+      # With the upload key stored as repository secrets (see STORE.md), the release builds are
+      # signed for Google Play; without them they're signed with a debug key for testing.
+      - name: Upload key
+        env:
+          KEYSTORE_B64: ${{ secrets.CLEARWAY_KEYSTORE_B64 }}
+        if: env.KEYSTORE_B64 != ''
+        run: echo "$KEYSTORE_B64" | base64 -d > upload-key.jks && echo "CLEARWAY_KEYSTORE=upload-key.jks" >> "$GITHUB_ENV"
+      - run: ./gradlew assembleRelease bundleRelease --no-daemon
+        env:
+          CLEARWAY_KEYSTORE_PASSWORD: ${{ secrets.CLEARWAY_KEYSTORE_PASSWORD }}
+          CLEARWAY_KEY_ALIAS: ${{ secrets.CLEARWAY_KEY_ALIAS }}
+          CLEARWAY_KEY_PASSWORD: ${{ secrets.CLEARWAY_KEY_PASSWORD }}
       - uses: actions/upload-artifact@v4
         with:
           name: clearway-apk
           path: android/app/build/outputs/apk/release/app-release.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: clearway-play-bundle
+          path: android/app/build/outputs/bundle/release/app-release.aab

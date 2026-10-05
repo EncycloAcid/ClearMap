@@ -1,27 +1,58 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
 
+// Release signing: the upload key's details come from android/keystore.properties (never committed)
+// or, in CI, from environment variables. See STORE.md.
+val signing = Properties().apply {
+    val f = rootProject.file("keystore.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+fun signingValue(key: String, env: String): String? = signing.getProperty(key) ?: System.getenv(env)
+val storePath = signingValue("storeFile", "CLEARWAY_KEYSTORE")
+
 android {
     namespace = "io.github.encycloacid.clearmap"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "io.github.encycloacid.clearmap"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 32
-        versionName = "6.0.1"
+        targetSdk = 36
+        versionCode = 33
+        versionName = "6.1"
+    }
+
+    signingConfigs {
+        create("upload") {
+            if (storePath != null) {
+                storeFile = rootProject.file(storePath)
+                storePassword = signingValue("storePassword", "CLEARWAY_KEYSTORE_PASSWORD")
+                keyAlias = signingValue("keyAlias", "CLEARWAY_KEY_ALIAS")
+                keyPassword = signingValue("keyPassword", "CLEARWAY_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
-            // Signed with the debug key so the release APK installs without extra setup.
-            // Replace with your own signing config before publishing to Google Play.
-            signingConfig = signingConfigs.getByName("debug")
+            // R8 shrinks the Kotlin code and drops unused resources; the map itself is web assets.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // Without an upload key the release build falls back to the debug key, so it still
+            // installs for testing; Google Play only accepts it signed with the upload key.
+            signingConfig = if (storePath != null) signingConfigs.getByName("upload") else signingConfigs.getByName("debug")
         }
+    }
+
+    bundle {
+        // one app bundle; Play serves each phone only the language and density it needs
+        language { enableSplit = true }
+        density { enableSplit = true }
     }
 
     compileOptions {

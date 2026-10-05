@@ -1,0 +1,34 @@
+Clearway is a calm, clear map of the inside of the airport: where your gate is, how long it takes to walk there, and what's on the way.
+
+AIRPORTS
+• Cleveland Hopkins International (CLE)
+• Hartsfield–Jackson Atlanta International (ATL), including the Plane Train
+More airports are on the way.
+
+WALKING DIRECTIONS
+• Turn-by-turn steps from security to your gate, with walk times and distances
+• Go mode: one step at a time, with a turn arrow and the time left
+• Upper and lower levels, with escalators, elevators and the Plane Train marked
+• Step-free routes that use elevators instead of escalators
+
+JUST LANDED?
+• Arrivals mode takes you from your gate to baggage claim, then to the train, rideshare, taxis, rental cars or the pickup curb
+
+PASS THE TIME
+• See how much time you have before boarding, and which restaurants, coffee shops, bars and shops you can visit and still make it back
+• Opening hours, so you don't walk to somewhere that's closed (Cleveland)
+• A reminder when it's time to head to your gate
+
+FIND ANYTHING
+• Search gates, airlines and places, even with everyday words like "pizza" or "bathroom"
+• Nearest restroom, coffee or food in one tap
+• Every airline and which concourse it uses
+
+PRIVATE BY DESIGN
+• Works fully offline: the app doesn't use the internet at all
+• No account, no ads, no tracking
+• Your location, if you turn it on, stays on your phone
+
+Light and dark themes. Map data © OpenStreetMap contributors.
+
+Gates, hours and airline concourses change. Always check your boarding pass and the airport's screens.

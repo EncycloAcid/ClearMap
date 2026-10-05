@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "CLEGateFinder"
+rootProject.name = "Clearway"
 include(":app")

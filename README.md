@@ -77,3 +77,7 @@ Two airports are included: Cleveland Hopkins (CLE) and Hartsfield–Jackson Atla
 2. Run `python3 tools/osm_places.py <code>` to print its gates and places (food, shops, restrooms…) from OpenStreetMap, ready to paste.
 3. Write `airports/<code>/airport.js` (see `airports/atl/airport.js`): the walkway graph (`V`, `EDGES`, `SPINES`), concourses with colours and badge shapes, airlines and the concourses they use, places, labels, arrival tips and time zone. Edges can be walkways, escalators (`esc`), elevators (`lift`), an airport train (`train`, with `board` edges to its platforms) or one-way exits (`exit`). Register it as `AIRPORTS.<CODE>`.
 4. Run `python3 tools/build.py`. The new airport appears in the airport picker (tap the airport name above the sheet title).
+
+## Publishing
+
+See [STORE.md](STORE.md) for releasing on Google Play: signing, the app bundle, the store listing and the privacy policy.
