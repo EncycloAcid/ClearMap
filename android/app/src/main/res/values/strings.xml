@@ -7,4 +7,8 @@
     <string name="sc_gate_short">My gate</string>
     <string name="sc_gate_long">Directions to my gate</string>
     <string name="reminder_channel">Gate reminders</string>
+    <string name="widget_desc">Your gate, boarding time and walk, with nearest restroom and coffee</string>
+    <string name="widget_empty">Open Clearway and pick your gate</string>
+    <string name="widget_restroom">Restroom</string>
+    <string name="widget_coffee">Coffee</string>
 </resources>

@@ -4,4 +4,8 @@
     <color name="icon_bg">#FFFFFF</color>
     <color name="map_light">#ECEFF3</color>
     <color name="map_dark">#14171C</color>
+    <color name="widget_bg">#FFFFFF</color>
+    <color name="widget_cell">#F1F3F8</color>
+    <color name="widget_text">#141A33</color>
+    <color name="widget_text2">#5B6178</color>
 </resources>

@@ -3172,6 +3172,17 @@ function leavePlan() {
   const sec = from && (from.zone === 'L' || from.id === CHK) && gate.zone !== 'L' && typeof waitMin === 'function' ? waitMin() || 0 : 0;
   return { gate, from, walk, sec, at: boardAt - (walk + sec + 5) * 60000 };
 }
+// Home-screen widget (Android): gate, boarding, leave-by and walk, sent whenever they change
+let widgetSent = '';
+function pushWidget() {
+  if (!(window.CLEApp && CLEApp.updateWidget)) return;
+  const p = leavePlan(), f = typeof live !== 'undefined' && live.flight && flightSide(live.flight) === 'departure' ? live.flight : null;
+  const data = JSON.stringify({ code: AP.code, airport: AP.short, tz: AP.tz, gate: p.gate ? p.gate.code : '', board: Math.round(boardAt),
+    leave: Math.round(p.at), walk: p.walk + (p.sec || 0), flight: f ? f.flight : '', status: f ? flightStatus(f, 'departure')[1] : '' });
+  if (data === widgetSent) return;
+  widgetSent = data;
+  try { CLEApp.updateWidget(data); } catch (e) {}
+}
 function updateClock() {
   $('#ktClock').textContent = 'Boarding at about ' + clock(boardAt);
   const p = leavePlan();
@@ -3183,6 +3194,7 @@ function updateClock() {
   const on = reminderAt > Date.now();
   rb.setAttribute('aria-pressed', String(on));
   rb.querySelector('span').textContent = on ? `Reminder at ${clock(reminderAt)} · Cancel` : 'Remind me when to leave';
+  pushWidget();
 }
 setInterval(() => { if (!$('#pane-kill').hidden) updateIdeas(); }, 30000);
 $('#remind').onclick = () => {

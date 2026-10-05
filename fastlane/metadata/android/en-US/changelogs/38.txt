@@ -1,2 +1,3 @@
 • Live flight status: gates, delays, boarding time and baggage carousel
 • Live security wait times
+• Home-screen widget: your gate, boarding time and walk, with nearest restroom and coffee

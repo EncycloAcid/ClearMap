@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home-screen widget: gate, boarding and walk at a glance, plus nearest restroom and coffee.
+     The app keeps it up to date through CLEApp.updateWidget (see TripWidget.kt). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@drawable/widget_bg" android:orientation="vertical" android:padding="12dp">
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center_vertical" android:orientation="horizontal">
+        <TextView android:id="@+id/w_code" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:background="@drawable/widget_pill" android:paddingStart="7dp" android:paddingTop="2dp" android:paddingEnd="7dp" android:paddingBottom="2dp"
+            android:text="CLE" android:textColor="#FFFFFF" android:textSize="12sp" android:textStyle="bold" />
+        <TextView android:id="@+id/w_title" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+            android:layout_marginStart="8dp" android:ellipsize="end" android:maxLines="1"
+            android:text="Clearway" android:textColor="@color/widget_text2" android:textSize="13sp" android:textStyle="bold" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/w_main" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="8dp" android:orientation="horizontal">
+        <LinearLayout
+            android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+            android:layout_marginEnd="6dp" android:background="@drawable/widget_cell"
+            android:orientation="vertical" android:paddingStart="10dp" android:paddingTop="7dp" android:paddingEnd="8dp" android:paddingBottom="7dp">
+            <TextView android:id="@+id/w_l1" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Gate" android:textColor="@color/widget_text2" android:textSize="11sp" android:textStyle="bold" />
+            <TextView android:id="@+id/w_gate" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:maxLines="1" android:text="C22" android:textColor="@color/widget_text" android:textSize="19sp" android:textStyle="bold" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+            android:layout_marginEnd="6dp" android:background="@drawable/widget_cell"
+            android:orientation="vertical" android:paddingStart="10dp" android:paddingTop="7dp" android:paddingEnd="8dp" android:paddingBottom="7dp">
+            <TextView android:id="@+id/w_l2" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Boards" android:textColor="@color/widget_text2" android:textSize="11sp" android:textStyle="bold" />
+            <TextView android:id="@+id/w_board" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:maxLines="1" android:text="3:05 PM" android:textColor="@color/widget_text" android:textSize="19sp" android:textStyle="bold" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+            android:layout_marginEnd="6dp" android:background="@drawable/widget_cell"
+            android:orientation="vertical" android:paddingStart="10dp" android:paddingTop="7dp" android:paddingEnd="8dp" android:paddingBottom="7dp">
+            <TextView android:id="@+id/w_l3" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Walk" android:textColor="@color/widget_text2" android:textSize="11sp" android:textStyle="bold" />
+            <TextView android:id="@+id/w_walk" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:maxLines="1" android:text="8 min" android:textColor="@color/widget_text" android:textSize="19sp" android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <TextView android:id="@+id/w_empty" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="10dp" android:text="@string/widget_empty" android:textColor="@color/widget_text"
+        android:textSize="15sp" android:textStyle="bold" android:visibility="gone" />
+
+    <TextView android:id="@+id/w_leave" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="6dp" android:maxLines="1" android:ellipsize="end"
+        android:text="Leave by 2:52 PM" android:textColor="@color/primary" android:textSize="13sp" android:textStyle="bold" />
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="8dp" android:orientation="horizontal">
+        <TextView android:id="@+id/w_restroom"
+            android:layout_width="0dp" android:layout_height="36dp" android:layout_weight="1" android:layout_marginEnd="6dp"
+            android:background="@drawable/widget_btn" android:drawableStart="@drawable/ic_w_restroom" android:drawablePadding="6dp"
+            android:gravity="center" android:paddingStart="12dp" android:paddingEnd="12dp"
+            android:text="@string/widget_restroom" android:textColor="#FFFFFF" android:textSize="14sp" android:textStyle="bold" />
+        <TextView android:id="@+id/w_coffee"
+            android:layout_width="0dp" android:layout_height="36dp" android:layout_weight="1" android:layout_marginEnd="6dp"
+            android:background="@drawable/widget_btn" android:drawableStart="@drawable/ic_w_coffee" android:drawablePadding="6dp"
+            android:gravity="center" android:paddingStart="12dp" android:paddingEnd="12dp"
+            android:text="@string/widget_coffee" android:textColor="#FFFFFF" android:textSize="14sp" android:textStyle="bold" />
+    </LinearLayout>
+</LinearLayout>

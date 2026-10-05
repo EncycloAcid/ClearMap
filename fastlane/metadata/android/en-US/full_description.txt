@@ -18,6 +18,7 @@ PASS THE TIME
 • See how much time you have before boarding, and which restaurants, coffee shops, bars and shops you can visit and still make it back
 • Opening hours, so you don't walk to somewhere that's closed (Cleveland)
 • A reminder when it's time to head to your gate
+• A home-screen widget with your gate, boarding time and walk, plus one-tap nearest restroom and coffee
 
 LIVE FLIGHT STATUS
 • Enter your flight number and Clearway fills in your gate, boarding time, arrival gate and baggage carousel

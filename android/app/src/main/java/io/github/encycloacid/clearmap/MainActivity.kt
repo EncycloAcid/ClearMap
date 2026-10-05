@@ -145,6 +145,12 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun cancelReminder() = ReminderReceiver.cancel(this@MainActivity)
 
+        /** The trip for the home-screen widget, as JSON (see TripWidget). */
+        @JavascriptInterface
+        fun updateWidget(json: String) {
+            if (json.length < 2000) TripWidget.save(this@MainActivity, json)
+        }
+
         @JavascriptInterface
         fun openSettings() {
             runOnUiThread {
