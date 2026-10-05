@@ -51,8 +51,9 @@ function readPalette() {
   const p = {};
   for (const k of ['map', 'grass', 'wood', 'water', 'apron-pave', 'lot', 'taxi', 'runway', 'taxi-line', 'road-case', 'road-fill',
     'mway-case', 'mway-fill', 'rail', 'other-bldg', 'garage', 'bldg', 'bldg-edge', 'bldg-shadow', 'plane', 'bridge', 'term-closed',
-    'walk', 'route', 'conA', 'conB', 'conC', 'corridor', 'stairs']) p[k] = g(k);
-  for (const c of 'ABC') p['term' + c] = /^#[0-9a-f]{6}$/i.test(p['con' + c]) && /^#[0-9a-f]{6}$/i.test(p.bldg) ? hexMix(p['con' + c], p.bldg, c === 'A' ? .09 : .08) : p.bldg;
+    'walk', 'route', 'conA', 'conB', 'conC', 'corridor', 'stairs', 'runway-mark']) p[k] = g(k);
+  const tint = parseFloat(g('con-tint')) || .1;
+  for (const c of 'ABC') p['term' + c] = /^#[0-9a-f]{6}$/i.test(p['con' + c]) && /^#[0-9a-f]{6}$/i.test(p.bldg) ? hexMix(p['con' + c], p.bldg, tint) : p.bldg;
   return p;
 }
 const repaint = () => { pal = null; if (committed) render(true); };
@@ -70,6 +71,8 @@ function drawBase() {
   fill('grass', pal.grass); fill('wood', pal.wood); fill('water', pal.water);
   fill('apron', pal['apron-pave']); fill('lots', pal.lot); fill('ramp', pal['apron-pave']);
   stroke('taxiway', pal.taxi, 23); stroke('runway', pal.runway, 46);
+  // runway centreline dashes, then the taxiway centrelines
+  if (k > .35) stroke('runway', pal['runway-mark'], .9, [36, 24]);
   stroke('taxiway', pal['taxi-line'], 1.1 / k);
   const roads = [['service', 5], ['minor', 9], ['major', 11], ['motorway', 15]];
   for (const [r, w] of roads) stroke(r, r === 'motorway' ? pal['mway-case'] : pal['road-case'], w + 2.6);
@@ -83,7 +86,7 @@ function drawBase() {
     c.save(); c.translate(x, y); c.rotate(a * Math.PI / 180); c.scale(2.1, 2.1); c.fill(planePath); c.restore();
   }
   // terminals raised on a soft shadow; concourses tinted by their colour
-  c.save(); c.translate(1.5, 3.5); c.fillStyle = pal['bldg-shadow'];
+  c.save(); c.translate(2, 4.5); c.fillStyle = pal['bldg-shadow'];
   for (const t of ['termM', 'termA', 'termB', 'termC', 'termD']) if (P2[t]) c.fill(P2[t]);
   c.restore();
   const edge = 1 / Math.max(k, .5);
@@ -94,8 +97,8 @@ function drawBase() {
   for (const t of 'ABC') { fill('term' + t, lower ? pal['term-closed'] : pal['term' + t]); stroke('term' + t, pal['bldg-edge'], edge, lower ? [3, 2] : null); }
   if (!lower) stroke('bridges', pal.bridge, 3.6);
   // this floor's walkways (OpenStreetMap indoor ways) and the escalators between floors
-  stroke(lower ? 'walk0' : 'walk1', pal.corridor, 3.4);
-  if (lower) stroke('walkm1', pal.corridor, 3.4, [4, 3]);
+  stroke(lower ? 'walk0' : 'walk1', pal.corridor, 5);
+  if (lower) stroke('walkm1', pal.corridor, 5, [5, 4]);
   stroke('stairs', pal.stairs, 2.6, [.9, .9]);
   if (!lower) {
     // the checkpoint line across the corridor from ticketing
@@ -293,7 +296,22 @@ function cullLabels() {
   const mrank = it => it.el.classList.contains('sel') ? 0 : it.el.classList.contains('hl') ? 1
     : stepFree && (it.icon === 'lift' || it.icon === 'access') ? 2 : RANK[it.cat] + (/vending|FuelRod|Lottery/i.test(it.name) ? 2 : 0);
   const mr = (svg.dataset.z === '1' ? 3.6 : 5.8) * u, kept = [];
-  for (const it of Object.values(ITEMS)) if ((it.kind === 'gate' || it.kind === 'place') && !away(it)) {
+  // gate pills that would overlap shrink to dots; the selected gate, gates on the route, then lower numbers win
+  const gnum = it => parseInt(it.code.replace(/\D/g, ''), 10) || 0;
+  const grank = it => it.el.classList.contains('sel') ? -2 : it.el.classList.contains('hl') ? -1 : gnum(it);
+  const gates = Object.values(ITEMS).filter(i => i.kind === 'gate').sort((a, b) => grank(a) - grank(b)), pills = [];
+  for (const it of gates) {
+    const p = scr(it), hw = ((it.code.length > 2 ? 17 : 14) / 2 + .6) * u, hh = 6 * u;
+    const box = { l: p.x - hw, r: p.x + hw, t: p.y - hh, b: p.y + hh };
+    const dot = grank(it) >= 0 && pills.some(o => box.l < o.r && box.r > o.l && box.t < o.b && box.b > o.t);
+    if (!dot) { it.el.removeAttribute('data-dot'); pills.push(box); kept.push(box); continue; }
+    // a dot that would still sit on a pill is left out altogether
+    const r = 2.6 * u, db = { l: p.x - r, r: p.x + r, t: p.y - r, b: p.y + r };
+    const covered = pills.some(o => db.l < o.r && db.r > o.l && db.t < o.b && db.b > o.t);
+    it.el.setAttribute('data-dot', covered ? 'hide' : '');
+    if (!covered) kept.push(db);
+  }
+  for (const it of Object.values(ITEMS)) if (it.kind === 'place' && !away(it)) {
     const p = scr(it); kept.push({ l: p.x - mr, r: p.x + mr, t: p.y - mr, b: p.y + mr });
   }
   const amens = Object.values(ITEMS).filter(i => i.kind === 'amen').sort((a, b) => mrank(a) - mrank(b));

@@ -11,7 +11,7 @@
 /* Layout: full-bleed map; floating glass search + control capsules; iOS-style draggable sheet (left sidebar on wide screens). */
 :root {
   /* iOS system surfaces */
-  --map: #eef0ec; --corridor: #d5dce7; --stairs: #8d99aa; --grass: #d7ead0; --wood: #c6e0bd; --water: #b6d4f2; --apron-pave: #e2e4ea; --taxi: #d8dbe2; --taxi-line: #e2bd3c; --runway: #c3c7cf; --road-case: #d0d5dc; --road-fill: #ffffff; --mway-case: #e3bf6b; --mway-fill: #fde8ad; --rail: #aab2bd; --lot: #e6e8ec; --other-bldg: #e0e2e7; --term-closed: #e7e8ec; --map-grid: #e2e6eb; --bldg: #ffffff; --bldg-edge: #cbd2da; --road: #d6dce3; --walk: #d3d9e0; --bldg-shadow: rgba(30, 45, 70, .13); --plane: #cdd4dc; --bridge: #c3ccd6; --garage: #dfe3e8;
+  --map: #eef1ec; --corridor: #e2e8f2; --stairs: #95a1b2; --grass: #d4e9cb; --wood: #c2ddb7; --water: #b3d3f3; --apron-pave: #e5e7eb; --taxi: #dadde3; --taxi-line: #e6c14a; --runway: #c6cad2; --runway-mark: #ffffff; --road-case: #d3d8de; --road-fill: #ffffff; --mway-case: #e8c574; --mway-fill: #fdeab4; --rail: #aeb6c0; --lot: #e8eaee; --other-bldg: #dfe2e7; --term-closed: #ebecef; --map-grid: #e2e6eb; --bldg: #ffffff; --bldg-edge: #bfc8d4; --road: #d6dce3; --walk: #d3d9e0; --bldg-shadow: rgba(30, 45, 80, .2); --plane: #c9d0d9; --bridge: #c3ccd6; --garage: #dde1e7; --con-tint: .13;
   --glass: rgba(250, 250, 252, .96); --sheet-bg: rgba(247, 247, 250, .97); --glass-hi: rgba(255, 255, 255, .55); --hairline: rgba(60, 60, 67, .16);
   --card: rgba(255, 255, 255, .92); --solid: #fbfbfd; --fill: rgba(118, 118, 128, .12); --fill-2: rgba(118, 118, 128, .2);
   --label: #101318; --label-2: rgba(60, 60, 67, .64); --label-3: rgba(60, 60, 67, .34);
@@ -42,7 +42,7 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --map: #121612; --corridor: #3a434e; --stairs: #7a8696; --grass: #1b2a1f; --wood: #1d2f21; --water: #14283d; --apron-pave: #1c2026; --taxi: #23272e; --taxi-line: #8a7323; --runway: #2b3038; --road-case: #2e343c; --road-fill: #3a414b; --mway-case: #5a4a24; --mway-fill: #6b5a2c; --rail: #4a525d; --lot: #1f242a; --other-bldg: #252a31; --term-closed: #20252b; --map-grid: #1a1e24; --bldg: #262b33; --bldg-edge: #3b424d; --road: #2a3038; --walk: #3a424d; --bldg-shadow: rgba(0, 0, 0, .5); --plane: #323a44; --bridge: #3b444f; --garage: #1d2228;
+    --map: #111513; --corridor: #3d4656; --stairs: #7a8696; --grass: #172519; --wood: #1a2b1d; --water: #12263b; --apron-pave: #181b20; --taxi: #20242a; --taxi-line: #8a7323; --runway: #2a2f37; --runway-mark: #575e69; --road-case: #22272e; --road-fill: #2d333b; --mway-case: #4d4024; --mway-fill: #5e5030; --rail: #3f4650; --lot: #1b1f24; --other-bldg: #22262d; --term-closed: #1e2228; --map-grid: #1a1e24; --bldg: #2f3540; --bldg-edge: #4a5262; --road: #2a3038; --walk: #3a424d; --bldg-shadow: rgba(0, 0, 0, .55); --plane: #2c333d; --bridge: #434c59; --garage: #1c2026; --con-tint: .2;
     --glass: rgba(34, 34, 38, .95); --sheet-bg: rgba(29, 29, 33, .97); --glass-hi: rgba(255, 255, 255, .07); --hairline: rgba(84, 84, 88, .55);
     --card: rgba(44, 44, 48, .88); --solid: #242428; --fill: rgba(118, 118, 128, .24); --fill-2: rgba(118, 118, 128, .34);
     --label: #f3f4f8; --label-2: rgba(235, 235, 245, .62); --label-3: rgba(235, 235, 245, .3);
@@ -57,7 +57,7 @@
   }
 }
 :root[data-theme="dark"] {
-  --map: #121612; --corridor: #3a434e; --stairs: #7a8696; --grass: #1b2a1f; --wood: #1d2f21; --water: #14283d; --apron-pave: #1c2026; --taxi: #23272e; --taxi-line: #8a7323; --runway: #2b3038; --road-case: #2e343c; --road-fill: #3a414b; --mway-case: #5a4a24; --mway-fill: #6b5a2c; --rail: #4a525d; --lot: #1f242a; --other-bldg: #252a31; --term-closed: #20252b; --map-grid: #1a1e24; --bldg: #262b33; --bldg-edge: #3b424d; --road: #2a3038; --walk: #3a424d; --bldg-shadow: rgba(0, 0, 0, .5); --plane: #323a44; --bridge: #3b444f; --garage: #1d2228;
+  --map: #111513; --corridor: #3d4656; --stairs: #7a8696; --grass: #172519; --wood: #1a2b1d; --water: #12263b; --apron-pave: #181b20; --taxi: #20242a; --taxi-line: #8a7323; --runway: #2a2f37; --runway-mark: #575e69; --road-case: #22272e; --road-fill: #2d333b; --mway-case: #4d4024; --mway-fill: #5e5030; --rail: #3f4650; --lot: #1b1f24; --other-bldg: #22262d; --term-closed: #1e2228; --map-grid: #1a1e24; --bldg: #2f3540; --bldg-edge: #4a5262; --road: #2a3038; --walk: #3a424d; --bldg-shadow: rgba(0, 0, 0, .55); --plane: #2c333d; --bridge: #434c59; --garage: #1c2026; --con-tint: .2;
   --glass: rgba(34, 34, 38, .95); --sheet-bg: rgba(29, 29, 33, .97); --glass-hi: rgba(255, 255, 255, .07); --hairline: rgba(84, 84, 88, .55);
   --card: rgba(44, 44, 48, .88); --solid: #242428; --fill: rgba(118, 118, 128, .24); --fill-2: rgba(118, 118, 128, .34);
   --label: #f3f4f8; --label-2: rgba(235, 235, 245, .62); --label-3: rgba(235, 235, 245, .3);
@@ -158,6 +158,11 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 .mk .pop { transition: transform .45s var(--spring); transform-box: fill-box; transform-origin: center; }
 .mk.sel .pop { transform: scale(1.55); }
 .gate .pill { stroke: var(--bldg); stroke-width: 1; }
+.gate[data-dot] .pop { transform: scale(.42); }
+.gate[data-dot] text { opacity: 0; }
+.gate[data-dot] .pill { x: -5.5px; width: 11px; }
+.gate[data-dot="hide"] { opacity: 0 !important; pointer-events: none; }
+.gate text { transition: opacity .2s; }
 .gate text { font: 700 6.6px var(--font-display); font-variation-settings: "wdth" 85; fill: #fff; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
 .amen .sym { stroke: var(--bldg); stroke-width: 1.2; }
 .amen text, .place text { font: 600 5.6px var(--font-text); fill: var(--label); paint-order: stroke; stroke: var(--map); stroke-width: 2.2px; stroke-linejoin: round; pointer-events: none; }
@@ -1096,8 +1101,9 @@ function readPalette() {
   const p = {};
   for (const k of ['map', 'grass', 'wood', 'water', 'apron-pave', 'lot', 'taxi', 'runway', 'taxi-line', 'road-case', 'road-fill',
     'mway-case', 'mway-fill', 'rail', 'other-bldg', 'garage', 'bldg', 'bldg-edge', 'bldg-shadow', 'plane', 'bridge', 'term-closed',
-    'walk', 'route', 'conA', 'conB', 'conC', 'corridor', 'stairs']) p[k] = g(k);
-  for (const c of 'ABC') p['term' + c] = /^#[0-9a-f]{6}$/i.test(p['con' + c]) && /^#[0-9a-f]{6}$/i.test(p.bldg) ? hexMix(p['con' + c], p.bldg, c === 'A' ? .09 : .08) : p.bldg;
+    'walk', 'route', 'conA', 'conB', 'conC', 'corridor', 'stairs', 'runway-mark']) p[k] = g(k);
+  const tint = parseFloat(g('con-tint')) || .1;
+  for (const c of 'ABC') p['term' + c] = /^#[0-9a-f]{6}$/i.test(p['con' + c]) && /^#[0-9a-f]{6}$/i.test(p.bldg) ? hexMix(p['con' + c], p.bldg, tint) : p.bldg;
   return p;
 }
 const repaint = () => { pal = null; if (committed) render(true); };
@@ -1115,6 +1121,8 @@ function drawBase() {
   fill('grass', pal.grass); fill('wood', pal.wood); fill('water', pal.water);
   fill('apron', pal['apron-pave']); fill('lots', pal.lot); fill('ramp', pal['apron-pave']);
   stroke('taxiway', pal.taxi, 23); stroke('runway', pal.runway, 46);
+  // runway centreline dashes, then the taxiway centrelines
+  if (k > .35) stroke('runway', pal['runway-mark'], .9, [36, 24]);
   stroke('taxiway', pal['taxi-line'], 1.1 / k);
   const roads = [['service', 5], ['minor', 9], ['major', 11], ['motorway', 15]];
   for (const [r, w] of roads) stroke(r, r === 'motorway' ? pal['mway-case'] : pal['road-case'], w + 2.6);
@@ -1128,7 +1136,7 @@ function drawBase() {
     c.save(); c.translate(x, y); c.rotate(a * Math.PI / 180); c.scale(2.1, 2.1); c.fill(planePath); c.restore();
   }
   // terminals raised on a soft shadow; concourses tinted by their colour
-  c.save(); c.translate(1.5, 3.5); c.fillStyle = pal['bldg-shadow'];
+  c.save(); c.translate(2, 4.5); c.fillStyle = pal['bldg-shadow'];
   for (const t of ['termM', 'termA', 'termB', 'termC', 'termD']) if (P2[t]) c.fill(P2[t]);
   c.restore();
   const edge = 1 / Math.max(k, .5);
@@ -1139,8 +1147,8 @@ function drawBase() {
   for (const t of 'ABC') { fill('term' + t, lower ? pal['term-closed'] : pal['term' + t]); stroke('term' + t, pal['bldg-edge'], edge, lower ? [3, 2] : null); }
   if (!lower) stroke('bridges', pal.bridge, 3.6);
   // this floor's walkways (OpenStreetMap indoor ways) and the escalators between floors
-  stroke(lower ? 'walk0' : 'walk1', pal.corridor, 3.4);
-  if (lower) stroke('walkm1', pal.corridor, 3.4, [4, 3]);
+  stroke(lower ? 'walk0' : 'walk1', pal.corridor, 5);
+  if (lower) stroke('walkm1', pal.corridor, 5, [5, 4]);
   stroke('stairs', pal.stairs, 2.6, [.9, .9]);
   if (!lower) {
     // the checkpoint line across the corridor from ticketing
@@ -1338,7 +1346,22 @@ function cullLabels() {
   const mrank = it => it.el.classList.contains('sel') ? 0 : it.el.classList.contains('hl') ? 1
     : stepFree && (it.icon === 'lift' || it.icon === 'access') ? 2 : RANK[it.cat] + (/vending|FuelRod|Lottery/i.test(it.name) ? 2 : 0);
   const mr = (svg.dataset.z === '1' ? 3.6 : 5.8) * u, kept = [];
-  for (const it of Object.values(ITEMS)) if ((it.kind === 'gate' || it.kind === 'place') && !away(it)) {
+  // gate pills that would overlap shrink to dots; the selected gate, gates on the route, then lower numbers win
+  const gnum = it => parseInt(it.code.replace(/\D/g, ''), 10) || 0;
+  const grank = it => it.el.classList.contains('sel') ? -2 : it.el.classList.contains('hl') ? -1 : gnum(it);
+  const gates = Object.values(ITEMS).filter(i => i.kind === 'gate').sort((a, b) => grank(a) - grank(b)), pills = [];
+  for (const it of gates) {
+    const p = scr(it), hw = ((it.code.length > 2 ? 17 : 14) / 2 + .6) * u, hh = 6 * u;
+    const box = { l: p.x - hw, r: p.x + hw, t: p.y - hh, b: p.y + hh };
+    const dot = grank(it) >= 0 && pills.some(o => box.l < o.r && box.r > o.l && box.t < o.b && box.b > o.t);
+    if (!dot) { it.el.removeAttribute('data-dot'); pills.push(box); kept.push(box); continue; }
+    // a dot that would still sit on a pill is left out altogether
+    const r = 2.6 * u, db = { l: p.x - r, r: p.x + r, t: p.y - r, b: p.y + r };
+    const covered = pills.some(o => db.l < o.r && db.r > o.l && db.t < o.b && db.b > o.t);
+    it.el.setAttribute('data-dot', covered ? 'hide' : '');
+    if (!covered) kept.push(db);
+  }
+  for (const it of Object.values(ITEMS)) if (it.kind === 'place' && !away(it)) {
     const p = scr(it); kept.push({ l: p.x - mr, r: p.x + mr, t: p.y - mr, b: p.y + mr });
   }
   const amens = Object.values(ITEMS).filter(i => i.kind === 'amen').sort((a, b) => mrank(a) - mrank(b));
