@@ -819,7 +819,7 @@ new MutationObserver(() => {
 const TAB_TITLES = { dir: 'Directions', kill: 'Pass the time', air: 'Airlines' };
 let tab = 'dir';
 function setTab(name, quiet) {
-  tab = name; placeMode = false;
+  tab = name; placeMode = false; $('#placeTile').hidden = true; $('#title').classList.remove('long');
   $('#seg').hidden = false; $('#closePlace').hidden = true; $('#pane-place').hidden = true; $('#modeSw').hidden = name !== 'dir';
   ['dir', 'kill', 'air'].forEach((t, i) => {
     $('#tab-' + t).setAttribute('aria-selected', String(t === name));
@@ -844,12 +844,14 @@ $('#tab-air').onclick = () => setTab('air');
 
 // ---------- Place card ----------
 let selected = null;
-function nearbyNames(it, n = 6) {
+function nearbyItems(it, n = 8) {
+  const seen = new Set();
   return Object.values(ITEMS)
-    .filter(o => o.kind === 'amen' && o.cat !== 'rest' && o !== it && dist(o, it) < 34)
+    .filter(o => o.kind === 'amen' && o.cat !== 'rest' && o !== it && o.name !== it.name && dist(o, it) < 34 && (!o.lvl || !it.lvl || o.lvl === it.lvl))
     .sort((a, b) => dist(a, it) - dist(b, it))
-    .map(o => o.name).filter((v, i, a) => a.indexOf(v) === i).slice(0, n);
+    .filter(o => !seen.has(o.name) && seen.add(o.name)).slice(0, n);
 }
+const nearbyNames = (it, n = 6) => nearbyItems(it, n).map(o => o.name);
 const tileFor = it => it.kind === 'gate' ? `<span class="tile ${it.con}">${icon('gate')}</span>`
   : it.kind === 'amen' ? `<span class="tile ${it.cat}">${icon(it.icon || it.cat)}</span>` : `<span class="tile place ${it.pk || ''}">${icon(it.icon || 'place')}</span>`;
 function showPlace(it, fromMap) {
@@ -862,33 +864,48 @@ function showPlace(it, fromMap) {
   $('#eyebrow').classList.remove('can'); openAirports(false); $('#title').hidden = false;
   ['dir', 'kill', 'air'].forEach(t => $('#pane-' + t).hidden = true);
   const pane = $('#pane-place'); pane.hidden = false; replay(pane); replay($('#title'));
-  $('#title').textContent = it.name;
+  $('#title').textContent = it.name; $('#title').classList.toggle('long', it.name.length > 22);
   $('#eyebrow').textContent = it.kind === 'gate' ? `Concourse ${it.con}` : it.kind === 'amen' ? CATS[it.cat].label : (it.node === ROLE.checkpoint ? 'Main terminal' : 'Arrive & depart');
-  let html = `<div class="bgroup">
-    <button class="primary" data-act="to">${icon('walk')}Directions</button>
-    <button data-act="from">${icon('flag')}Start here</button></div>`;
-  const rows = [];
-  if (it.kind === 'amen') rows.push(['Location', esc(it.near)]);
-  if (it.note) rows.push(['About', esc(it.note)]);
+  const tile = $('#placeTile'); tile.innerHTML = tileFor(it); tile.hidden = false; replay(tile.firstChild);
+  // walk time from wherever directions currently start (security if that's this place)
+  const fromIt = ITEMS[$('#from').value] && $('#from').value !== it.id ? ITEMS[$('#from').value] : ITEMS[CHK];
+  const walk = fromIt !== it ? route(fromIt, it) : null;
   const hs = hoursStatus(it);
-  if (hs) rows.push(['Hours', `<span class="status ${hs.state === 'open' ? 'ok' : hs.state === 'closed' ? 'no' : 'warn'}">${esc(hs.text)}</span>`]);
+  const summary = [];
+  if (hs) summary.push(`<span class="${hs.state === 'open' ? 'ok' : hs.state === 'closed' ? 'no' : 'warn'}">${esc(hs.text)}</span>`);
+  if (it.kind === 'amen') summary.push(`<span>${esc(it.near)}</span>`);
+  if (it.kind === 'gate') summary.push(`<span>${esc(AIRLINES.filter(a => a.con === it.con).map(a => a.name).slice(0, 3).join(', '))}</span>`);
+  if (it.zone === 'L' || it.kind === 'place') summary.push(`<span>${it.lvl === 'lo' ? 'Lower level' : 'Upper level'}</span>`);
+  let html = summary.length ? `<p class="summary">${summary.join('')}</p>` : '';
+  html += `<div class="bgroup">
+    <button class="primary" data-act="to">${icon('walk')}Directions${walk && walk.path ? `<span class="sub">${minutes(walk.units)} min</span>` : ''}</button>
+    <button data-act="from">${icon('flag')}Start here</button></div>`;
+  // what to know before you go: the airport's tip for this place
+  const tip = (AP.ui.arrivals || []).find(a => a[0] === it.id);
+  if (tip) html += `<div class="group tip">${tileFor(it)}<span>${esc(tip[2])}</span></div>`;
+  const rows = [];
+  if (it.note) rows.push(['About', esc(it.note)]);
   if (it.hours) rows.push(['Schedule', esc(hoursLine(it))]);
   if (it.kind === 'amen' && it.cat !== 'rest') rows.push(['Typical visit', `About ${it.dwell} min`]);
+  if (walk && walk.path && fromIt.id !== CHK) rows.push([`From ${esc(fromIt.label || fromIt.name)}`, `${minutes(walk.units)} min · ${meters(walk.len)} m`]);
   if (it.zone !== 'L' && it.id !== CHK) {
     const { units, len } = route(ITEMS[CHK], it);
     rows.push(['From security', `${minutes(units)} min · ${meters(len)} m`]);
   }
-  if (it.zone === 'L' || it.kind === 'place') rows.push(['Level', it.lvl === 'lo' ? 'Lower level' : 'Upper level']);
   if (it.kind === 'gate') rows.push(['Concourse', `${it.con} · ${CON_RANGE[it.con]}`]);
-  html += `<div class="group">${rows.map(([k, v]) => `<div class="row"><span class="rl" style="flex:none">${k}</span><span style="flex:1;min-width:0;color:var(--label-2);text-align:right">${v}</span></div>`).join('')}</div>`;
+  if (rows.length) html += `<div class="group">${rows.map(([k, v]) => `<div class="row"><span class="rl" style="flex:none">${k}</span><span style="flex:1;min-width:0;color:var(--label-2);text-align:right">${v}</span></div>`).join('')}</div>`;
   if (it.kind === 'gate') {
     html += `<div class="group-title">Airlines in Concourse ${it.con}</div><div class="group tags">${AIRLINES.filter(a => a.con === it.con).map(a => `<span class="tag">${esc(a.name)}</span>`).join('')}</div>`;
   }
   if (it.hours && !it.hours.h24 && !it.hours.close) html += `<p class="foot" style="margin:-6px 16px 0">Opening times from the airport's directory. Closing times aren't published; they follow the last flights.</p>`;
-  const near = it.kind !== 'place' ? nearbyNames(it) : [];
-  if (near.length) html += `<div class="group-title">Nearby</div><div class="group tags">${near.map(n => `<span class="tag">${esc(n)}</span>`).join('')}</div>`;
+  const near = it.kind !== 'place' ? nearbyItems(it) : [];
+  if (near.length) html += `<div class="group-title">Nearby</div><div class="near">${near.map(o => {
+    const s = hoursStatus(o), m = Math.max(1, Math.round(dist(o, it) / M_PER_MIN));
+    return `<button data-near="${o.id}">${tileFor(o)}<b>${esc(o.name)}</b><small>${s && s.state === 'closed' ? 'Closed' : m + ' min walk'}</small></button>`;
+  }).join('')}</div>`;
   pane.innerHTML = html;
   pane.querySelector('[data-act="to"]').onclick = () => { buzz(); $('#to').value = it.id; if ($('#from').value === it.id) $('#from').value = CHK; setTab('dir', true); if (!wide()) setDetent('peek'); updateRoute(true); };
+  pane.querySelectorAll('[data-near]').forEach(b => b.onclick = () => { buzz(5); showPlace(ITEMS[b.dataset.near], false); });
   pane.querySelector('[data-act="from"]').onclick = () => { buzz(); $('#from').value = it.id; if ($('#to').value === it.id) $('#to').value = CHK; setTab('dir', true); if (!wide()) setDetent('peek'); updateRoute(true); };
   sheetBody.scrollTop = 0;
   if (!wide()) setDetent(detent === 'full' || detent === 'peek' ? 'half' : detent);

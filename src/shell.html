@@ -12,7 +12,7 @@
 :root {
   /* iOS system surfaces */
   --map: #eef1ec; --corridor: #e2e8f2; --stairs: #95a1b2; --grass: #d4e9cb; --wood: #c2ddb7; --water: #b3d3f3; --apron-pave: #e5e7eb; --taxi: #dadde3; --taxi-line: #e6c14a; --runway: #c6cad2; --runway-mark: #ffffff; --road-case: #d3d8de; --road-fill: #ffffff; --mway-case: #e8c574; --mway-fill: #fdeab4; --rail: #aeb6c0; --lot: #e8eaee; --other-bldg: #dfe2e7; --term-closed: #ebecef; --map-grid: #e2e6eb; --bldg: #ffffff; --bldg-edge: #bfc8d4; --road: #d6dce3; --walk: #d3d9e0; --bldg-shadow: rgba(30, 45, 80, .2); --plane: #c9d0d9; --bridge: #c3ccd6; --garage: #dde1e7; --con-tint: .13;
-  --glass: rgba(250, 250, 252, .96); --sheet-bg: rgba(247, 247, 250, .97); --glass-hi: rgba(255, 255, 255, .55); --hairline: rgba(60, 60, 67, .16);
+  --glass: rgba(250, 250, 252, .96); --sheet-bg: #f7f7fa; --glass-hi: rgba(255, 255, 255, .55); --hairline: rgba(60, 60, 67, .16);
   --card: rgba(255, 255, 255, .92); --solid: #fbfbfd; --fill: rgba(118, 118, 128, .12); --fill-2: rgba(118, 118, 128, .2);
   --label: #101318; --label-2: rgba(60, 60, 67, .64); --label-3: rgba(60, 60, 67, .34);
   --shadow: 0 10px 30px rgba(16, 24, 40, .14), 0 1px 3px rgba(16, 24, 40, .08);
@@ -44,7 +44,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --map: #111513; --corridor: #3d4656; --stairs: #7a8696; --grass: #172519; --wood: #1a2b1d; --water: #12263b; --apron-pave: #181b20; --taxi: #20242a; --taxi-line: #8a7323; --runway: #2a2f37; --runway-mark: #575e69; --road-case: #22272e; --road-fill: #2d333b; --mway-case: #4d4024; --mway-fill: #5e5030; --rail: #3f4650; --lot: #1b1f24; --other-bldg: #22262d; --term-closed: #1e2228; --map-grid: #1a1e24; --bldg: #2f3540; --bldg-edge: #4a5262; --road: #2a3038; --walk: #3a424d; --bldg-shadow: rgba(0, 0, 0, .55); --plane: #2c333d; --bridge: #434c59; --garage: #1c2026; --con-tint: .2;
-    --glass: rgba(34, 34, 38, .95); --sheet-bg: rgba(29, 29, 33, .97); --glass-hi: rgba(255, 255, 255, .07); --hairline: rgba(84, 84, 88, .55);
+    --glass: rgba(34, 34, 38, .95); --sheet-bg: #1d1d21; --glass-hi: rgba(255, 255, 255, .07); --hairline: rgba(84, 84, 88, .55);
     --card: rgba(44, 44, 48, .88); --solid: #242428; --fill: rgba(118, 118, 128, .24); --fill-2: rgba(118, 118, 128, .34);
     --label: #f3f4f8; --label-2: rgba(235, 235, 245, .62); --label-3: rgba(235, 235, 245, .3);
     --shadow: 0 10px 30px rgba(0, 0, 0, .5), 0 1px 3px rgba(0, 0, 0, .4);
@@ -61,7 +61,7 @@
 }
 :root[data-theme="dark"] {
   --map: #111513; --corridor: #3d4656; --stairs: #7a8696; --grass: #172519; --wood: #1a2b1d; --water: #12263b; --apron-pave: #181b20; --taxi: #20242a; --taxi-line: #8a7323; --runway: #2a2f37; --runway-mark: #575e69; --road-case: #22272e; --road-fill: #2d333b; --mway-case: #4d4024; --mway-fill: #5e5030; --rail: #3f4650; --lot: #1b1f24; --other-bldg: #22262d; --term-closed: #1e2228; --map-grid: #1a1e24; --bldg: #2f3540; --bldg-edge: #4a5262; --road: #2a3038; --walk: #3a424d; --bldg-shadow: rgba(0, 0, 0, .55); --plane: #2c333d; --bridge: #434c59; --garage: #1c2026; --con-tint: .2;
-  --glass: rgba(34, 34, 38, .95); --sheet-bg: rgba(29, 29, 33, .97); --glass-hi: rgba(255, 255, 255, .07); --hairline: rgba(84, 84, 88, .55);
+  --glass: rgba(34, 34, 38, .95); --sheet-bg: #1d1d21; --glass-hi: rgba(255, 255, 255, .07); --hairline: rgba(84, 84, 88, .55);
   --card: rgba(44, 44, 48, .88); --solid: #242428; --fill: rgba(118, 118, 128, .24); --fill-2: rgba(118, 118, 128, .34);
   --label: #f3f4f8; --label-2: rgba(235, 235, 245, .62); --label-3: rgba(235, 235, 245, .3);
   --shadow: 0 10px 30px rgba(0, 0, 0, .5), 0 1px 3px rgba(0, 0, 0, .4);
@@ -272,6 +272,9 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 .bump { animation: bump .45s var(--spring); }
 @keyframes bump { 30% { transform: scale(1.08); } }
 
+/* while searching, the results sit above the sheet */
+.topbar:focus-within { z-index: 8; }
+
 /* ---------- Layers menu ---------- */
 .layers { position: fixed; z-index: 6; right: calc(var(--safe-right) + 72px); top: calc(var(--safe-top) + 70px); width: min(270px, calc(100% - 104px)); border-radius: 20px; padding: 6px 0; background: var(--solid); }
 .layers .lh { padding: 8px 16px 4px; font-size: 13px; font-weight: 600; color: var(--label-2); }
@@ -326,7 +329,7 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 .me-cone { fill: var(--route); opacity: .35; }
 @keyframes me-pulse { from { transform: scale(.6); opacity: .45; } to { transform: scale(2.2); opacity: 0; } }
 .toast-bar {
-  position: fixed; z-index: 7; left: calc(var(--safe-left) + 16px); right: calc(var(--safe-right) + 76px); margin: 0 auto; width: fit-content; top: calc(var(--safe-top) + 70px);
+  position: fixed; z-index: 5; left: calc(var(--safe-left) + 16px); right: calc(var(--safe-right) + 76px); margin: 0 auto; width: fit-content; top: calc(var(--safe-top) + 70px);
   max-width: 440px; display: flex; align-items: center; gap: 12px;
   padding: 10px 12px 10px 16px; border-radius: 18px; font-size: 14px; font-weight: 600;
 }
@@ -548,6 +551,28 @@ input.switch:checked::after { transform: translateX(20px); }
 .bgroup button:active { flex-grow: 1.35; border-radius: 26px; }
 .bgroup .ico { width: 19px; height: 19px; }
 .tags { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 16px; }
+/* ---------- Place card ---------- */
+#placeTile .tile { width: 44px; height: 44px; border-radius: 13px; margin-top: 2px; }
+#placeTile .tile .ico { width: 24px; height: 24px; }
+#placeTile .tile.enter { animation: tile-in .5s var(--spring) both; }
+@keyframes tile-in { from { transform: scale(.6) rotate(-8deg); opacity: 0; } }
+h1.long { font-size: 24px; }
+.summary { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; margin: -2px 0 0 56px; font-size: 15px; color: var(--label-2); }
+.summary > * + *::before { content: "·"; margin-right: 8px; color: var(--label-3); }
+.summary .ok { color: var(--ok); font-weight: 650; } .summary .no { color: var(--no); font-weight: 650; } .summary .warn { color: var(--warn); font-weight: 650; }
+.bgroup button .sub { font: 600 14px var(--font-text); opacity: .8; white-space: nowrap; margin-left: -2px; }
+.tip { display: flex; gap: 12px; padding: 14px 16px; font-size: 15px; line-height: 1.4; }
+.tip .tile { width: 28px; height: 28px; border-radius: 8px; }
+.tip .tile .ico { width: 16px; height: 16px; }
+.near { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 16px 4px; margin: 0 -16px; scroll-padding: 16px; }
+.near::-webkit-scrollbar { display: none; }
+.near button { flex: none; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; width: 132px; padding: 12px; border: 0; border-radius: 16px;
+  background: var(--card); text-align: left; transition: transform .35s var(--spring); }
+.near button:active { transform: scale(.96); }
+.near .tile { width: 30px; height: 30px; }
+.near b { font-size: 14px; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.near small { font-size: 13px; color: var(--label-2); margin-top: -4px; }
+
 .tag { font-size: 14px; font-weight: 600; padding: 6px 12px; border-radius: 10px; background: var(--fill); }
 
 /* Desktop / tablet: sheet becomes a floating sidebar */
@@ -650,6 +675,7 @@ input.switch:checked::after { transform: translateX(20px); }
   <div class="sheet-head" id="sheetHead">
     <div class="grabber" aria-hidden="true"></div>
     <div class="titlebar">
+      <span id="placeTile" hidden></span>
       <div><button class="eyebrow ap-btn" id="eyebrow" aria-haspopup="menu" aria-expanded="false">Airport</button><h1 id="title">Directions</h1></div>
       <div class="mode" id="modeSw" role="group" aria-label="Trip direction">
         <button data-mode="dep" aria-pressed="true">Depart</button><button data-mode="arr" aria-pressed="false">Arrive</button>
