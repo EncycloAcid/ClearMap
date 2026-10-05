@@ -545,7 +545,19 @@ button.row:active, label.row:active { background: var(--fill); }
 
 /* Transit-line steps */
 .line { list-style: none; margin: 0; padding: 14px 16px; }
-.line li { position: relative; display: grid; grid-template-columns: 22px 1fr; gap: 12px; padding: 0 0 16px; }
+.line li { position: relative; display: grid; grid-template-columns: 22px 1fr auto; gap: 12px; padding: 0 0 18px; }
+.line .body { min-width: 0; }
+.line .leg { display: flex; flex-direction: column; align-items: flex-end; align-self: start; margin-top: 1px; font-size: 12px; font-weight: 600; line-height: 1.25; color: var(--label-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.line .leg b { display: inline-flex; align-items: center; gap: 3px; font-size: 14px; font-weight: 700; color: var(--label); }
+.line .leg .ico { width: 14px; height: 14px; color: var(--route); }
+.line .lvl { display: inline-block; margin: 3px 0 1px; padding: 2px 8px; border-radius: 8px; font-size: 12px; font-weight: 700; background: color-mix(in srgb, var(--route) 14%, transparent); color: var(--route); }
+.line li.change .stop { border-style: double; border-width: 6px; }
+.line li.start .stop { background: var(--route); border-color: var(--route); box-shadow: inset 0 0 0 4px var(--card); }
+.pass-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.tag.pass { color: var(--label); display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; }
+.tag.pass .tile { width: 22px; height: 22px; border-radius: 7px; }
+.tag.pass .tile .ico { width: 13px; height: 13px; }
+.line .pl { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .02em; }
 .line li:last-child { padding-bottom: 0; }
 .line li::before { content: ""; position: absolute; left: 9px; top: 14px; bottom: -2px; width: 4px; border-radius: 2px; background: var(--route); opacity: .9; }
 .line li:last-child::before, .line li.end::before, .line li.passing::before { display: none; }

@@ -1098,6 +1098,34 @@ for (const sel of [$('#from'), $('#to')]) {
 { const o = document.createElement('option'); o.value = ''; o.textContent = 'Choose a destination'; $('#to').insertBefore(o, $('#to').firstChild); }
 $('#from').value = AP.ui.defaults.from; $('#to').value = AP.ui.defaults.to;
 
+// The step list: a line of stops with the distance of each leg, floor changes marked,
+// and the places you pass as tappable chips
+const listJoin = a => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
+function renderSteps(steps, passed) {
+  curSteps = steps;
+  const legs = buildLegs();
+  if (nav) { nav.legs = legs; showLeg(Math.min(nav.i, nav.legs.length - 1), 0); }
+  $('#steps').innerHTML = steps.map((s, i) => {
+    const L = i ? legs[i - 1] : null, d = L ? Math.max(5, Math.round((L.d1 - L.d0) / 5) * 5) : 0;
+    const ch = L && L.change;
+    const meta = L ? `<span class="leg"><b>${ch ? icon(ch.lift ? 'lift' : 'swap') : ''}${Math.max(1, Math.round(d / M_PER_MIN))} min</b>${d} m</span>` : '';
+    const lvl = ch ? `<span class="lvl">${ch.down ? 'Lower level' : 'Upper level'}</span>` : '';
+    return `<li class="${s.end ? 'end' : ''}${i === 0 ? ' start' : ''}${ch ? ' change' : ''}" data-node="${esc(s.node)}" tabindex="0" role="button"><span class="stop"></span><span class="body"><span class="t">${esc(s.t.replace(/\s*\((upper|lower) level\)$/, ''))}</span>${lvl}${s.n && s.n !== 'Start' ? `<span class="n">${esc(s.n)}</span>` : ''}</span>${meta}</li>`;
+  }).join('')
+    + (passed.length ? `<li class="passing"><span class="pl">On the way</span><span class="pass-chips">${passed.map(p => `<button class="tag pass" data-pass="${p.id}"><span class="tile ${p.cat}">${icon(p.icon || p.cat)}</span>${esc(p.name)}</button>`).join('')}</span></li>` : '');
+  $('#steps').querySelectorAll('[data-node]').forEach(li => {
+    const go = () => {
+      const p = NODE[li.dataset.node]; if (!p) return;
+      setFloor(levelOf(li.dataset.node), true);
+      buzz(5); userMoved = true;
+      if (!wide() && detent === 'full') setDetent('half');
+      fitBox(p.x - 45, p.y - 45, p.x + 45, p.y + 45, 10, 3.6);
+    };
+    li.onclick = go;
+    li.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } };
+  });
+  $('#steps').querySelectorAll('[data-pass]').forEach(b => b.onclick = e => { e.stopPropagation(); buzz(5); showPlace(ITEMS[b.dataset.pass], false); });
+}
 function describe(path, a, b) {
   const steps = [{ t: a.name, n: 'Start', node: nodeOf(a) }];
   const crossesSecurity = path.some((n, i) => i && ((n === ROLE.checkpoint && path[i - 1] === ROLE.hub) || (n === ROLE.hub && path[i - 1] === ROLE.checkpoint)));
@@ -1118,7 +1146,7 @@ function describe(path, a, b) {
     }
     if (n.startsWith('p:m:')) {
       const am = ITEMS[n.slice(2)];
-      if (am && am !== b && !['rest', 'service'].includes(am.cat) && !/vending/i.test(am.name) && !passed.includes(am.name)) passed.push(am.name);
+      if (am && am !== b && !['rest', 'service'].includes(am.cat) && !/vending/i.test(am.name) && !passed.some(x => x.name === am.name)) passed.push(am);
     }
   }
   let endNote = '';
@@ -1162,22 +1190,9 @@ function updateRoute(fit) {
   $('#hero').className = 'hero';
   $('#hero').innerHTML = `<button class="hero-x" id="clearRoute" aria-label="Clear route">${icon('x')}</button><span class="num">${minutes(units)}<small>min</small></span>
     <span class="m1">${meters(len)} m walk${lift ? ' · elevator' : ''}</span>
-    <span class="m2">${via.length ? 'via ' + via.slice(0, 3).map(esc).join(' · ') : 'Direct'}</span>
+    <span class="m2">Arrive ${clock(Date.now() + minutes(units) * 60000)}${via.length ? ' via ' + listJoin(via.slice(0, 3).map(esc)) : ''}</span>
     <button class="go" data-go>${icon('walk')}Go</button>`;
-  curSteps = steps; if (nav) { nav.legs = buildLegs(); showLeg(Math.min(nav.i, nav.legs.length - 1), 0); }
-  $('#steps').innerHTML = steps.map(s => `<li class="${s.end ? 'end' : ''}" data-node="${esc(s.node)}" tabindex="0" role="button"><span class="stop"></span><span><span class="t">${esc(s.t)}</span>${s.n ? `<span class="n">${esc(s.n)}</span>` : ''}</span></li>`).join('')
-    + (passed.length ? `<li class="passing">On the way: ${passed.map(esc).join(', ')}</li>` : '');
-  $('#steps').querySelectorAll('[data-node]').forEach(li => {
-    const go = () => {
-      const p = NODE[li.dataset.node]; if (!p) return;
-      setFloor(levelOf(li.dataset.node), true);
-      buzz(5); userMoved = true;
-      if (!wide() && detent === 'full') setDetent('half');
-      fitBox(p.x - 45, p.y - 45, p.x + 45, p.y + 45, 10, 3.6);
-    };
-    li.onclick = go;
-    li.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } };
-  });
+  renderSteps(steps, passed);
   $('#clearRoute').onclick = () => { buzz(5); $('#to').value = ''; updateRoute(false); saveTrip(); };
   const ids = [a.id, b.id];
   for (const n of path) { if (ITEMS[n]) ids.push(n); if (n.startsWith('p:') && ITEMS[n.slice(2)]) ids.push(n.slice(2)); }
@@ -1226,13 +1241,7 @@ function updateArrival(fit) {
     <span class="m1">${meters(len)} m walk${p1.lift || p2.lift ? ' · elevator' : ''}${bags ? ` + ~${BAG_WAIT} min for bags` : ''}</span>
     <span class="m2">${esc(gate.name)} to ${esc(info ? info[1] : dest.name)}</span>
     <button class="go" data-go>${icon('walk')}Go</button>`;
-  curSteps = steps; if (nav) { nav.legs = buildLegs(); showLeg(Math.min(nav.i, nav.legs.length - 1), 0); }
-  $('#steps').innerHTML = steps.map(s => `<li class="${s.end ? 'end' : ''}" data-node="${esc(s.node)}" tabindex="0" role="button"><span class="stop"></span><span><span class="t">${esc(s.t)}</span>${s.n ? `<span class="n">${esc(s.n)}</span>` : ''}</span></li>`).join('')
-    + (passed.length ? `<li class="passing">On the way: ${passed.map(esc).join(', ')}</li>` : '');
-  $('#steps').querySelectorAll('[data-node]').forEach(li => {
-    const go = () => { const p = NODE[li.dataset.node]; if (!p) return; setFloor(levelOf(li.dataset.node), true); buzz(5); userMoved = true; if (!wide() && detent === 'full') setDetent('half'); fitBox(p.x - 45, p.y - 45, p.x + 45, p.y + 45, 10, 3.6); };
-    li.onclick = go; li.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } };
-  });
+  renderSteps(steps, passed);
   const ids = [gate.id, dest.id, bag.id];
   for (const n of path) { if (ITEMS[n]) ids.push(n); if (n.startsWith('p:') && ITEMS[n.slice(2)]) ids.push(n.slice(2)); }
   highlight(ids);
