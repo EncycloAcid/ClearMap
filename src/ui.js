@@ -221,9 +221,30 @@ for (const [con, x, y] of AP.ui.roundels) {
 const meG = el('g', { opacity: 0, style: 'pointer-events:none' });
 const meAcc = el('circle', { class: 'me-acc', r: 0, 'vector-effect': 'non-scaling-stroke' }, meG);
 const meMark = el('g', {}, meG);
-const meCone = el('path', { class: 'me-cone', d: 'M0 0L-7 -17A18 18 0 0 1 7 -17Z', opacity: 0 }, meMark);
-el('circle', { class: 'me-halo', r: 9 }, meMark);
-el('circle', { class: 'me-dot', r: 5.2 }, meMark);
+const meCone = el('path', { class: 'me-cone', d: 'M0 0L-15.5 -22.1A27 27 0 0 1 15.5 -22.1Z', opacity: 0 }, meMark);
+el('circle', { class: 'me-pulse', r: 7 }, meMark);
+const meBody = el('g', {}, meMark);
+el('circle', { class: 'me-shadow', r: 7.9, cy: .7 }, meBody);
+el('circle', { class: 'me-ring', r: 7.3 }, meBody);
+el('circle', { class: 'me-dot', r: 5.1 }, meBody);
+el('ellipse', { class: 'me-shine', rx: 2.4, ry: 1.5, cx: -1.3, cy: -2.1 }, meBody);
+// the beam turns the short way round (359° → 1° is a small turn, not a spin)
+let coneAngle = null;
+function aimCone(deg) {
+  if (coneAngle == null) coneAngle = deg;
+  else coneAngle += ((deg - coneAngle) % 360 + 540) % 360 - 180;
+  meCone.style.transform = `rotate(${coneAngle}deg)`;
+}
+// a ripple from the dot when it first appears or you jump back to it
+function pingMe(pop) {
+  if (reduced) return;
+  meG.classList.remove('ping'); if (pop) meBody.classList.remove('me-pop');
+  void meG.getBBox();
+  meG.classList.add('ping'); if (pop) meBody.classList.add('me-pop');
+}
+// grey once the last fix is more than half a minute old: it's where you were, not where you are
+let lastFixAt = 0;
+setInterval(() => { if (me) meG.classList.toggle('stale', Date.now() - lastFixAt > 30000); }, 5000);
 const routeStart = el('g', { class: 'route-start', opacity: 0, style: 'pointer-events:none' });
 el('circle', { r: 5.6 }, routeStart); el('circle', { r: 2.4, class: 'core' }, routeStart);
 const routeEnd = el('g', { class: 'route-endpt', opacity: 0, style: 'pointer-events:none' });
@@ -791,6 +812,7 @@ function kalman(p, acc, t) {
     kf.ax.p11 = kf.ay.p11 = acc * acc;
     return true;
   }
+  if (t < kf.t) return false;   // an older fix arriving late (a cached one) adds nothing
   const dt = Math.min(30, Math.max(0, (t - kf.t) / 1000));
   kfPredict(kf.ax, dt); kfPredict(kf.ay, dt);
   const e = kfPos(), jump = Math.hypot(p.x - e.x, p.y - e.y), allow = 3 * Math.sqrt(kfSigma() ** 2 + acc * acc) + 5;
@@ -819,17 +841,17 @@ function snapToWalkway(p, radius) {
 }
 function drawMe(p, acc) {
   meAcc.setAttribute('cx', p.x); meAcc.setAttribute('cy', p.y);
-  meAcc.setAttribute('r', Math.max(4, Math.min(acc, 250)));
+  meAcc.style.r = Math.max(4, Math.min(acc, 250)) + 'px';
   meAcc.style.opacity = acc > 80 ? .5 : 1;
   meMark.setAttribute('transform', `translate(${p.x} ${p.y}) scale(${markerScale})`);
   const fresh = heading != null && Date.now() - headingAt < 5000;
   meCone.setAttribute('opacity', fresh ? 1 : 0);
-  if (fresh) meCone.setAttribute('transform', `rotate(${heading})`);
+  if (fresh) aimCone(heading);
 }
 function glideTo(target, acc) {
   cancelAnimationFrame(glideRAF);
   if (!shown || reduced || Math.hypot(target.x - shown.x, target.y - shown.y) > 150) { shown = { ...target }; drawMe(shown, acc); return; }
-  const from = { ...shown }, t0 = performance.now(), dur = 650;
+  const from = { ...shown }, t0 = performance.now(), dur = 450;
   const step = now => {
     const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
     shown = { x: from.x + (target.x - from.x) * e, y: from.y + (target.y - from.y) * e };
@@ -849,7 +871,7 @@ function onFix(pos) {
   const { latitude, longitude, accuracy, heading: gpsHeading, speed } = pos.coords;
   const raw = toMap(latitude, longitude), far = Math.hypot(raw.x, raw.y);
   if (far > 2500) {
-    me = { ...raw, acc: accuracy }; meG.setAttribute('opacity', 1); drawMe(raw, accuracy);
+    me = { ...raw, acc: accuracy }; lastFixAt = Date.now(); meG.setAttribute('opacity', 1); drawMe(raw, accuracy);
     if (firstFix) toast(`You’re ${(far / 1609).toFixed(1)} miles from ${AP.code}. Your dot will appear when you’re at the airport.`);
     firstFix = false; setLocState('on'); return;
   }
@@ -860,9 +882,11 @@ function onFix(pos) {
   // the ring shows how sure we really are: the filter's spread, never much tighter than the fix itself
   const acc = Math.max(kfSigma(), accuracy * .5), est = kfPos();
   const p = acc < 60 ? snapToWalkway(est, Math.max(12, Math.min(acc * 1.5, 40))) : est;
-  me = { ...p, acc };
+  const appearing = !me || meG.getAttribute('opacity') === '0';
+  me = { ...p, acc }; lastFixAt = Date.now(); meG.classList.remove('stale');
   meG.setAttribute('opacity', 1);
   glideTo(p, acc);
+  if (appearing) pingMe(true);
   if (!warnedAcc && acc > 50 && !firstFix) { warnedAcc = true; toast(`Indoors your location is approximate (±${Math.round(acc / 5) * 5} m). Use it as a guide.`); }
   // "My location" can start a route once we're at the airport
   const node = nearestWalkNode(p);
@@ -913,19 +937,21 @@ function stopLocating(keepDot) {
   if (watchId != null && navigator.geolocation && watchId !== 'native') navigator.geolocation.clearWatch(watchId);
   if (watchId === 'native' && window.CLEApp && CLEApp.stopLocation) CLEApp.stopLocation();
   watchId = null; browserCompass(false); cancelAnimationFrame(glideRAF);
-  if (!keepDot) { me = null; shown = null; kf.t = 0; heading = null; meG.setAttribute('opacity', 0); delete ITEMS['v:me']; }
+  if (!keepDot) { me = null; shown = null; kf.t = 0; heading = null; coneAngle = null; meG.setAttribute('opacity', 0); meG.classList.remove('stale'); delete ITEMS['v:me']; }
 }
 function startLocating() {
   setLocState('busy'); firstFix = true; warnedSlow = false;
   if (window.CLEApp && CLEApp.startLocation) { watchId = 'native'; CLEApp.startLocation(); return; }   // Android: fused location and compass
   if (!navigator.geolocation) { setLocState('off'); toast('Location isn’t available on this device.'); return; }
   watchId = navigator.geolocation.watchPosition(onFix, onLocError, { enableHighAccuracy: true, maximumAge: 0 });
+  // a recent cached fix shows the dot at once while the precise one warms up
+  navigator.geolocation.getCurrentPosition(pos => { if (watchId != null && watchId !== 'native') onFix(pos); }, () => {}, { enableHighAccuracy: false, maximumAge: 120000, timeout: 2000 });
   browserCompass(true);
 }
 locBtn.onclick = () => {
   buzz();
   if (watchId == null) startLocating();
-  else if (!following && me && Math.hypot(me.x, me.y) <= 2500) { setLocState('follow'); const r = Math.max(me.acc, 40); fitBox(me.x - r, me.y - r, me.x + r, me.y + r, 20, Math.max(view.k, 2.4)); }
+  else if (!following && me && Math.hypot(me.x, me.y) <= 2500) { setLocState('follow'); pingMe(false); const r = Math.max(me.acc, 40); fitBox(me.x - r, me.y - r, me.x + r, me.y + r, 20, Math.max(view.k, 2.4)); }
   else { setLocState('off'); stopLocating(false); }
 };
 

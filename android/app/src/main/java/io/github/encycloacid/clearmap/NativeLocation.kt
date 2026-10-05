@@ -9,6 +9,7 @@ import android.hardware.SensorManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.location.LocationRequest
 import android.os.Build
 import android.os.Looper
 import android.view.Surface
@@ -39,11 +40,28 @@ class NativeLocation(private val context: Context, private val send: (String) ->
             listOf(LocationManager.FUSED_PROVIDER)
         else listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER).filter { runCatching { lm.isProviderEnabled(it) }.getOrDefault(false) }
         if (providers.isEmpty()) { send("window.cleLocationError && cleLocationError(2)"); running = false; return }
-        // the freshest fix we already have, so the dot appears straight away
-        providers.mapNotNull { runCatching { lm.getLastKnownLocation(it) }.getOrNull() }
-            .filter { System.currentTimeMillis() - it.time < 2 * 60_000 }
-            .minByOrNull { it.accuracy }?.let { onLocationChanged(it) }
-        for (p in providers) runCatching { lm.requestLocationUpdates(p, 1000L, 0f, this, Looper.getMainLooper()) }
+        // the freshest fix we already have, so the dot appears straight away (the filter on the
+        // page trusts it only as far as its accuracy, and real fixes take over within seconds)
+        (providers + LocationManager.PASSIVE_PROVIDER).distinct()
+            .mapNotNull { runCatching { lm.getLastKnownLocation(it) }.getOrNull() }
+            .filter { System.currentTimeMillis() - it.time < 10 * 60_000 }
+            .maxByOrNull { it.time }?.let { onLocationChanged(it) }
+        val main = Looper.getMainLooper()
+        if (Build.VERSION.SDK_INT >= 31) {
+            // ask for high accuracy explicitly: the old (provider, time, distance) call gives the
+            // fused provider a low-power request, which updates slowly and coarsely
+            val req = LocationRequest.Builder(1000L)
+                .setQuality(LocationRequest.QUALITY_HIGH_ACCURACY)
+                .setMinUpdateIntervalMillis(500L)
+                .build()
+            val exec = context.mainExecutor
+            for (p in providers) {
+                runCatching { lm.getCurrentLocation(p, req, null, exec) { l -> if (running && l != null) onLocationChanged(l) } }
+                runCatching { lm.requestLocationUpdates(p, req, exec, this) }
+            }
+        } else {
+            for (p in providers) runCatching { lm.requestLocationUpdates(p, 1000L, 0f, this, main) }
+        }
         sm.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)?.let { sm.registerListener(this, it, SensorManager.SENSOR_DELAY_UI) }
     }
 

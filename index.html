@@ -469,11 +469,27 @@ button.tag { border: 0; color: inherit; font: inherit; font-size: 14px; font-wei
 #locate[aria-pressed="true"] .ico { fill: currentColor; }
 #locate.busy .ico { animation: pulse 1s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: .3; } }
-.me-acc { fill: var(--route); fill-opacity: .12; stroke: var(--route); stroke-opacity: .35; stroke-width: 1px; }
-.me-dot { fill: var(--route); stroke: #fff; stroke-width: 2.6; }
-.me-halo { fill: var(--route); opacity: .2; }
-.me-cone { fill: var(--route); opacity: .35; }
-@keyframes me-pulse { from { transform: scale(.6); opacity: .45; } to { transform: scale(2.2); opacity: 0; } }
+/* your location: a blue dot in a white ring with a soft shadow, a beam fading out the way you face,
+   and a ring for how sure we are. Grey when the last fix is old. */
+.me-acc { fill: var(--route); fill-opacity: .1; stroke: var(--route); stroke-opacity: .3; stroke-width: 1px;
+  transition: r .45s cubic-bezier(.2,.8,.2,1), opacity .3s, fill .3s, stroke .3s; }
+.me-shadow { fill: #0b1530; opacity: .22; }
+.me-ring { fill: #fff; }
+.me-dot { fill: var(--route); transition: fill .3s; }
+.me-shine { fill: #fff; opacity: .28; }
+.me-beam-a { stop-color: var(--route); stop-opacity: .55; }
+.me-beam-b { stop-color: var(--route); stop-opacity: 0; }
+.me-cone { fill: url(#meBeam); transition: transform .3s cubic-bezier(.2,.8,.2,1), opacity .3s; }
+.me-pulse { fill: var(--route); opacity: 0; transform-box: fill-box; transform-origin: center; }
+.ping .me-pulse { animation: me-pulse 1.5s cubic-bezier(.2,.7,.3,1) 2; }
+@keyframes me-pulse { from { transform: scale(.7); opacity: .4; } to { transform: scale(3.2); opacity: 0; } }
+.me-pop { animation: me-pop .45s cubic-bezier(.3,1.5,.5,1); transform-box: fill-box; transform-origin: center; }
+@keyframes me-pop { from { transform: scale(0); } to { transform: scale(1); } }
+.stale .me-dot { fill: #8d95a6; }
+.stale .me-acc { fill: #8d95a6; stroke: #8d95a6; }
+.stale .me-cone { opacity: 0 !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .me-shadow { fill: #000; opacity: .45; } }
+:root[data-theme="dark"] .me-shadow { fill: #000; opacity: .45; }
 .toast-bar {
   position: fixed; z-index: 5; left: calc(var(--safe-left) + 16px); right: calc(var(--safe-right) + 76px); margin: 0 auto; width: fit-content; top: calc(var(--safe-top) + 70px);
   max-width: 440px; display: flex; align-items: center; gap: 12px;
@@ -756,6 +772,7 @@ h1.long { font-size: 24px; }
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <radialGradient id="meBeam" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="27"><stop offset=".15" class="me-beam-a"/><stop offset="1" class="me-beam-b"/></radialGradient>
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
   <symbol id="i-swap" viewBox="0 0 24 24"><path d="M8 4v15M8 4L4.5 7.5M8 4l3.5 3.5M16 20V5M16 20l-3.5-3.5M16 20l3.5-3.5"/></symbol>
@@ -1929,9 +1946,30 @@ for (const [con, x, y] of AP.ui.roundels) {
 const meG = el('g', { opacity: 0, style: 'pointer-events:none' });
 const meAcc = el('circle', { class: 'me-acc', r: 0, 'vector-effect': 'non-scaling-stroke' }, meG);
 const meMark = el('g', {}, meG);
-const meCone = el('path', { class: 'me-cone', d: 'M0 0L-7 -17A18 18 0 0 1 7 -17Z', opacity: 0 }, meMark);
-el('circle', { class: 'me-halo', r: 9 }, meMark);
-el('circle', { class: 'me-dot', r: 5.2 }, meMark);
+const meCone = el('path', { class: 'me-cone', d: 'M0 0L-15.5 -22.1A27 27 0 0 1 15.5 -22.1Z', opacity: 0 }, meMark);
+el('circle', { class: 'me-pulse', r: 7 }, meMark);
+const meBody = el('g', {}, meMark);
+el('circle', { class: 'me-shadow', r: 7.9, cy: .7 }, meBody);
+el('circle', { class: 'me-ring', r: 7.3 }, meBody);
+el('circle', { class: 'me-dot', r: 5.1 }, meBody);
+el('ellipse', { class: 'me-shine', rx: 2.4, ry: 1.5, cx: -1.3, cy: -2.1 }, meBody);
+// the beam turns the short way round (359° → 1° is a small turn, not a spin)
+let coneAngle = null;
+function aimCone(deg) {
+  if (coneAngle == null) coneAngle = deg;
+  else coneAngle += ((deg - coneAngle) % 360 + 540) % 360 - 180;
+  meCone.style.transform = `rotate(${coneAngle}deg)`;
+}
+// a ripple from the dot when it first appears or you jump back to it
+function pingMe(pop) {
+  if (reduced) return;
+  meG.classList.remove('ping'); if (pop) meBody.classList.remove('me-pop');
+  void meG.getBBox();
+  meG.classList.add('ping'); if (pop) meBody.classList.add('me-pop');
+}
+// grey once the last fix is more than half a minute old: it's where you were, not where you are
+let lastFixAt = 0;
+setInterval(() => { if (me) meG.classList.toggle('stale', Date.now() - lastFixAt > 30000); }, 5000);
 const routeStart = el('g', { class: 'route-start', opacity: 0, style: 'pointer-events:none' });
 el('circle', { r: 5.6 }, routeStart); el('circle', { r: 2.4, class: 'core' }, routeStart);
 const routeEnd = el('g', { class: 'route-endpt', opacity: 0, style: 'pointer-events:none' });
@@ -2499,6 +2537,7 @@ function kalman(p, acc, t) {
     kf.ax.p11 = kf.ay.p11 = acc * acc;
     return true;
   }
+  if (t < kf.t) return false;   // an older fix arriving late (a cached one) adds nothing
   const dt = Math.min(30, Math.max(0, (t - kf.t) / 1000));
   kfPredict(kf.ax, dt); kfPredict(kf.ay, dt);
   const e = kfPos(), jump = Math.hypot(p.x - e.x, p.y - e.y), allow = 3 * Math.sqrt(kfSigma() ** 2 + acc * acc) + 5;
@@ -2527,17 +2566,17 @@ function snapToWalkway(p, radius) {
 }
 function drawMe(p, acc) {
   meAcc.setAttribute('cx', p.x); meAcc.setAttribute('cy', p.y);
-  meAcc.setAttribute('r', Math.max(4, Math.min(acc, 250)));
+  meAcc.style.r = Math.max(4, Math.min(acc, 250)) + 'px';
   meAcc.style.opacity = acc > 80 ? .5 : 1;
   meMark.setAttribute('transform', `translate(${p.x} ${p.y}) scale(${markerScale})`);
   const fresh = heading != null && Date.now() - headingAt < 5000;
   meCone.setAttribute('opacity', fresh ? 1 : 0);
-  if (fresh) meCone.setAttribute('transform', `rotate(${heading})`);
+  if (fresh) aimCone(heading);
 }
 function glideTo(target, acc) {
   cancelAnimationFrame(glideRAF);
   if (!shown || reduced || Math.hypot(target.x - shown.x, target.y - shown.y) > 150) { shown = { ...target }; drawMe(shown, acc); return; }
-  const from = { ...shown }, t0 = performance.now(), dur = 650;
+  const from = { ...shown }, t0 = performance.now(), dur = 450;
   const step = now => {
     const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
     shown = { x: from.x + (target.x - from.x) * e, y: from.y + (target.y - from.y) * e };
@@ -2557,7 +2596,7 @@ function onFix(pos) {
   const { latitude, longitude, accuracy, heading: gpsHeading, speed } = pos.coords;
   const raw = toMap(latitude, longitude), far = Math.hypot(raw.x, raw.y);
   if (far > 2500) {
-    me = { ...raw, acc: accuracy }; meG.setAttribute('opacity', 1); drawMe(raw, accuracy);
+    me = { ...raw, acc: accuracy }; lastFixAt = Date.now(); meG.setAttribute('opacity', 1); drawMe(raw, accuracy);
     if (firstFix) toast(`You’re ${(far / 1609).toFixed(1)} miles from ${AP.code}. Your dot will appear when you’re at the airport.`);
     firstFix = false; setLocState('on'); return;
   }
@@ -2568,9 +2607,11 @@ function onFix(pos) {
   // the ring shows how sure we really are: the filter's spread, never much tighter than the fix itself
   const acc = Math.max(kfSigma(), accuracy * .5), est = kfPos();
   const p = acc < 60 ? snapToWalkway(est, Math.max(12, Math.min(acc * 1.5, 40))) : est;
-  me = { ...p, acc };
+  const appearing = !me || meG.getAttribute('opacity') === '0';
+  me = { ...p, acc }; lastFixAt = Date.now(); meG.classList.remove('stale');
   meG.setAttribute('opacity', 1);
   glideTo(p, acc);
+  if (appearing) pingMe(true);
   if (!warnedAcc && acc > 50 && !firstFix) { warnedAcc = true; toast(`Indoors your location is approximate (±${Math.round(acc / 5) * 5} m). Use it as a guide.`); }
   // "My location" can start a route once we're at the airport
   const node = nearestWalkNode(p);
@@ -2621,19 +2662,21 @@ function stopLocating(keepDot) {
   if (watchId != null && navigator.geolocation && watchId !== 'native') navigator.geolocation.clearWatch(watchId);
   if (watchId === 'native' && window.CLEApp && CLEApp.stopLocation) CLEApp.stopLocation();
   watchId = null; browserCompass(false); cancelAnimationFrame(glideRAF);
-  if (!keepDot) { me = null; shown = null; kf.t = 0; heading = null; meG.setAttribute('opacity', 0); delete ITEMS['v:me']; }
+  if (!keepDot) { me = null; shown = null; kf.t = 0; heading = null; coneAngle = null; meG.setAttribute('opacity', 0); meG.classList.remove('stale'); delete ITEMS['v:me']; }
 }
 function startLocating() {
   setLocState('busy'); firstFix = true; warnedSlow = false;
   if (window.CLEApp && CLEApp.startLocation) { watchId = 'native'; CLEApp.startLocation(); return; }   // Android: fused location and compass
   if (!navigator.geolocation) { setLocState('off'); toast('Location isn’t available on this device.'); return; }
   watchId = navigator.geolocation.watchPosition(onFix, onLocError, { enableHighAccuracy: true, maximumAge: 0 });
+  // a recent cached fix shows the dot at once while the precise one warms up
+  navigator.geolocation.getCurrentPosition(pos => { if (watchId != null && watchId !== 'native') onFix(pos); }, () => {}, { enableHighAccuracy: false, maximumAge: 120000, timeout: 2000 });
   browserCompass(true);
 }
 locBtn.onclick = () => {
   buzz();
   if (watchId == null) startLocating();
-  else if (!following && me && Math.hypot(me.x, me.y) <= 2500) { setLocState('follow'); const r = Math.max(me.acc, 40); fitBox(me.x - r, me.y - r, me.x + r, me.y + r, 20, Math.max(view.k, 2.4)); }
+  else if (!following && me && Math.hypot(me.x, me.y) <= 2500) { setLocState('follow'); pingMe(false); const r = Math.max(me.acc, 40); fitBox(me.x - r, me.y - r, me.x + r, me.y + r, 20, Math.max(view.k, 2.4)); }
   else { setLocState('off'); stopLocating(false); }
 };
 

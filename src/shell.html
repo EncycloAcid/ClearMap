@@ -469,11 +469,27 @@ button.tag { border: 0; color: inherit; font: inherit; font-size: 14px; font-wei
 #locate[aria-pressed="true"] .ico { fill: currentColor; }
 #locate.busy .ico { animation: pulse 1s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: .3; } }
-.me-acc { fill: var(--route); fill-opacity: .12; stroke: var(--route); stroke-opacity: .35; stroke-width: 1px; }
-.me-dot { fill: var(--route); stroke: #fff; stroke-width: 2.6; }
-.me-halo { fill: var(--route); opacity: .2; }
-.me-cone { fill: var(--route); opacity: .35; }
-@keyframes me-pulse { from { transform: scale(.6); opacity: .45; } to { transform: scale(2.2); opacity: 0; } }
+/* your location: a blue dot in a white ring with a soft shadow, a beam fading out the way you face,
+   and a ring for how sure we are. Grey when the last fix is old. */
+.me-acc { fill: var(--route); fill-opacity: .1; stroke: var(--route); stroke-opacity: .3; stroke-width: 1px;
+  transition: r .45s cubic-bezier(.2,.8,.2,1), opacity .3s, fill .3s, stroke .3s; }
+.me-shadow { fill: #0b1530; opacity: .22; }
+.me-ring { fill: #fff; }
+.me-dot { fill: var(--route); transition: fill .3s; }
+.me-shine { fill: #fff; opacity: .28; }
+.me-beam-a { stop-color: var(--route); stop-opacity: .55; }
+.me-beam-b { stop-color: var(--route); stop-opacity: 0; }
+.me-cone { fill: url(#meBeam); transition: transform .3s cubic-bezier(.2,.8,.2,1), opacity .3s; }
+.me-pulse { fill: var(--route); opacity: 0; transform-box: fill-box; transform-origin: center; }
+.ping .me-pulse { animation: me-pulse 1.5s cubic-bezier(.2,.7,.3,1) 2; }
+@keyframes me-pulse { from { transform: scale(.7); opacity: .4; } to { transform: scale(3.2); opacity: 0; } }
+.me-pop { animation: me-pop .45s cubic-bezier(.3,1.5,.5,1); transform-box: fill-box; transform-origin: center; }
+@keyframes me-pop { from { transform: scale(0); } to { transform: scale(1); } }
+.stale .me-dot { fill: #8d95a6; }
+.stale .me-acc { fill: #8d95a6; stroke: #8d95a6; }
+.stale .me-cone { opacity: 0 !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .me-shadow { fill: #000; opacity: .45; } }
+:root[data-theme="dark"] .me-shadow { fill: #000; opacity: .45; }
 .toast-bar {
   position: fixed; z-index: 5; left: calc(var(--safe-left) + 16px); right: calc(var(--safe-right) + 76px); margin: 0 auto; width: fit-content; top: calc(var(--safe-top) + 70px);
   max-width: 440px; display: flex; align-items: center; gap: 12px;
@@ -756,6 +772,7 @@ h1.long { font-size: 24px; }
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <radialGradient id="meBeam" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="27"><stop offset=".15" class="me-beam-a"/><stop offset="1" class="me-beam-b"/></radialGradient>
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
   <symbol id="i-swap" viewBox="0 0 24 24"><path d="M8 4v15M8 4L4.5 7.5M8 4l3.5 3.5M16 20V5M16 20l-3.5-3.5M16 20l3.5-3.5"/></symbol>
