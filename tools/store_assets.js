@@ -11,13 +11,13 @@ const OUT = path.join(ROOT, 'fastlane/metadata/android/en-US/images');
 const PAGE = 'file://' + path.join(ROOT, 'index.html');
 const NOON = new Date('2026-10-05T13:00:00-04:00');     // shops open, a sensible boarding time
 
-// The launcher icon, from the Android vector drawable, on the brand blue
+// The launcher icon, from the Android vector drawable, on its white background
 function iconSvg(size, rounded) {
   const xml = fs.readFileSync(path.join(ROOT, 'android/app/src/main/res/drawable/ic_launcher_foreground.xml'), 'utf8');
   const paths = [...xml.matchAll(/fillColor="([^"]+)" android:pathData="([^"]+)"/g)].map(([, c, d]) => `<path fill="${c}" d="${d}"/>`).join('');
   // the adaptive icon's visible area is the middle 72 of its 108 units; show a little more for the store
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="14 14 80 80">
-    <rect x="14" y="14" width="80" height="80" rx="${rounded ? 18 : 0}" fill="#2F50D0"/>${paths}</svg>`;
+    <rect x="14" y="14" width="80" height="80" rx="${rounded ? 18 : 0}" fill="#FFFFFF"/>${paths}</svg>`;
 }
 
 (async () => {
@@ -72,7 +72,7 @@ function iconSvg(size, rounded) {
     await p.setContent(`<!doctype html><body style="margin:0;width:1024px;height:500px;overflow:hidden;font-family:Roboto,Arial,sans-serif;
       background:radial-gradient(120% 140% at 0% 0%,#3e63e6 0%,#2F50D0 45%,#1f3497 100%);color:#fff;position:relative">
       <div style="position:absolute;left:72px;top:110px;width:470px">
-        <div style="display:flex;align-items:center;gap:22px">${iconSvg(104, true).replace('fill="#2F50D0"', 'fill="#ffffff22"')}
+        <div style="display:flex;align-items:center;gap:22px"><div style="border-radius:24px;box-shadow:0 12px 30px #0003;line-height:0">${iconSvg(104, true)}</div>
           <div style="font:800 70px/1 Roboto,Arial,sans-serif;letter-spacing:-1.5px">Clearway</div></div>
         <div style="margin-top:34px;font:600 34px/1.25 Roboto,Arial,sans-serif">Find your gate.<br>Find your way.</div>
         <div style="margin-top:20px;font:400 21px/1.4 Roboto,Arial,sans-serif;opacity:.85">Indoor maps and walking directions for Cleveland Hopkins and Atlanta Hartsfield–Jackson</div>
