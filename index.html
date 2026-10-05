@@ -507,6 +507,9 @@ input.switch:checked::after { transform: translateX(20px); }
   <symbol id="i-fit" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
   <symbol id="i-locate" viewBox="0 0 24 24"><path d="M20.5 3.5L3.5 10.6l7.2 2.7 2.7 7.2z"/></symbol>
   <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0"/></symbol>
+  <symbol id="i-lift" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9.5 9.5L12 7l2.5 2.5M9.5 14.5L12 17l2.5-2.5"/></symbol>
+  <symbol id="i-water" viewBox="0 0 24 24"><path d="M12 3.5s6 6.6 6 10.5a6 6 0 0 1-12 0c0-3.9 6-10.5 6-10.5z"/></symbol>
+  <symbol id="i-access" viewBox="0 0 24 24"><circle cx="11" cy="4.5" r="1.8"/><path d="M11 7.5v6h5l2.5 5.5M11 10.5h5M8 10.2a5.5 5.5 0 1 0 7.6 7.9"/></symbol>
   <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
   <symbol id="i-walk" viewBox="0 0 24 24"><circle cx="13" cy="4.5" r="1.8"/><path d="M10 21l2.5-6.5L15 17v4M12.5 14.5L11 9l-3 2v4M11 9l3.5-.5 2 3.5 2.5 1"/></symbol>
   <symbol id="i-dice" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="9" cy="9" r=".6" fill="currentColor"/><circle cx="15" cy="15" r=".6" fill="currentColor"/><circle cx="15" cy="9" r=".6" fill="currentColor"/><circle cx="9" cy="15" r=".6" fill="currentColor"/><circle cx="12" cy="12" r=".6" fill="currentColor"/></symbol>
@@ -591,7 +594,13 @@ input.switch:checked::after { transform: translateX(20px); }
         <label class="row"><span class="pt b"></span><span class="rl">To</span><select id="to" aria-label="To"></select></label>
         <button class="swap" id="swap" aria-label="Swap start and destination"><svg class="ico"><use href="#i-swap"/></svg></button>
       </div>
+      <div class="group" id="sfGroup">
+        <label class="row"><span class="tile" style="background:var(--conB)"><svg class="ico"><use href="#i-access"/></svg></span>
+          <span class="grow"><span class="t">Step-free route</span><span class="s">Elevators instead of escalators</span></span>
+          <input type="checkbox" class="switch" id="stepFree" aria-label="Step-free route"></label>
+      </div>
       <ol class="group line" id="steps"></ol>
+      <p class="foot" id="sfNote" hidden>Need a wheelchair or help getting to your gate? Ask your airline. They arrange assistance at check-in or when you book.</p>
       <p class="foot">Tap a step to see it on the map. Walking times assume about 75 m a minute. Allow 15–30 minutes for the TSA checkpoint when it’s busy.</p>
     </div>
 
@@ -655,12 +664,18 @@ const V = {
   hotel:[184, 24, 'Hotel & parking shuttles'],
   ride: [178, -44, 'Rideshare pickup'],
   curb: [124, -44, 'Arrivals curb (Lower Drive)'],
+  lift_t: [191, -202, 'Elevator by ticketing'],
+  lift_c: [108, -130, 'Elevator beside the checkpoint'],
+  lift_r: [110, -119, 'Elevator to the RTA platform'],
 };
 const EDGES = [
   ['chk','hub','S'], ['hub','fc','M'], ['fc','c0','M'], ['c0','c1','C'], ['c1','c2','C'], ['c2','c3','C'], ['c3','c4','C'], ['c4','crot','R'],
   ['hub','b0','M'], ['b0','b1','B'], ['b1','b2','B'], ['hub','a0','M'], ['a0','a1','A'], ['a1','a2','A'],
-  ['tix','chk','L'], ['tix','bag','L'], ['bag','rta','L'], ['bag','gtc','L'], ['bag','taxi','L'], ['gtc','rent','L'], ['gtc','hotel','L'], ['gtc','ride','L'], ['bag','curb','L'],
-  ['chk','bag','L'],   // escalators beside the checkpoint between the upper and lower levels
+  ['tix','chk','L'], ['tix','bag','X','esc'], ['bag','rta','X','esc'], ['bag','gtc','L'], ['bag','taxi','L'], ['gtc','rent','L'], ['gtc','hotel','L'], ['gtc','ride','L'], ['bag','curb','L'],
+  ['chk','bag','X','esc'],   // escalators beside the checkpoint between the upper and lower levels
+  // elevators (step-free): ticketing ↔ baggage claim, checkpoint ↔ baggage claim, baggage claim ↔ RTA platform
+  ['tix','lift_t','L'], ['lift_t','bag','X','lift'], ['chk','lift_c','L'], ['lift_c','bag','X','lift'],
+  ['bag','lift_r','L'], ['lift_r','rta','X','lift'],
 ];
 const SPINES = { A: ['a0','a1','a2'], B: ['b0','b1','b2'], C: ['c0','c1','c2','c3','c4'] };
 const ROT = { x: -185, y: 268, r: 43 };
@@ -732,6 +747,12 @@ const AMEN = [
   ['Sunglass Hut','shop',[38,-113,'M']], ['Johnston & Murphy','shop',[44,-124,'M']], ['Hudson Booksellers','shop',[50,-139,'M'],15],
   ['Rock & Roll Hall of Fame store','play',[53,-108,'M'],15,'Cleveland music souvenirs'], ['Ohio Game Day Sports','shop',[80,-128,'M']],
   ['Kids Works','play',[84,-140,'M'],15,'Toys and games'], ['Service animal relief area','service',[92,-152,'M'],10], ['Restrooms','rest',[76,-138,'M']],
+  ['Accessible restroom','rest',[-160,-173,'B','B6'],5,'Wheelchair accessible'], ['Accessible restroom','rest',[37,-48,'M'],5,'Wheelchair accessible'],
+  ['Accessible restroom','rest',[-196,265,'R','C20'],5,'Wheelchair accessible'],
+  ['Water fountain','service',[25,12,'C','C2'],3], ['Water fountain','service',[12,41,'C','C3'],3], ['Water fountain','service',[-15,68,'C','C5'],3],
+  ['Water fountain','service',[-129,186,'C','C11'],3],
+  ['Elevator','service',[191,-202,'LIFT','lift_t'],2,'Ticketing ↔ baggage claim'], ['Elevator','service',[108,-130,'LIFT','lift_c'],2,'Checkpoint ↔ baggage claim'],
+  ['Elevator','service',[110,-119,'LIFT','lift_r'],2,'Baggage claim ↔ RTA platform'],
   ['Information desk','service',[152,-190,'L'],5], ["Farmer's Fridge vending",'food',[170,-208,'L'],4], ['Illy Coffee vending','coffee',[160,-210,'L'],4],
   ['Welcome Center','service',[108,-58,'L'],5], ['Hudson Aero Mart','shop',[104,-84,'L']], ['SIM card vending','service',[110,-96,'L'],5],
 ];
@@ -790,7 +811,8 @@ AMEN.forEach(([name, cat, at, dwell, note], i) => {
   const it = { id: 'm:' + i, kind: 'amen', name, cat, dwell: dwell ?? CATS[cat].dwell, note };
   if (Array.isArray(at)) {
     const [x, y, zone, gate] = at;
-    Object.assign(it, { x, y, zone, gate, near: gate ? 'Near gate ' + gate : zone === 'L' ? 'Landside, before security' : 'Main terminal' });
+    if (zone === 'LIFT') Object.assign(it, { x, y, zone, lift: gate, near: V[gate][2] });
+    else Object.assign(it, { x, y, zone, gate, near: gate ? 'Near gate ' + gate : zone === 'L' ? 'Landside, before security' : 'Main terminal' });
   }
   else {
     const gi = gateInfo[at], k = perGate[at] = (perGate[at] ?? -1) + 1;
@@ -802,15 +824,17 @@ AMEN.forEach(([name, cat, at, dwell, note], i) => {
       Object.assign(it, along(SPINES[gi.con], Math.min(gi.t, .985) + (shift * 7 - 2) / len, gi.s, 5), { zone: gi.con });
     }
   }
+  // icons that differ from their category's
+  it.icon = /^Elevator$/.test(name) ? 'lift' : /^Water fountain/.test(name) ? 'water' : /^Accessible restroom/.test(name) ? 'access' : cat;
   ITEMS[it.id] = it;
 });
 
 // ---------- Floors ----------
 // 'up' = upper level (gates, security, ticketing, airside shops); 'lo' = lower level
 // (baggage claim, ground transportation, and the RTA platform below it).
-const LOWER_V = new Set(['bag', 'rta', 'gtc', 'taxi', 'rent', 'hotel', 'ride', 'curb']);
+const LOWER_V = new Set(['bag', 'rta', 'gtc', 'taxi', 'rent', 'hotel', 'ride', 'curb', 'lift_r']);
 for (const it of Object.values(ITEMS))
-  it.lvl = it.kind === 'place' ? (LOWER_V.has(it.node) ? 'lo' : 'up') : (it.zone === 'L' && it.y > -150 ? 'lo' : 'up');
+  it.lvl = it.zone === 'LIFT' ? null : it.kind === 'place' ? (LOWER_V.has(it.node) ? 'lo' : 'up') : (it.zone === 'L' && it.y > -150 ? 'lo' : 'up');
 function levelOf(node) {
   if (V[node]) return LOWER_V.has(node) ? 'lo' : 'up';
   const it = ITEMS[node.startsWith('p:') ? node.slice(2) : node];
@@ -821,7 +845,7 @@ function levelOf(node) {
 const G = {};   // node -> [{to, w}]
 const NODE = {}; // node -> {x,y}
 const addNode = (id, p) => { NODE[id] = p; G[id] = G[id] || []; };
-const link = (a, b) => { const w = dist(NODE[a], NODE[b]); G[a].push({ to: b, w }); G[b].push({ to: a, w }); };
+const link = (a, b, kind) => { const w = dist(NODE[a], NODE[b]); G[a].push({ to: b, w, kind }); G[b].push({ to: a, w, kind }); };
 for (const id in V) addNode(id, P(id));
 const onEdge = EDGES.map(() => []);
 function project(p, a, b) {
@@ -833,6 +857,7 @@ for (const it of Object.values(ITEMS)) {
   if (it.kind === 'place') continue;
   addNode(it.id, { x: it.x, y: it.y });
   if (it.zone === 'R') { link(it.id, 'crot'); continue; }
+  if (it.zone === 'LIFT') { link(it.id, it.lift); continue; }
   let best = null;
   EDGES.forEach(([a, b, z], ei) => {
     if (z !== it.zone) return;
@@ -844,12 +869,17 @@ for (const it of Object.values(ITEMS)) {
   onEdge[best.ei].push({ u: best.pr.u, id: pid });
   link(it.id, pid);
 }
-EDGES.forEach(([a, b], ei) => {
+const EDGE_KIND = {};
+EDGES.forEach(([a, b, , kind], ei) => {
   const chain = [a, ...onEdge[ei].sort((p, q) => p.u - q.u).map(p => p.id), b];
-  for (let i = 1; i < chain.length; i++) link(chain[i-1], chain[i]);
+  for (let i = 1; i < chain.length; i++) link(chain[i-1], chain[i], kind);
+  if (kind) EDGE_KIND[a + '|' + b] = EDGE_KIND[b + '|' + a] = kind;
 });
 const nodeOf = it => it.kind === 'place' ? it.node : it.id;
 
+// Step-free routing skips escalators; elevators cost a short wait (about a minute) on top of the walk
+let stepFree = false;
+const LIFT_WAIT = 75;   // metres-equivalent at 75 m/min
 function dijkstra(src) {
   const D = { [src]: 0 }, prev = {}, done = new Set();
   const ids = Object.keys(G);
@@ -858,16 +888,22 @@ function dijkstra(src) {
     for (const id of ids) if (!done.has(id) && D[id] !== undefined && D[id] < best) { best = D[id]; u = id; }
     if (u === null) break;
     done.add(u);
-    for (const { to, w } of G[u]) if (!done.has(to) && (D[to] === undefined || D[u] + w < D[to])) { D[to] = D[u] + w; prev[to] = u; }
+    for (const { to, w, kind } of G[u]) {
+      if (done.has(to) || (stepFree && kind === 'esc')) continue;
+      const nd = D[u] + w + (kind === 'lift' ? LIFT_WAIT : 0);
+      if (D[to] === undefined || nd < D[to]) { D[to] = nd; prev[to] = u; }
+    }
   }
   return { D, prev };
 }
 const dCache = {};
-const fromSrc = id => dCache[id] || (dCache[id] = dijkstra(id));
+const fromSrc = id => { const key = id + (stepFree ? '|sf' : ''); return dCache[key] || (dCache[key] = dijkstra(id)); };
 function route(aItem, bItem) {
   const s = nodeOf(aItem), t = nodeOf(bItem), { D, prev } = fromSrc(s);
   const path = [t]; while (path[0] !== s) path.unshift(prev[path[0]]);
-  return { path, units: D[t] };
+  // units: time-equivalent (includes elevator waits); len: metres actually walked
+  let len = 0; for (let i = 1; i < path.length; i++) len += dist(NODE[path[i - 1]], NODE[path[i]]);
+  return { path, units: D[t], len, lift: path.some((n, i) => i && EDGE_KIND[path[i - 1] + '|' + n] === 'lift') };
 }
 const meters = u => Math.round(u * M_PER_UNIT / 10) * 10;
 const minutes = u => Math.max(1, Math.round(u * M_PER_UNIT / M_PER_MIN));
@@ -1007,7 +1043,7 @@ for (const it of Object.values(ITEMS)) {
     const sz = el('g', { class: 'sz' }, el('g', { class: 'pop' }, g));
     if (it.cat === 'rest') el('rect', { class: 'sym', x: -5, y: -5, width: 10, height: 10, rx: 3 }, sz);
     else el('circle', { class: 'sym', r: 5.2 }, sz);
-    el('use', { class: 'glyph', href: '#i-' + it.cat, x: -3.6, y: -3.6, width: 7.2, height: 7.2 }, sz);
+    el('use', { class: 'glyph', href: '#i-' + (it.icon || it.cat), x: -3.6, y: -3.6, width: 7.2, height: 7.2 }, sz);
     el('text', { x: 8, y: 2 }, g).textContent = it.name;
   } else {
     g = el('g', { class: 'mk place', 'data-id': it.id }, layerPlaces);
@@ -1052,7 +1088,7 @@ function setPin(it) {
   pinItem = it && it.kind !== 'gate' ? it : null;
   if (!pinItem) { pinG.setAttribute('opacity', 0); return; }
   pinG.dataset.cat = pinItem.cat || 'place';
-  pinUse.setAttribute('href', '#i-' + (pinItem.cat || 'place'));
+  pinUse.setAttribute('href', '#i-' + (pinItem.icon || pinItem.cat || 'place'));
   pinG.setAttribute('opacity', 1);
   placeDecor();
   if (!reduced) { pinG.classList.remove('drop'); void pinG.getBBox(); pinG.classList.add('drop'); }
@@ -1165,7 +1201,7 @@ function cullLabels() {
   // (selected, on the route, restrooms, food and bars, coffee, shops, then vending and chargers)
   const RANK = { rest: 2, bar: 3, food: 3, coffee: 4, shop: 5, play: 5, service: 6 };
   const mrank = it => it.el.classList.contains('sel') ? 0 : it.el.classList.contains('hl') ? 1
-    : RANK[it.cat] + (/vending|FuelRod|Lottery/i.test(it.name) ? 2 : 0);
+    : stepFree && (it.icon === 'lift' || it.icon === 'access') ? 2 : RANK[it.cat] + (/vending|FuelRod|Lottery/i.test(it.name) ? 2 : 0);
   const mr = (svg.dataset.z === '1' ? 3.6 : 5.8) * u, kept = [];
   for (const it of Object.values(ITEMS)) if ((it.kind === 'gate' || it.kind === 'place') && !away(it)) {
     const p = scr(it); kept.push({ l: p.x - mr, r: p.x + mr, t: p.y - mr, b: p.y + mr });
@@ -1395,7 +1431,7 @@ function startPuck() {
   };
   puckRAF = requestAnimationFrame(loop);
 }
-function setRoute(nodes) {
+function setRoute(nodes, mins) {
   routeNodes = nodes.slice();
   routePts = nodes.map(n => NODE[n]);
   routeLens = [0];
@@ -1404,7 +1440,7 @@ function setRoute(nodes) {
   const show = routePts.length > 1 ? 1 : 0;
   for (const g of [routeStart, routeEnd, eta]) g.setAttribute('opacity', show);
   if (show) {
-    etaText.textContent = minutes(routeTotal) + ' min';
+    etaText.textContent = (mins || minutes(routeTotal)) + ' min';
     const w = etaText.textContent.length * 5.2 + 14;
     etaRect.setAttribute('x', -w / 2); etaRect.setAttribute('width', w);
   }
@@ -1417,9 +1453,10 @@ function setRoute(nodes) {
     const la = levelOf(routeNodes[i - 1]), lb = levelOf(routeNodes[i]);
     if (la === lb) continue;
     const a = routePts[i - 1], b = routePts[i], g = el('g', { class: 'esc', 'data-esc': lb, role: 'button' }, escLayer);
-    el('title', {}, g).textContent = lb === 'lo' ? 'Escalator down to the lower level' : 'Escalator up to the upper level';
+    const lift = EDGE_KIND[routeNodes[i - 1] + '|' + routeNodes[i]] === 'lift';
+    el('title', {}, g).textContent = (lift ? 'Elevator' : 'Escalator') + (lb === 'lo' ? ' down to the lower level' : ' up to the upper level');
     el('circle', { r: 7 }, g);
-    el('use', { class: 'glyph', href: '#i-swap', x: -4.5, y: -4.5, width: 9, height: 9 }, g);
+    el('use', { class: 'glyph', href: lift ? '#i-lift' : '#i-swap', x: -4.5, y: -4.5, width: 9, height: 9 }, g);
     escBadges.push({ g, x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
   }
   placeDecor();
@@ -1673,7 +1710,7 @@ function nearbyNames(it, n = 6) {
     .map(o => o.name).filter((v, i, a) => a.indexOf(v) === i).slice(0, n);
 }
 const tileFor = it => it.kind === 'gate' ? `<span class="tile ${it.con}">${icon('gate')}</span>`
-  : it.kind === 'amen' ? `<span class="tile ${it.cat}">${icon(it.cat)}</span>` : `<span class="tile place">${icon('place')}</span>`;
+  : it.kind === 'amen' ? `<span class="tile ${it.cat}">${icon(it.icon || it.cat)}</span>` : `<span class="tile place">${icon('place')}</span>`;
 function showPlace(it, fromMap) {
   if (!it) return;
   if (selected) selected.el.classList.remove('sel');
@@ -1693,8 +1730,8 @@ function showPlace(it, fromMap) {
   if (it.note) rows.push(['About', esc(it.note)]);
   if (it.kind === 'amen' && it.cat !== 'rest') rows.push(['Typical visit', `About ${it.dwell} min`]);
   if (it.zone !== 'L' && it.id !== 'v:chk') {
-    const { units } = route(ITEMS['v:chk'], it);
-    rows.push(['From security', `${minutes(units)} min · ${meters(units)} m`]);
+    const { units, len } = route(ITEMS['v:chk'], it);
+    rows.push(['From security', `${minutes(units)} min · ${meters(len)} m`]);
   }
   if (it.zone === 'L' || it.kind === 'place') rows.push(['Level', it.lvl === 'lo' ? 'Lower level' : 'Upper level']);
   if (it.kind === 'gate') rows.push(['Concourse', `${it.con} · ${CON_RANGE[it.con]}`]);
@@ -1760,9 +1797,11 @@ function describe(path, a, b) {
       if (n === 'tix' && path[i + 1] === 'bag') note = 'Take the escalator down a level';
       if (n === 'bag' && path[i - 1] === 'tix') note = 'Lower level';
       if (n === 'c4') note = 'Gates C17–C29 ring the rotunda';
+      if (n === 'lift_r') note = path[i + 1] === 'rta' ? 'Take the elevator down to the RTA platform' : 'Take the elevator up to baggage claim';
+      else if (n.startsWith('lift_')) note = levelOf(path[i + 1]) === 'lo' ? 'Take the elevator down to the lower level' : 'Take the elevator up to the upper level';
       if (n === 'fc' && path.includes('c0')) note = 'Follow the purple C signs';
       steps.push({ t: V[n][2], n: note, node: n }); lastLabel = n;
-      via.push(V[n][2].replace(/^Main terminal, past security$/, 'Main terminal').replace(/^Main terminal food court$/, 'Food court').replace(/ \((upper|lower) level\)/, ''));
+      if (!n.startsWith('lift_')) via.push(V[n][2].replace(/^Main terminal, past security$/, 'Main terminal').replace(/^Main terminal food court$/, 'Food court').replace(/ \((upper|lower) level\)/, ''));
     }
     if (n.startsWith('p:m:')) {
       const am = ITEMS[n.slice(2)];
@@ -1804,12 +1843,12 @@ function updateRoute(fit) {
     $('#hero').innerHTML = `<span class="num">0<small>min</small></span><span class="m1">You’re already there</span><span class="m2">Pick a different destination</span>`;
     $('#steps').innerHTML = ''; setRoute([]); return;
   }
-  const { path, units } = route(a, b);
-  setRoute(path);
+  const { path, units, len, lift } = route(a, b);
+  setRoute(path, minutes(units));
   const { steps, passed, via } = describe(path, a, b);
   $('#hero').className = 'hero';
   $('#hero').innerHTML = `<button class="hero-x" id="clearRoute" aria-label="Clear route">${icon('x')}</button><span class="num">${minutes(units)}<small>min</small></span>
-    <span class="m1">${meters(units)} m walk</span>
+    <span class="m1">${meters(len)} m walk${lift ? ' · elevator' : ''}</span>
     <span class="m2">${via.length ? 'via ' + via.slice(0, 3).map(esc).join(' · ') : 'Direct'}</span>`;
   $('#steps').innerHTML = steps.map(s => `<li class="${s.end ? 'end' : ''}" data-node="${esc(s.node)}" tabindex="0" role="button"><span class="stop"></span><span><span class="t">${esc(s.t)}</span>${s.n ? `<span class="n">${esc(s.n)}</span>` : ''}</span></li>`).join('')
     + (passed.length ? `<li class="passing">On the way: ${passed.map(esc).join(', ')}</li>` : '');
@@ -1832,6 +1871,13 @@ function updateRoute(fit) {
 }
 $('#from').onchange = $('#to').onchange = () => updateRoute(true);
 
+// ---------- Step-free routing ----------
+function setStepFree(on, quiet) {
+  stepFree = on; $('#stepFree').checked = on; $('#sfNote').hidden = !on;
+  if (!quiet) { buzz(5); updateRoute(true); saveTrip(); cullLabels(); }
+}
+$('#stepFree').addEventListener('change', e => setStepFree(e.target.checked));
+
 // ---------- Arrivals: gate → exit → baggage claim → your ride ----------
 let mode = 'dep';
 const ARR_DEST = [
@@ -1852,12 +1898,12 @@ function updateArrival(fit) {
   const bags = $('#arrBags').checked, car = parseInt($('#arrCarousel').value, 10);
   $('#carRow').hidden = !bags;
   const p1 = route(gate, bag), p2 = route(bag, dest);
-  const path = p1.path.concat(p2.path.slice(1)), units = p1.units + p2.units;
-  setRoute(path);
+  const path = p1.path.concat(p2.path.slice(1)), units = p1.units + p2.units, len = p1.len + p2.len;
+  setRoute(path, minutes(units));
   const { steps, passed } = describe(path, gate, dest);
   for (const s of steps) {
     if (s.node === 'tix') { s.t = 'Escalators down to the lower level'; s.n = ''; }
-    if (s.node === 'chk') { s.t = 'Exit lane by the security checkpoint'; s.n = 'Then take the escalators down to baggage claim. Once you’re through, you can’t go back to the gates.'; }
+    if (s.node === 'chk') { s.t = 'Exit lane by the security checkpoint'; s.n = (stepFree ? '' : 'Then take the escalators down to baggage claim. ') + 'Once you’re through, you can’t go back to the gates.'; }
     if (s.node === 'bag' && !s.end) {
       s.n = !bags ? 'No bags? Walk straight through.'
         : car > 0 ? `Carousel ${car}. Bags usually arrive 15–25 min after landing.`
@@ -1870,7 +1916,7 @@ function updateArrival(fit) {
   const walk = minutes(units), total = walk + (bags ? BAG_WAIT : 0);
   $('#hero').className = 'hero';
   $('#hero').innerHTML = `<span class="num">${total}<small>min</small></span>
-    <span class="m1">${meters(units)} m walk${bags ? ` + ~${BAG_WAIT} min for bags` : ''}</span>
+    <span class="m1">${meters(len)} m walk${p1.lift || p2.lift ? ' · elevator' : ''}${bags ? ` + ~${BAG_WAIT} min for bags` : ''}</span>
     <span class="m2">${esc(gate.name)} to ${esc(info ? info[1] : dest.name)}</span>`;
   $('#steps').innerHTML = steps.map(s => `<li class="${s.end ? 'end' : ''}" data-node="${esc(s.node)}" tabindex="0" role="button"><span class="stop"></span><span><span class="t">${esc(s.t)}</span>${s.n ? `<span class="n">${esc(s.n)}</span>` : ''}</span></li>`).join('')
     + (passed.length ? `<li class="passing">On the way: ${passed.map(esc).join(', ')}</li>` : '');
@@ -1906,7 +1952,7 @@ $('#swap').onclick = () => {
 
 // ---------- Go to the nearest… ----------
 const QUICK = [
-  ['rest', 'Restroom', 'rest', i => i.cat === 'rest'],
+  ['rest', 'Restroom', 'rest', i => i.cat === 'rest' && (!stepFree || /Accessible/.test(i.name))],
   ['coffee', 'Coffee', 'coffee', i => i.cat === 'coffee' && !/vending/i.test(i.name)],
   ['food', 'Food', 'food', i => i.cat === 'food' && !/vending/i.test(i.name)],
   ['bar', 'Bar', 'bar', i => i.cat === 'bar'],
@@ -1932,7 +1978,7 @@ function goNearest(key) {
   updateRoute(true); saveTrip();
   const where = best.gate ? 'near gate ' + best.gate : best.zone === 'L' ? 'before security' : 'in the main terminal';
   const mins = minutes(route(from, best).units);
-  if (key === 'rest') toast(`Nearest restrooms are ${where}, ${mins} min away.`);
+  if (key === 'rest') toast(stepFree ? `Nearest accessible restroom is ${where}, ${mins} min away.` : `Nearest restrooms are ${where}, ${mins} min away.`);
   else if (key !== 'gate') toast(`Nearest ${q[1].toLowerCase()}: ${best.name}, ${where} (${mins} min).`);
 }
 $('#quick').innerHTML = QUICK.map(([k, label, ico]) =>
@@ -2008,7 +2054,7 @@ function updateIdeas() {
   const seen = new Set();
   const order = { ok: 0, warn: 1, no: 2 };
   const list = Object.values(ITEMS)
-    .filter(i => i.kind === 'amen' && i.zone !== 'L' && i.cat !== 'rest' && (ktCat === 'all' || i.cat === ktCat))
+    .filter(i => i.kind === 'amen' && i.zone !== 'L' && i.zone !== 'LIFT' && i.cat !== 'rest' && !/^Water fountain/.test(i.name) && (ktCat === 'all' || i.cat === ktCat))
     .map(i => {
       const walk = minutes(D[i.id]), spare = mins - 10 - walk * 2 - i.dwell;
       return { i, walk, spare, status: spare >= 5 ? 'ok' : spare >= 0 ? 'warn' : 'no' };
@@ -2150,7 +2196,7 @@ window.cleBack = () => {
 function saveTrip() {
   const keep = v => v === 'v:me' ? null : v;
   store.set('trip', { from: keep($('#from').value), to: keep($('#to').value), gate: $('#ktGate').value, boardAt, reminderAt, cat: ktCat, tab,
-    mode, arr: { gate: $('#arrGate').value, dest: $('#arrDest').value, bags: $('#arrBags').checked, car: $('#arrCarousel').value } });
+    mode, stepFree, arr: { gate: $('#arrGate').value, dest: $('#arrDest').value, bags: $('#arrBags').checked, car: $('#arrCarousel').value } });
 }
 (() => {
   const t = store.get('trip', null);
@@ -2169,6 +2215,7 @@ function saveTrip() {
     if (/^\d{1,2}$/.test(t.arr.car || '')) $('#arrCarousel').value = t.arr.car;
   }
   if (t.mode === 'arr') mode = 'arr';
+  if (t.stepFree) setStepFree(true, true);
 })();
 for (const id of ['from', 'to', 'ktGate', 'ktMin']) $('#' + id).addEventListener('change', saveTrip);
 $('#ktGate').addEventListener('change', updateClock);
