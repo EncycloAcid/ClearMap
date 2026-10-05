@@ -2198,7 +2198,7 @@ function zoomAt(px, py, f) {
   const nk = clampK(view.k * f), r = nk / view.k;
   view.x = px - (px - view.x) * r; view.y = py - (py - view.y) * r; view.k = nk; apply();
 }
-let anim = null;
+let anim = null, animUntil = 0;
 function animateTo(target) {
   cancelAnimationFrame(anim); cancelAnimationFrame(glide);
   if (reduced) { Object.assign(view, target); render(); return; }
@@ -2210,6 +2210,7 @@ function animateTo(target) {
   const hop = Math.hypot(c1.x - c0.x, c1.y - c0.y) * Math.min(from.k, target.k) / Math.max(W, H);
   const lift = Math.min(0.45, Math.max(0, hop - 0.6) * 0.25);
   const dur = Math.min(900, 480 + hop * 120), t0 = performance.now();
+  animUntil = t0 + dur + 50;
   const step = now => {
     const p = Math.min(1, (now - t0) / dur);
     const e = 1 - Math.exp(-7 * p) * (1 + 7 * p);          // critically damped, no overshoot
@@ -2573,24 +2574,33 @@ function drawMe(p, acc) {
   meCone.setAttribute('opacity', fresh ? 1 : 0);
   if (fresh) aimCone(heading);
 }
-function glideTo(target, acc) {
+// walking: an even glide lasting until the next fix is due, so the dot and map move steadily rather
+// than in hops; standing: a short ease into place
+function glideTo(target, acc, walking) {
   cancelAnimationFrame(glideRAF);
-  if (!shown || reduced || Math.hypot(target.x - shown.x, target.y - shown.y) > 150) { shown = { ...target }; drawMe(shown, acc); return; }
-  const from = { ...shown }, t0 = performance.now(), dur = 450;
+  if (!shown || reduced || Math.hypot(target.x - shown.x, target.y - shown.y) > 150) { shown = { ...target }; drawMe(shown, acc); followCam(shown, true); return; }
+  const from = { ...shown }, t0 = performance.now(), dur = walking ? 1050 : 450;
   const step = now => {
-    const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+    const k = Math.min(1, (now - t0) / dur), e = walking ? k : 1 - Math.pow(1 - k, 3);
     shown = { x: from.x + (target.x - from.x) * e, y: from.y + (target.y - from.y) * e };
-    drawMe(shown, acc);
+    drawMe(shown, acc); followCam(shown, k >= 1);
     if (k < 1) glideRAF = requestAnimationFrame(step);
   };
   glideRAF = requestAnimationFrame(step);
 }
-// keep following without changing your zoom: pan only when the dot drifts from the middle
-function followPan(p) {
+// While following, the camera moves with you: each frame of the dot's glide also slides the map so
+// the dot stays in the middle of the visible map, at whatever zoom you chose.
+let camLast = 0;
+function followCam(p, last) {
+  if (!following || ptrs.size || performance.now() < animUntil) return;
   const R = visibleRect(), cx = (R.l + R.r) / 2, cy = (R.t + R.b) / 2;
-  const sx = view.x + view.k * p.x, sy = view.y + view.k * p.y;
-  if (Math.hypot(sx - cx, sy - cy) < Math.min(R.r - R.l, R.b - R.t) * .12) return;
-  animateTo({ k: view.k, x: view.x + (cx - sx), y: view.y + (cy - sy) });
+  const nx = cx - view.k * p.x, ny = cy - view.k * p.y;
+  const dx = nx - view.x, dy = ny - view.y;
+  if (Math.abs(dx) < .3 && Math.abs(dy) < .3) { if (last && moving) { moving = false; render(); } return; }
+  // a spring, not a snap: a far-off camera (after you panned, or a step overview) eases back to you
+  const f = Math.hypot(dx, dy) > 24 ? .2 : 1;
+  view.x += dx * f; view.y += dy * f;
+  if (last) { moving = false; render(); } else { moving = true; apply(); }
 }
 function onFix(pos) {
   const { latitude, longitude, accuracy, heading: gpsHeading, speed } = pos.coords;
@@ -2605,12 +2615,15 @@ function onFix(pos) {
   if (!kalman(raw, accuracy, pos.timestamp || Date.now())) return;
   if (gpsHeading != null && !isNaN(gpsHeading) && (speed || 0) > 0.8) { heading = gpsHeading; headingAt = gpsHeadingAt = Date.now(); }
   // the ring shows how sure we really are: the filter's spread, never much tighter than the fix itself
-  const acc = Math.max(kfSigma(), accuracy * .5), est = kfPos();
-  const p = acc < 60 ? snapToWalkway(est, Math.max(12, Math.min(acc * 1.5, 40))) : est;
+  const acc = Math.max(kfSigma(), accuracy * .5), est = kfPos(), snap = q => acc < 60 ? snapToWalkway(q, Math.max(12, Math.min(acc * 1.5, 40))) : q;
+  const p = snap(est);
+  // while walking, aim the dot where you'll be when the next fix comes, so it isn't a step behind
+  const vx = kf.ax.v, vy = kf.ay.v, walking = Math.hypot(vx, vy) > .45;
+  const aim = walking ? snap({ x: est.x + vx, y: est.y + vy }) : p;
   const appearing = !me || meG.getAttribute('opacity') === '0';
   me = { ...p, acc }; lastFixAt = Date.now(); meG.classList.remove('stale');
   meG.setAttribute('opacity', 1);
-  glideTo(p, acc);
+  glideTo(aim, acc, walking);
   if (appearing) pingMe(true);
   if (!warnedAcc && acc > 50 && !firstFix) { warnedAcc = true; toast(`Indoors your location is approximate (±${Math.round(acc / 5) * 5} m). Use it as a guide.`); }
   // "My location" can start a route once we're at the airport
@@ -2626,7 +2639,7 @@ function onFix(pos) {
     const r = Math.max(acc, 40);
     fitBox(p.x - r, p.y - r, p.x + r, p.y + r, 20, 3.2);
     setLocState('follow');
-  } else if (following) followPan(p);
+  }
   firstFix = false;
 }
 // which way the phone is pointing (compass), between GPS headings
@@ -2676,7 +2689,7 @@ function startLocating() {
 locBtn.onclick = () => {
   buzz();
   if (watchId == null) startLocating();
-  else if (!following && me && Math.hypot(me.x, me.y) <= 2500) { setLocState('follow'); pingMe(false); const r = Math.max(me.acc, 40); fitBox(me.x - r, me.y - r, me.x + r, me.y + r, 20, Math.max(view.k, 2.4)); }
+  else if (!following && me && Math.hypot(me.x, me.y) <= 2500) { setLocState('follow'); pingMe(false); const d = shown || me, R = visibleRect(), k = Math.max(view.k, 2.4); animateTo({ k, x: (R.l + R.r) / 2 - k * d.x, y: (R.t + R.b) / 2 - k * d.y }); }
   else { setLocState('off'); stopLocating(false); }
 };
 
@@ -2928,6 +2941,7 @@ function startNav() {
   document.body.classList.add('navigating'); chromeCache = null;
   fade($('#navBanner'), true); fade($('#navBar'), true);
   showLeg(0, 1);
+  if (me && $('#from').value === 'v:me' && Math.hypot(me.x, me.y) <= 2500) setLocState('follow');
 }
 function endNav() {
   if (!nav) return;
@@ -2973,7 +2987,7 @@ function showLeg(i, dir) {
   // frame this leg, on the floor you start it on
   const pts = routePts.slice(L.ia, L.ib + 1);
   setFloor(levelOf(routeNodes[L.ia]), true);
-  fitItems(pts.length > 1 ? pts : [routePts[L.ia], routePts[L.ib]], 30, 3.6);
+  if (!following) fitItems(pts.length > 1 ? pts : [routePts[L.ia], routePts[L.ib]], 30, 3.6);   // when following, the camera stays with you
 }
 $('#nbMain').addEventListener('click', e => { const n = e.target.closest('.nb-n'); if (n) n.classList.toggle('open'); });
 $('#nbNext').onclick = () => { if (nav) { buzz(5); showLeg(nav.i + 1, 1); } };
