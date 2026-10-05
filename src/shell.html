@@ -107,6 +107,8 @@ button { cursor: pointer; }
 /* markers from the floor you've left fade back in on the new one */
 #map.floor-in .mk, #map.floor-in .route, #map.floor-in .route-case { animation: mk-in .35s ease-out both; }
 svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touch-action: none; }
+#map .zs { transform-origin: 0 0; scale: var(--zs, 1); rotate: var(--zr, 0deg); }
+#map .zs-s { transform-origin: 0 0; scale: var(--zs, 1); }
 .apron { fill: none; pointer-events: all; }
 .grid-line { stroke: var(--map-grid); }
 .bldg { fill: var(--bldg); stroke: var(--bldg-edge); }

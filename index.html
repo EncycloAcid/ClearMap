@@ -107,6 +107,8 @@ button { cursor: pointer; }
 /* markers from the floor you've left fade back in on the new one */
 #map.floor-in .mk, #map.floor-in .route, #map.floor-in .route-case { animation: mk-in .35s ease-out both; }
 svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touch-action: none; }
+#map .zs { transform-origin: 0 0; scale: var(--zs, 1); rotate: var(--zr, 0deg); }
+#map .zs-s { transform-origin: 0 0; scale: var(--zs, 1); }
 .apron { fill: none; pointer-events: all; }
 .grid-line { stroke: var(--map-grid); }
 .bldg { fill: var(--bldg); stroke: var(--bldg-edge); }
@@ -1056,6 +1058,10 @@ AIRPORTS.ATL = (() => {
     { name: 'Delta', code: 'DL', color: '#c8102e', cons: ['T', 'A', 'B', 'C', 'D', 'E'], note: 'Hub airline; international flights from E and F' },
     { name: 'American', code: 'AA', color: '#0078d2', cons: ['T'] },
     { name: 'United', code: 'UA', color: '#005daa', cons: ['T'] },
+    // regional brands (see the Cleveland pack): same gates and counters as the airline they fly for
+    { name: 'Delta Connection', code: 'DL', color: '#c8102e', cons: ['T', 'A', 'B', 'C', 'D', 'E'], partner: 'Delta', ops: ['Endeavor Air', 'SkyWest', 'Republic'] },
+    { name: 'American Eagle', code: 'AA', color: '#0078d2', cons: ['T'], partner: 'American', ops: ['Envoy', 'Piedmont', 'PSA Airlines', 'Republic', 'SkyWest'] },
+    { name: 'United Express', code: 'UA', color: '#005daa', cons: ['T'], partner: 'United', ops: ['SkyWest', 'Republic', 'CommuteAir', 'GoJet'] },
     { name: 'Southwest', code: 'WN', color: '#304cb2', cons: ['C'] },
     { name: 'Alaska', code: 'AS', color: '#01426a', cons: ['C'] },
     { name: 'Frontier', code: 'F9', color: '#0b6b4f', cons: ['C', 'D', 'E'] },
@@ -1402,10 +1408,17 @@ AIRPORTS.CLE = (() => {
     { name: 'Southwest', code: 'WN', color: '#304cb2', con: 'B' },
     { name: 'United', code: 'UA', color: '#005daa', con: 'C' },
     { name: 'American', code: 'AA', color: '#0078d2', con: 'C' },
-    { name: 'Air Canada', code: 'AC', color: '#d22630', con: 'C', note: 'Toronto' },
+    { name: 'Air Canada Express', code: 'AC', color: '#d22630', con: 'C', note: 'Toronto; Montréal in summer', ops: ['Jazz'], aka: ['Air Canada'] },
     { name: 'Aer Lingus', code: 'EI', color: '#00806e', con: 'C', note: 'Dublin' },
     { name: 'Alaska', code: 'AS', color: '#01426a', con: 'C' },
     { name: 'JetBlue', code: 'B6', color: '#0033a0', con: 'C' },
+    // Regional brands: smaller jets flown for the big airlines by partner airlines, whose names are
+    // often what the boarding pass shows ("operated by SkyWest dba United Express"). Same gates and
+    // check-in counters as the airline they fly for.
+    { name: 'United Express', code: 'UA', color: '#005daa', con: 'C', partner: 'United', ops: ['SkyWest', 'Republic', 'CommuteAir', 'GoJet'] },
+    { name: 'American Eagle', code: 'AA', color: '#0078d2', con: 'C', partner: 'American', ops: ['Envoy', 'Piedmont', 'PSA Airlines', 'Republic', 'SkyWest'] },
+    { name: 'Delta Connection', code: 'DL', color: '#c8102e', con: 'B', partner: 'Delta', ops: ['Endeavor Air', 'SkyWest', 'Republic'] },
+    { name: 'Charter flights', code: '', color: '#5b6474', con: 'A', note: 'Sports teams, tour and casino charters' },
   ];
   const CON_RANGE = { A: 'A1–A14', B: 'B1–B11', C: 'C2–C29' };
   // concourses: id, colour [light, dark], badge shape [lobes, depth]
@@ -1972,6 +1985,16 @@ for (const [con, x, y] of AP.ui.roundels) {
   el('text', { class: 'con-letter', y: .8 }, pop).textContent = con;
   g.dataset.x = x; g.dataset.y = y; markers.push(g);
 }
+// Mid-pinch the overlay is scaled (and turned) as one picture, which would grow and swing every icon
+// until the fingers lift. Each icon's contents sit in a .zs group that the frame counter-scales and
+// counter-turns through two CSS variables, so icons keep their size, stay upright and don't jump.
+function zsWrap(g, cls = 'zs') {
+  const w = document.createElementNS(NS, 'g'); w.setAttribute('class', cls);
+  while (g.firstChild) w.appendChild(g.firstChild);
+  g.appendChild(w); return g;
+}
+for (const g of markers) zsWrap(g);
+for (const g of areaLabels) zsWrap(g);
 const meG = el('g', { opacity: 0, style: 'pointer-events:none' });
 const meAcc = el('circle', { class: 'me-acc', r: 0, 'vector-effect': 'non-scaling-stroke' }, meG);
 const meMark = el('g', {}, meG);
@@ -2043,6 +2066,9 @@ let escBadges = [];
 const puckG = el('g', { style: 'pointer-events:none', opacity: 0 });
 el('circle', { class: 'puck-halo', r: 9 }, puckG);
 el('circle', { class: 'puck', r: 4.6 }, puckG);
+// (the location mark's beam points along the map, so it only keeps its size)
+for (const g of [pinG, routeStart, routeEnd, eta, puckG]) zsWrap(g);
+zsWrap(meMark, 'zs-s');
 
 // ---------- Pan / zoom in screen pixels ----------
 // screen = (x, y) + k · rotate(r) · map point; r turns the map clockwise on screen (0 = north up)
@@ -2082,7 +2108,7 @@ function updateScaleBar() {
 //   pre-built, so this is cheap), so it never shows stale or half-drawn areas;
 // - the SVG overlay (markers, labels, route) slides with a CSS transform during a gesture and is
 //   re-laid-out once things settle ("commit"), because laying it out every frame is the slow part.
-let committed = null, commitTimer = null, moving = false, scaledAtK = 0, scaledAtR = 0, framePending = false;   // moving: glide or camera animation
+let committed = null, commitTimer = null, moving = false, scaledAtK = 0, scaledAtR = 0, framePending = false, zsSet = 1, zrSet = 0;   // moving: glide or camera animation
 const ox = 0, oy = 0;
 const stage = $('#stage');
 let dpr = 1;
@@ -2108,6 +2134,10 @@ function frame() {
   if (M.rho > 1.9 || M.rho < .55 || Math.abs(wrapAngle(view.r - committed.r)) > .35) return render();
   blitBase(); updateCompass();
   svg.style.transform = `matrix(${M.a},${M.b},${-M.b},${M.a},${M.e},${M.f})`;
+  const zs = Math.pow(M.rho, -.62), zr = -wrapAngle(view.r - committed.r) * 180 / Math.PI;
+  if (Math.abs(zs - zsSet) > .004 || Math.abs(zr - zrSet) > .1) {
+    zsSet = zs; zrSet = zr; svg.style.setProperty('--zs', zs.toFixed(4)); svg.style.setProperty('--zr', zr.toFixed(2) + 'deg');
+  }
 }
 function render() {
   clearTimeout(commitTimer);
@@ -2115,6 +2145,7 @@ function render() {
   committed = { ...view };
   if (ptrs.size || moving) blitBase(); else drawBase();
   svg.style.transform = '';
+  if (zsSet !== 1 || zrSet !== 0) { zsSet = 1; zrSet = 0; svg.style.removeProperty('--zs'); svg.style.removeProperty('--zr'); }
   world.setAttribute('transform', `translate(${view.x} ${view.y})${view.r ? ` rotate(${rotDeg()})` : ''} scale(${view.k})`);
   // marker transforms only depend on zoom and turn, so a plain pan skips rewriting ~200 of them
   if (view.k !== scaledAtK || view.r !== scaledAtR) {
@@ -2216,7 +2247,7 @@ function cullLabels() {
     }
   }
   for (const [it, dir] of side) {
-    const t = it.el.querySelector(':scope > text');
+    const t = it.el.querySelector(':scope > .zs > text');
     if (t && t.dataset.dir !== String(dir)) {
       t.dataset.dir = dir; t.setAttribute('x', dir * (it.kind === 'place' ? 9 : 8)); t.setAttribute('text-anchor', dir > 0 ? 'start' : 'end');
     }
@@ -2487,7 +2518,7 @@ function setRoute(nodes, mins) {
     el('title', {}, g).textContent = (lift ? 'Elevator' : 'Escalator') + (lb === 'lo' ? ' down to the lower level' : ' up to the upper level');
     el('circle', { r: 7 }, g);
     el('use', { class: 'glyph', href: lift ? '#i-lift' : '#i-swap', x: -4.5, y: -4.5, width: 9, height: 9 }, g);
-    escBadges.push({ g, x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+    zsWrap(g); escBadges.push({ g, x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
   }
   placeDecor();
   if (reduced || !show) { draw(1); startPuck(); return; }
@@ -2959,7 +2990,7 @@ function showPlace(it, fromMap) {
   const wm = it.id === CHK ? waitMin() : null;
   if (wm != null) summary.push(`<span class="${wm >= 30 ? 'no' : wm >= 15 ? 'warn' : 'ok'}">~${wm} min wait</span>`);
   if (it.kind === 'amen') summary.push(`<span>${esc(it.near)}</span>`);
-  if (it.kind === 'gate') summary.push(`<span class="marks">${AIRLINES.filter(a => a.cons.includes(it.con)).slice(0, 5).map(a => airMark(a, 20)).join('')}</span>`);
+  if (it.kind === 'gate') summary.push(`<span class="marks">${AIRLINES.filter(a => a.cons.includes(it.con) && !a.partner).slice(0, 5).map(a => airMark(a, 20)).join('')}</span>`);
   if (it.zone === 'L' || it.kind === 'place') summary.push(`<span>${it.lvl === 'lo' ? 'Lower level' : 'Upper level'}</span>`);
   let html = summary.length ? `<p class="summary">${summary.join('')}</p>` : '';
   html += `<div class="bgroup">
@@ -3606,6 +3637,9 @@ function showAirline(a) {
     <button data-act="show">${one ? badgeSvg(a.con, 22) : icon('gate')}Show gates</button></div>`;
   const rows = [['Check in', `${esc(ITEMS['v:' + ROLE.ticketing] ? ITEMS['v:' + ROLE.ticketing].name.replace(/\s*\(.*\)$/, '') : 'Ticketing')}`]];
   if (walks.length) rows.push(['From security', `${lo === hi ? lo : lo + '–' + hi} min ${AP.ui.transitWord || 'walk'}`]);
+  if (a.partner) rows[0][1] += ` · ${esc(a.partner)} counter`;
+  if (a.ops) rows.unshift(['Operated by', esc(listJoin(a.ops))]);
+  if (a.partner) rows.unshift(['Flies for', esc(a.partner)]);
   if (a.note) rows.unshift(['Flies', esc(a.note)]);
   html += `<div class="group">${rows.map(([k, v]) => `<div class="row"><span class="rl" style="flex:none">${k}</span><span style="flex:1;min-width:0;color:var(--label-2);text-align:right">${v}</span></div>`).join('')}</div>`;
   if (one && CON_WALK[a.con]) html += `<div class="group-title">Gates</div><div class="gate-chips">${CON_WALK[a.con].gates.map(g => `<button data-gate="${g.id}" class="gate-chip ${g.con}">${esc(g.code)}</button>`).join('')}</div>`;
@@ -3694,7 +3728,8 @@ function runSearch() {
   const code = s.replace(/^gate\s*/, '').replace(/\s+/g, '');
   // airline codes match too, unless a gate has that number (JetBlue is B6)
   const isGateCode = Object.values(ITEMS).some(it => it.kind === 'gate' && it.code.toLowerCase() === code);
-  const air = AIRLINES.map(a => ({ a, sc: Math.max(score(a.name, s), !isGateCode && a.code && a.code.toLowerCase() === s ? 3 : 0) })).filter(x => x.sc)
+  // the airline that actually flies it (SkyWest, Envoy…) finds the brand it flies for
+  const air = AIRLINES.map(a => ({ a, sc: Math.max(score(a.name, s), ...[...(a.ops || []), ...(a.aka || [])].map(n => score(n, s) * .9), !isGateCode && a.code && a.code.toLowerCase() === s && !a.partner ? 3 : 0) })).filter(x => x.sc)
     .sort((x, y) => y.sc - x.sc)
     .map(({ a }) => ({ label: a.name, kind: !a.cons.length ? 'Airline · gate varies' : a.cons.length > 1 ? `Airline · Concourses ${a.cons.join(', ')}` : `Airline · Concourse ${a.con} · ${CON_RANGE[a.con]}`, lead: airMark(a, 30), go: () => showAirline(a) }));
   // categories the query names, by label or everyday word

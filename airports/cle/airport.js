@@ -51,10 +51,17 @@ AIRPORTS.CLE = (() => {
     { name: 'Southwest', code: 'WN', color: '#304cb2', con: 'B' },
     { name: 'United', code: 'UA', color: '#005daa', con: 'C' },
     { name: 'American', code: 'AA', color: '#0078d2', con: 'C' },
-    { name: 'Air Canada', code: 'AC', color: '#d22630', con: 'C', note: 'Toronto' },
+    { name: 'Air Canada Express', code: 'AC', color: '#d22630', con: 'C', note: 'Toronto; Montréal in summer', ops: ['Jazz'], aka: ['Air Canada'] },
     { name: 'Aer Lingus', code: 'EI', color: '#00806e', con: 'C', note: 'Dublin' },
     { name: 'Alaska', code: 'AS', color: '#01426a', con: 'C' },
     { name: 'JetBlue', code: 'B6', color: '#0033a0', con: 'C' },
+    // Regional brands: smaller jets flown for the big airlines by partner airlines, whose names are
+    // often what the boarding pass shows ("operated by SkyWest dba United Express"). Same gates and
+    // check-in counters as the airline they fly for.
+    { name: 'United Express', code: 'UA', color: '#005daa', con: 'C', partner: 'United', ops: ['SkyWest', 'Republic', 'CommuteAir', 'GoJet'] },
+    { name: 'American Eagle', code: 'AA', color: '#0078d2', con: 'C', partner: 'American', ops: ['Envoy', 'Piedmont', 'PSA Airlines', 'Republic', 'SkyWest'] },
+    { name: 'Delta Connection', code: 'DL', color: '#c8102e', con: 'B', partner: 'Delta', ops: ['Endeavor Air', 'SkyWest', 'Republic'] },
+    { name: 'Charter flights', code: '', color: '#5b6474', con: 'A', note: 'Sports teams, tour and casino charters' },
   ];
   const CON_RANGE = { A: 'A1–A14', B: 'B1–B11', C: 'C2–C29' };
   // concourses: id, colour [light, dark], badge shape [lobes, depth]

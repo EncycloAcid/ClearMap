@@ -80,6 +80,10 @@ AIRPORTS.ATL = (() => {
     { name: 'Delta', code: 'DL', color: '#c8102e', cons: ['T', 'A', 'B', 'C', 'D', 'E'], note: 'Hub airline; international flights from E and F' },
     { name: 'American', code: 'AA', color: '#0078d2', cons: ['T'] },
     { name: 'United', code: 'UA', color: '#005daa', cons: ['T'] },
+    // regional brands (see the Cleveland pack): same gates and counters as the airline they fly for
+    { name: 'Delta Connection', code: 'DL', color: '#c8102e', cons: ['T', 'A', 'B', 'C', 'D', 'E'], partner: 'Delta', ops: ['Endeavor Air', 'SkyWest', 'Republic'] },
+    { name: 'American Eagle', code: 'AA', color: '#0078d2', cons: ['T'], partner: 'American', ops: ['Envoy', 'Piedmont', 'PSA Airlines', 'Republic', 'SkyWest'] },
+    { name: 'United Express', code: 'UA', color: '#005daa', cons: ['T'], partner: 'United', ops: ['SkyWest', 'Republic', 'CommuteAir', 'GoJet'] },
     { name: 'Southwest', code: 'WN', color: '#304cb2', cons: ['C'] },
     { name: 'Alaska', code: 'AS', color: '#01426a', cons: ['C'] },
     { name: 'Frontier', code: 'F9', color: '#0b6b4f', cons: ['C', 'D', 'E'] },
