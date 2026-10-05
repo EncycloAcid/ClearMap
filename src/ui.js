@@ -13,7 +13,19 @@ function blob(n, amp, R = 10) {
   }
   return d + 'Z';
 }
-const CON_SHAPE = { A: blob(0, 0), B: blob(4, .16), C: blob(9, .075) };
+const CON_SHAPE = Object.fromEntries(AP.concourses.map(c => [c.id, blob(...(c.shape || [0, 0]))]));
+// Each concourse's colour, light and dark, and the rules that use it
+{
+  const light = AP.concourses.map(c => `--con${c.id}: ${c.color[0]};`).join(' '), dark = AP.concourses.map(c => `--con${c.id}: ${c.color[1]};`).join(' ');
+  const rules = AP.concourses.map(({ id }) => `.con-shape.${id}, .gate.${id} .pill, .gate.${id} .stem { fill: var(--con${id}); }
+.gate-chip.${id}, .tile.${id} { background: var(--con${id}); }`).join('\n');
+  const st = document.createElement('style');
+  st.textContent = `:root { ${light} }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { ${dark} } }
+:root[data-theme="dark"] { ${dark} }
+${rules}`;
+  document.head.appendChild(st);
+}
 const badgeSvg = (con, size = 30) =>
   `<svg class="badge" viewBox="-11 -11 22 22" width="${size}" height="${size}" aria-hidden="true"><path class="con-shape ${con}" d="${CON_SHAPE[con]}" transform="scale(1.05)" style="fill:var(--con${con})"/><text y=".6">${con}</text></svg>`;
 const icon = name => `<svg class="ico"><use href="#i-${name}"/></svg>`;
@@ -41,8 +53,6 @@ const P2 = {};
 for (const k in B) if (typeof B[k] === 'string' && B[k]) P2[k] = new Path2D(B[k]);
 const PLANE_D = 'M0 -8C1 -8 1.3 -6.5 1.3 -5L1.3 -1.5L8 2L8 3.4L1.3 1.6L1.1 5.2L3 6.6L3 7.6L0 7L-3 7.6L-3 6.6L-1.1 5.2L-1.3 1.6L-8 3.4L-8 2L-1.3 -1.5L-1.3 -5C-1.3 -6.5 -1 -8 0 -8Z';
 const planePath = new Path2D(PLANE_D);
-const walkPath = new Path2D(['c0,c1,c2,c3,c4,crot', 'b0,b1,b2', 'hub,a0,a1,a2', 'c0,fc,hub,b0']
-  .map(s => 'M' + s.split(',').map(id => V[id][0] + ' ' + V[id][1]).join('L')).join(''));
 let pal = null, floor = 'up';
 $('#map').dataset.floor = 'up';
 function hexMix(a, b, t) {   // a over b, t = amount of a
@@ -55,9 +65,9 @@ function readPalette() {
   const p = {};
   for (const k of ['map', 'grass', 'wood', 'water', 'apron-pave', 'lot', 'taxi', 'runway', 'taxi-line', 'road-case', 'road-fill',
     'mway-case', 'mway-fill', 'rail', 'other-bldg', 'garage', 'bldg', 'bldg-edge', 'bldg-shadow', 'plane', 'bridge', 'term-closed',
-    'walk', 'route', 'conA', 'conB', 'conC', 'corridor', 'stairs', 'runway-mark']) p[k] = g(k);
+    'walk', 'route', 'corridor', 'stairs', 'runway-mark', ...CONS.map(c => 'con' + c)]) p[k] = g(k);
   const tint = parseFloat(g('con-tint')) || .1;
-  for (const c of 'ABC') p['term' + c] = /^#[0-9a-f]{6}$/i.test(p['con' + c]) && /^#[0-9a-f]{6}$/i.test(p.bldg) ? hexMix(p['con' + c], p.bldg, tint) : p.bldg;
+  for (const c of CONS) p['term' + c] = /^#[0-9a-f]{6}$/i.test(p['con' + c]) && /^#[0-9a-f]{6}$/i.test(p.bldg) ? hexMix(p['con' + c], p.bldg, tint) : p.bldg;
   return p;
 }
 const repaint = () => { pal = null; if (committed) render(true); };
@@ -126,14 +136,15 @@ function paintBase(c, cw, ch, tx, ty, k) {
   }
   // terminals raised on a soft shadow; concourses tinted by their colour
   c.save(); c.translate(2, 4.5); c.fillStyle = pal['bldg-shadow'];
-  for (const t of ['termM', 'termA', 'termB', 'termC', 'termD']) if (P2[t]) c.fill(P2[t]);
+  const closed = AP.ui.closedTerms || [];
+  for (const t of ['termM', ...CONS.map(c => 'term' + c), ...closed]) if (P2[t]) c.fill(P2[t]);
   c.restore();
   const edge = 1 / Math.max(k, .5);
-  fill('termD', pal['term-closed']); stroke('termD', pal['bldg-edge'], edge, [3, 2]);
+  for (const t of closed) { fill(t, pal['term-closed']); stroke(t, pal['bldg-edge'], edge, [3, 2]); }
   fill('termM', pal.bldg); stroke('termM', pal['bldg-edge'], edge);
   // the concourses only have an upper level, so they fade back on the lower floor
   const lower = floor === 'lo';
-  for (const t of 'ABC') {
+  for (const t of CONS) {
     if (!lower) { fill('term' + t, pal['term' + t]); stroke('term' + t, pal['bldg-edge'], edge); continue; }
     c.globalAlpha = .55; fill('term' + t, pal['term-closed']); stroke('term' + t, pal['bldg-edge'], edge * .8); c.globalAlpha = 1;
   }
@@ -141,6 +152,8 @@ function paintBase(c, cw, ch, tx, ty, k) {
   // this floor's walkways (OpenStreetMap indoor ways) and the escalators between floors
   stroke(lower ? 'walk0' : 'walk1', pal.corridor, 5);
   if (lower) stroke('walkm1', pal.corridor, 5, [5, 4]);
+  // an airport train runs on the lower floor: a track with ties
+  if (lower && P2.train) { stroke('train', pal.route, 7 / Math.max(k, .6)); stroke('train', pal.corridor, 3 / Math.max(k, .6), [4, 5]); }
   stroke('stairs', pal.stairs, 2.6, [.9, .9]);
   if (!lower) {
     // the checkpoint line across the corridor from ticketing
@@ -354,7 +367,7 @@ function cullLabels() {
   for (const it of gates) {
     const p = scr(it), hw = ((it.code.length > 2 ? 17 : 14) / 2 + .6) * u, hh = 6 * u;
     const box = { l: p.x - hw, r: p.x + hw, t: p.y - hh, b: p.y + hh };
-    const dot = grank(it) >= 0 && pills.some(o => box.l < o.r && box.r > o.l && box.t < o.b && box.b > o.t);
+    const dot = grank(it) > -2 && pills.some(o => box.l < o.r && box.r > o.l && box.t < o.b && box.b > o.t);
     if (!dot) { it.el.removeAttribute('data-dot'); pills.push(box); kept.push(box); continue; }
     // a dot that would still sit on a pill is left out altogether
     const r = 2.6 * u, db = { l: p.x - r, r: p.x + r, t: p.y - r, b: p.y + r };
@@ -432,7 +445,9 @@ function cullLabels() {
     if (ok) taken.push(r);
   }
 }
-const clampK = k => Math.max(0.25, Math.min(10, k));
+// how far out you can zoom: enough to see the whole airport (a big one like ATL needs more)
+const kMin = () => Math.min(0.25, (vw - 24) / (MAP_BOUNDS.x1 - MAP_BOUNDS.x0) * .9);
+const clampK = k => Math.max(kMin(), Math.min(10, k));
 function zoomAt(px, py, f) {
   const nk = clampK(view.k * f), r = nk / view.k;
   view.x = px - (px - view.x) * r; view.y = py - (py - view.y) * r; view.k = nk; apply();
@@ -571,7 +586,19 @@ const zoomCenter = f => { const R = visibleRect(); userMoved = true; zoomAnimAt(
 $('#zin').onclick = () => zoomCenter(1.6);
 $('#zout').onclick = () => zoomCenter(1 / 1.6);
 $('#zfit').onclick = () => fitAll();
-$('#conCap').innerHTML = 'ABC'.split('').map(c => `<button class="shape-btn" data-zoom="${c}" aria-label="Zoom to Concourse ${c}">${badgeSvg(c, 28)}</button>`).join('');
+// Concourse buttons zoom to a concourse; airports with many concourses get one button that opens a menu
+const conMenu = $('#conMenu');
+if (CONS.length <= 4) $('#conCap').innerHTML = CONS.map(c => `<button class="shape-btn" data-zoom="${c}" aria-label="Zoom to Concourse ${c}">${badgeSvg(c, 28)}</button>`).join('');
+else {
+  $('#conCap').innerHTML = `<button id="conBtn" class="shape-btn" aria-label="Zoom to a concourse" aria-haspopup="menu" aria-expanded="false">${icon('gate')}</button>`;
+  conMenu.innerHTML = '<div class="lh">Concourses</div>' + CONS.map(c => `<button role="menuitem" data-zoom="${c}">${badgeSvg(c, 26)}Concourse ${c}<span class="s">${esc(CON_RANGE[c])}</span></button>`).join('');
+  const openCons = open => {
+    if (open) { const r = $('#conBtn').getBoundingClientRect(); conMenu.style.top = Math.max(8, Math.min(r.top, vh - 420)) + 'px'; stagger(conMenu, 'button'); }
+    fade(conMenu, open); $('#conBtn').setAttribute('aria-expanded', String(open)); };
+  $('#conBtn').onclick = () => { buzz(5); openCons(conMenu.hidden || conMenu.classList.contains('leaving')); };
+  document.addEventListener('pointerdown', e => { if (!conMenu.hidden && !e.target.closest('#conMenu, #conBtn')) openCons(false); }, true);
+  conMenu.addEventListener('click', () => openCons(false));
+}
 document.querySelectorAll('[data-zoom]').forEach(b => b.onclick = () => { buzz(); fitCon(b.dataset.zoom); });
 
 // ---------- Walking puck that travels the route ----------
@@ -694,7 +721,12 @@ function setFloor(f, quiet) {
   if (committed) render();
   if (!quiet) { buzz(5); toast(FLOOR_NAME[f]); }
 }
-document.querySelectorAll('#floorCap [data-floor]').forEach(b => b.onclick = () => setFloor(b.dataset.floor));
+document.querySelectorAll('#floorCap [data-floor]').forEach(b => {
+  b.onclick = () => setFloor(b.dataset.floor);
+  const name = (AP.ui.floors[b.dataset.floor] || '').replace(' · ', ': ');
+  b.title = name; b.setAttribute('aria-label', name);
+});
+svg.setAttribute('aria-label', `Map of ${AP.name}`);
 function partialPath(f) {
   if (!routePts.length) return '';
   const upto = routeTotal * f, out = [routePts[0]];
@@ -947,7 +979,7 @@ function showPlace(it, fromMap) {
   const summary = [];
   if (hs) summary.push(`<span class="${hs.state === 'open' ? 'ok' : hs.state === 'closed' ? 'no' : 'warn'}">${esc(hs.text)}</span>`);
   if (it.kind === 'amen') summary.push(`<span>${esc(it.near)}</span>`);
-  if (it.kind === 'gate') summary.push(`<span class="marks">${AIRLINES.filter(a => a.con === it.con).slice(0, 5).map(a => airMark(a, 20)).join('')}</span>`);
+  if (it.kind === 'gate') summary.push(`<span class="marks">${AIRLINES.filter(a => a.cons.includes(it.con)).slice(0, 5).map(a => airMark(a, 20)).join('')}</span>`);
   if (it.zone === 'L' || it.kind === 'place') summary.push(`<span>${it.lvl === 'lo' ? 'Lower level' : 'Upper level'}</span>`);
   let html = summary.length ? `<p class="summary">${summary.join('')}</p>` : '';
   html += `<div class="bgroup">
@@ -968,7 +1000,7 @@ function showPlace(it, fromMap) {
   if (it.kind === 'gate') rows.push(['Concourse', `${it.con} · ${CON_RANGE[it.con]}`]);
   if (rows.length) html += `<div class="group">${rows.map(([k, v]) => `<div class="row"><span class="rl" style="flex:none">${k}</span><span style="flex:1;min-width:0;color:var(--label-2);text-align:right">${v}</span></div>`).join('')}</div>`;
   if (it.kind === 'gate') {
-    html += `<div class="group-title">Airlines in Concourse ${it.con}</div><div class="group tags">${AIRLINES.filter(a => a.con === it.con).map(a => `<span class="tag air-tag">${airMark(a, 22)}${esc(a.name)}</span>`).join('')}</div>`;
+    html += `<div class="group-title">Airlines in Concourse ${it.con}</div><div class="group tags">${AIRLINES.filter(a => a.cons.includes(it.con)).map(a => `<span class="tag air-tag">${airMark(a, 22)}${esc(a.name)}</span>`).join('')}</div>`;
   }
   if (it.hours && !it.hours.h24 && !it.hours.close) html += `<p class="foot" style="margin:-6px 16px 0">Opening times from the airport's directory. Closing times aren't published; they follow the last flights.</p>`;
   const near = it.kind !== 'place' ? nearbyItems(it) : [];
@@ -1108,8 +1140,8 @@ function buildOptions(sel, includeLandside = true, gatesOnly = false) {
   };
   const all = Object.values(ITEMS);
   if (includeLandside && !gatesOnly) group('Arrive & depart', all.filter(i => i.kind === 'place'));
-  const gnum = g => +g.code.slice(1);
-  for (const con of 'ABC') group(`Concourse ${con} gates`, all.filter(i => i.kind === 'gate' && i.con === con).sort((a, b) => gnum(a) - gnum(b)));
+  const gnum = g => gnumOf(g.code);
+  for (const con of CONS) group(`Concourse ${con} gates`, all.filter(i => i.kind === 'gate' && i.con === con).sort((a, b) => gnum(a) - gnum(b)));
   if (gatesOnly) return;
   for (const [cat, c] of Object.entries(CATS)) {
     const list = all.filter(i => i.kind === 'amen' && i.cat === cat && (includeLandside || i.zone !== 'L'))
@@ -1136,7 +1168,9 @@ function renderSteps(steps, passed) {
   $('#steps').innerHTML = steps.map((s, i) => {
     const L = i ? legs[i - 1] : null, d = L ? Math.max(5, Math.round((L.d1 - L.d0) / 5) * 5) : 0;
     const ch = L && L.change;
-    const meta = L ? `<span class="leg"><b>${ch ? icon(ch.lift ? 'lift' : 'swap') : ''}${Math.max(1, Math.round(d / M_PER_MIN))} min</b>${d} m</span>` : '';
+    const ride = L && s.alight;   // a ride on the train: its time, not a walking distance
+    const meta = !L ? '' : ride ? `<span class="leg"><b>${icon('train')}${Math.max(1, Math.round((L.d1 - L.d0) / M_PER_MIN / TRAIN_SPEED + 1))} min</b>ride</span>`
+      : `<span class="leg"><b>${ch ? icon(ch.lift ? 'lift' : 'swap') : ''}${Math.max(1, Math.round(d / M_PER_MIN))} min</b>${d} m</span>`;
     const lvl = ch ? `<span class="lvl">${ch.down ? 'Lower level' : 'Upper level'}</span>` : '';
     return `<li class="${s.end ? 'end' : ''}${i === 0 ? ' start' : ''}${ch ? ' change' : ''}" data-node="${esc(s.node)}" tabindex="0" role="button"><span class="stop"></span><span class="body"><span class="t">${esc(s.t.replace(/\s*\((upper|lower) level\)$/, ''))}</span>${lvl}${s.n && s.n !== 'Start' ? `<span class="n">${esc(s.n)}</span>` : ''}</span>${meta}</li>`;
   }).join('')
@@ -1159,8 +1193,25 @@ function describe(path, a, b) {
   const crossesSecurity = path.some((n, i) => i && ((n === ROLE.checkpoint && path[i - 1] === ROLE.hub) || (n === ROLE.hub && path[i - 1] === ROLE.checkpoint)));
   let lastLabel = a.kind === 'place' ? a.node : null;
   const passed = [], via = [];
+  const kindAt = i => EDGE_KIND[path[i] + '|' + path[i + 1]];
   for (let i = 1; i < path.length - 1; i++) {
     const n = path[i];
+    // on a train: skip the stops you ride through, and say where to get off
+    const riding = kindAt(i - 1) === 'train', boarding = kindAt(i) === 'train';
+    if (riding && boarding) continue;
+    if (boarding) {
+      let j = i; while (kindAt(j) === 'train') j++;
+      const to = V[path[j]][2].replace(/^.*· /, ''), stops = j - i;
+      steps.push({ t: V[n][2], n: `Ride ${stops} stop${stops > 1 ? 's' : ''} to ${to}. Trains come every 2 minutes or so.`, node: n, train: true });
+      lastLabel = n; continue;
+    }
+    if (riding) {
+      // up to the gates, or on along the lower level (to baggage claim)
+      let j = i + 1; while (j < path.length - 1 && !(V[path[j]] && V[path[j]][2])) j++;
+      const up = levelOf(path[j]) === 'up';
+      steps.push({ t: 'Get off at ' + V[n][2].replace(/^.*· /, ''), n: up ? (stepFree ? 'Take the elevator up to the gates' : 'Take the escalators up to the gates') : 'Follow the signs to ' + V[path[j]][2].toLowerCase().replace(/^exit to /, ''), node: n, alight: true });
+      lastLabel = n; continue;
+    }
     if (V[n] && V[n][2] && n !== lastLabel) {
       let note = '';
       if (n === ROLE.checkpoint && crossesSecurity) note = path.indexOf(ROLE.hub) > i ? (path[i - 1] === ROLE.baggage || lastLabel === ROLE.baggage || lastLabel === ROLE.transit ? 'Take the escalators up, screen through TSA, then continue straight ahead' : 'Screen through TSA, then continue straight ahead') : 'Leave through the exit lane';
@@ -1179,6 +1230,7 @@ function describe(path, a, b) {
   }
   let endNote = '';
   if (b.kind === 'gate') endNote = b.zone === 'R' ? 'In the rotunda' : 'Watch the overhead gate numbers';
+  if (b.kind === 'gate' && AP.ui.gateNote) endNote = AP.ui.gateNote(b) || endNote;
   else if (b.kind === 'amen') endNote = b.near;
   steps.push({ t: b.name, n: endNote, end: true, node: nodeOf(b) });
   return { steps, passed: passed.slice(0, 5), via };
@@ -1499,32 +1551,41 @@ $('#surprise').onclick = () => {
 const airMark = (a, size = 30) => `<span class="air-mark" style="--ac:${esc(a.color || 'var(--label-2)')};--ai:${esc(a.ink || '#fff')};--as:${size}px" aria-hidden="true">${esc(a.code || a.name.slice(0, 2).toUpperCase())}</span>`;
 // walk from security to each concourse: nearest and farthest gate
 const CON_WALK = {};
-for (const con of 'ABC') {
+for (const con of CONS) {
   const gates = Object.values(ITEMS).filter(it => it.kind === 'gate' && it.con === con);
   const legs = gates.map(g => ({ g, m: minutes(route(ITEMS[CHK], g).units) })).sort((x, y) => x.m - y.m);
-  if (legs.length) CON_WALK[con] = { min: legs[0].m, max: legs[legs.length - 1].m, near: legs[0].g, gates: gates.sort((x, y) => parseInt(x.code.slice(1)) - parseInt(y.code.slice(1))) };
+  if (legs.length) CON_WALK[con] = { min: legs[0].m, max: legs[legs.length - 1].m, near: legs[0].g, gates: gates.sort((x, y) => gnumOf(x.code) - gnumOf(y.code)) };
 }
 const walkRange = con => { const w = CON_WALK[con]; return !w ? '' : w.min === w.max ? `${w.min} min` : `${w.min}–${w.max} min`; };
-$('#airlines').innerHTML = 'ABC'.split('').map(con => `
-  <div class="group-title">${badgeSvg(con, 22)}Concourse ${con} · ${CON_RANGE[con]}<span class="gt-walk">${icon('walk')}${walkRange(con)}</span></div>
-  <div class="group" style="--inset:16px">${AIRLINES.map((a, i) => a.con !== con ? '' : `
+$('#airNote').textContent = AP.ui.airlinesNote || '';
+$('#airTip').textContent = (AP.ui.airlinesTip ? AP.ui.airlinesTip + ' ' : '') + 'Gates change, so check your boarding pass and the departure screens.';
+// Grouped by concourse; an airline in several concourses appears under each, and airlines
+// without a fixed concourse come last
+const airRow = (a, i) => `
     <button class="row air-row" data-i="${i}">${airMark(a, 38)}
       <span class="grow"><span class="t">${esc(a.name)}</span>${a.note ? `<span class="s">${esc(a.note)}</span>` : ''}</span>
       <svg class="ico chev"><use href="#i-chev"/></svg>
-    </button>`).join('')}</div>`).join('');
+    </button>`;
+const unplaced = AIRLINES.filter(a => !a.cons.length);
+$('#airlines').innerHTML = CONS.filter(con => AIRLINES.some(a => a.cons.includes(con))).map(con => `
+  <div class="group-title">${badgeSvg(con, 22)}Concourse ${con} · ${CON_RANGE[con]}<span class="gt-walk">${icon('walk')}${walkRange(con)}</span></div>
+  <div class="group" style="--inset:16px">${AIRLINES.map((a, i) => a.cons.includes(con) ? airRow(a, i) : '').join('')}</div>`).join('')
+  + (unplaced.length ? `<div class="group-title">Gate varies</div><div class="group" style="--inset:16px">${unplaced.map(a => airRow(a, AIRLINES.indexOf(a))).join('')}</div>` : '');
+const airGates = a => Object.values(ITEMS).filter(it => it.kind === 'gate' && a.cons.includes(it.con));
+const fitAirline = a => a.cons.length === 1 ? fitCon(a.con) : a.cons.length ? fitItems(airGates(a), 24, 5) : fitAll();
 function highlightAirline(a) {
   buzz();
-  highlight(Object.values(ITEMS).filter(it => it.kind === 'gate' && it.con === a.con).map(it => it.id));
+  highlight(airGates(a).map(it => it.id));
   setRoute([]);
   if (!wide() && detent !== 'peek') setDetent('peek');
-  fitCon(a.con);
+  fitAirline(a);
 }
 // An airline's card: where it flies from, how far that is, and its gates
 function showAirline(a) {
   buzz();
   if (selected) { selected.el.classList.remove('sel'); selected = null; }
   setPin(null); setRoute([]); setFloor('up', true);
-  highlight(Object.values(ITEMS).filter(it => it.kind === 'gate' && it.con === a.con).map(it => it.id));
+  highlight(airGates(a).map(it => it.id));
   placeMode = true;
   $('#seg').hidden = true; $('#closePlace').hidden = false; $('#modeSw').hidden = true;
   $('#eyebrow').classList.remove('can'); openAirports(false); $('#title').hidden = false;
@@ -1533,30 +1594,35 @@ function showAirline(a) {
   $('#title').textContent = a.name; $('#title').classList.remove('long');
   $('#eyebrow').textContent = a.code ? `Airline · ${a.code}` : 'Airline';
   const tile = $('#placeTile'); tile.innerHTML = airMark(a, 44); tile.hidden = false; replay(tile.firstChild);
-  const w = CON_WALK[a.con], others = AIRLINES.filter(o => o.con === a.con && o !== a);
-  let html = `<p class="summary"><span>Concourse ${a.con}</span><span>Gates ${esc(CON_RANGE[a.con])}</span></p>`;
+  const one = a.cons.length === 1, walks = a.cons.map(c => CON_WALK[c]).filter(Boolean);
+  const nearest = walks.slice().sort((x, y) => x.min - y.min)[0];
+  const lo = walks.length ? Math.min(...walks.map(w => w.min)) : 0, hi = walks.length ? Math.max(...walks.map(w => w.max)) : 0;
+  const others = one ? AIRLINES.filter(o => o !== a && o.cons.includes(a.con)) : [];
+  let html = !a.cons.length ? `<p class="summary"><span>Check the departure screens for the gate</span></p>`
+    : one ? `<p class="summary"><span>Concourse ${a.con}</span><span>Gates ${esc(CON_RANGE[a.con])}</span></p>`
+    : `<p class="summary"><span>Concourses ${listJoin(a.cons)}</span></p>`;
   html += `<div class="bgroup">
-    <button class="primary" data-act="walk">${icon('walk')}Directions${w ? `<span class="sub">${w.min} min</span>` : ''}</button>
-    <button data-act="show">${badgeSvg(a.con, 22)}Show gates</button></div>`;
-  const rows = [
-    ['Check in', `${esc(ITEMS['v:' + ROLE.ticketing] ? ITEMS['v:' + ROLE.ticketing].name.replace(/\s*\(.*\)$/, '') : 'Ticketing')}, upper level`],
-    ['From security', `${walkRange(a.con)} walk`],
-  ];
+    <button class="primary" data-act="walk"${nearest ? '' : ' disabled'}>${icon('walk')}Directions${nearest ? `<span class="sub">${nearest.min} min</span>` : ''}</button>
+    <button data-act="show">${one ? badgeSvg(a.con, 22) : icon('gate')}Show gates</button></div>`;
+  const rows = [['Check in', `${esc(ITEMS['v:' + ROLE.ticketing] ? ITEMS['v:' + ROLE.ticketing].name.replace(/\s*\(.*\)$/, '') : 'Ticketing')}`]];
+  if (walks.length) rows.push(['From security', `${lo === hi ? lo : lo + '–' + hi} min ${AP.ui.transitWord || 'walk'}`]);
   if (a.note) rows.unshift(['Flies', esc(a.note)]);
   html += `<div class="group">${rows.map(([k, v]) => `<div class="row"><span class="rl" style="flex:none">${k}</span><span style="flex:1;min-width:0;color:var(--label-2);text-align:right">${v}</span></div>`).join('')}</div>`;
-  if (w) html += `<div class="group-title">Gates</div><div class="gate-chips">${w.gates.map(g => `<button data-gate="${g.id}" class="gate-chip ${g.con}">${esc(g.code)}</button>`).join('')}</div>`;
+  if (one && CON_WALK[a.con]) html += `<div class="group-title">Gates</div><div class="gate-chips">${CON_WALK[a.con].gates.map(g => `<button data-gate="${g.id}" class="gate-chip ${g.con}">${esc(g.code)}</button>`).join('')}</div>`;
+  else if (a.cons.length > 1) html += `<div class="group-title">Concourses</div><div class="gate-chips">${a.cons.map(c => `<button data-con="${c}" class="gate-chip ${c}">${c}</button>`).join('')}</div>`;
   if (others.length) html += `<div class="group-title">Also in Concourse ${a.con}</div><div class="group tags">${others.map(o => `<button class="tag air-tag" data-air="${AIRLINES.indexOf(o)}">${airMark(o, 22)}${esc(o.name)}</button>`).join('')}</div>`;
   html += `<p class="foot" style="margin:-6px 16px 0">Gates change, so check your boarding pass and the departure screens.</p>`;
   pane.innerHTML = html;
   pane.querySelector('[data-act="walk"]').onclick = () => {
-    if (!w) return; buzz(); $('#from').value = CHK; $('#to').value = w.near.id; setTab('dir', true); if (!wide()) setDetent('peek'); updateRoute(true);
+    if (!nearest) return; buzz(); $('#from').value = CHK; $('#to').value = nearest.near.id; setTab('dir', true); if (!wide()) setDetent('peek'); updateRoute(true);
   };
-  pane.querySelector('[data-act="show"]').onclick = () => { buzz(5); if (!wide()) setDetent('peek'); fitCon(a.con); };
+  pane.querySelector('[data-act="show"]').onclick = () => { buzz(5); if (!wide()) setDetent('peek'); fitAirline(a); };
   pane.querySelectorAll('[data-gate]').forEach(b => b.onclick = () => { buzz(5); showPlace(ITEMS[b.dataset.gate], false); });
+  pane.querySelectorAll('.gate-chip[data-con]').forEach(b => b.onclick = () => { buzz(5); if (!wide()) setDetent('peek'); fitCon(b.dataset.con); });
   pane.querySelectorAll('[data-air]').forEach(b => b.onclick = () => showAirline(AIRLINES[+b.dataset.air]));
   sheetBody.scrollTop = 0;
   if (!wide()) setDetent('half');
-  fitCon(a.con);
+  fitAirline(a);
 }
 $('#airlines').querySelectorAll('[data-i]').forEach(b => b.onclick = () => showAirline(AIRLINES[+b.dataset.i]));
 
@@ -1630,7 +1696,7 @@ function runSearch() {
   const isGateCode = Object.values(ITEMS).some(it => it.kind === 'gate' && it.code.toLowerCase() === code);
   const air = AIRLINES.map(a => ({ a, sc: Math.max(score(a.name, s), !isGateCode && a.code && a.code.toLowerCase() === s ? 3 : 0) })).filter(x => x.sc)
     .sort((x, y) => y.sc - x.sc)
-    .map(({ a }) => ({ label: a.name, kind: `Airline · Concourse ${a.con} · ${CON_RANGE[a.con]}`, lead: airMark(a, 30), go: () => showAirline(a) }));
+    .map(({ a }) => ({ label: a.name, kind: !a.cons.length ? 'Airline · gate varies' : a.cons.length > 1 ? `Airline · Concourses ${a.cons.join(', ')}` : `Airline · Concourse ${a.con} · ${CON_RANGE[a.con]}`, lead: airMark(a, 30), go: () => showAirline(a) }));
   // categories the query names, by label or everyday word
   const cats = Object.keys(CATS).filter(c => score(CATS[c].label, s) >= 1 || SYNONYMS[c].split(' ').some(w => w.startsWith(s) || (s.length >= 4 && near1(s, w))));
   // nearest first, from where directions start (or where you are)

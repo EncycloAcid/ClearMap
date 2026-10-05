@@ -71,6 +71,9 @@ Edit the files in `src/` and `airports/`, then run `python3 tools/build.py`. Don
 
 ## Adding an airport
 
-1. Create `airports/<code>/` and generate `basemap.js` for it with `tools/build_basemap.py` (adjust the origin, crop and terminal names).
-2. Copy `airports/cle/airport.js` and replace its data: walkway graph (`V`, `EDGES`, `SPINES`), gates, places, amenities, hours, airlines, labels, arrival tips and time zone. Register it as `AIRPORTS.<CODE>`.
-3. Run `python3 tools/build.py`. The new airport appears in the airport picker (tap the airport name above the sheet title).
+Two airports are included: Cleveland Hopkins (CLE) and Hartsfield–Jackson Atlanta (ATL).
+
+1. Add the airport's settings (origin, crop, OSM bounding boxes, terminal names, floor levels) to `AIRPORTS` in `tools/build_basemap.py`, then run `python3 tools/build_basemap.py <code>` to write `airports/<code>/basemap.js`.
+2. Run `python3 tools/osm_places.py <code>` to print its gates and places (food, shops, restrooms…) from OpenStreetMap, ready to paste.
+3. Write `airports/<code>/airport.js` (see `airports/atl/airport.js`): the walkway graph (`V`, `EDGES`, `SPINES`), concourses with colours and badge shapes, airlines and the concourses they use, places, labels, arrival tips and time zone. Edges can be walkways, escalators (`esc`), elevators (`lift`), an airport train (`train`, with `board` edges to its platforms) or one-way exits (`exit`). Register it as `AIRPORTS.<CODE>`.
+4. Run `python3 tools/build.py`. The new airport appears in the airport picker (tap the airport name above the sheet title).

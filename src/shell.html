@@ -390,6 +390,10 @@ button.tag { border: 0; color: inherit; font: inherit; font-size: 14px; font-wei
 .layers button[aria-pressed="false"] .tick { visibility: hidden; }
 .layers button[aria-pressed="false"] .tile { background: var(--fill-2) !important; color: var(--label-2); }
 #layersBtn[aria-expanded="true"] { color: var(--primary); }
+.con-menu { max-height: 70vh; overflow: auto; }
+.con-menu button .badge { width: 26px; height: 26px; }
+.con-menu button .s { margin-left: auto; font-size: 13px; font-weight: 500; color: var(--label-2); }
+#conBtn .ico { width: 22px; height: 22px; }
 @media (pointer: coarse) { .fine-only { display: none !important; } }
 .surprise-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .surprise-row .toast { margin: 0; flex: 1; min-width: 0; }
@@ -769,7 +773,7 @@ h1.long { font-size: 24px; }
 <div id="stage">
 <canvas id="base" aria-hidden="true"></canvas>
 <canvas id="baseFade" aria-hidden="true"></canvas>
-<svg id="map" role="img" aria-label="Map of Cleveland Hopkins terminal and concourses">
+<svg id="map" role="img" aria-label="Airport map">
   <g id="world">
     <rect x="-3000" y="-3000" width="7000" height="7000" class="apron"/>
   </g>
@@ -798,8 +802,8 @@ h1.long { font-size: 24px; }
 
 <div class="controls">
   <div class="cap glass floor" id="floorCap" role="group" aria-label="Floor">
-    <button data-floor="up" aria-pressed="true" title="Upper level: gates, security, ticketing" aria-label="Upper level: gates, security, ticketing">U</button>
-    <button data-floor="lo" aria-pressed="false" title="Lower level: baggage claim, ground transportation, RTA" aria-label="Lower level: baggage claim, ground transportation, RTA">L</button>
+    <button data-floor="up" aria-pressed="true">U</button>
+    <button data-floor="lo" aria-pressed="false">L</button>
   </div>
   <div class="cap glass">
     <button id="locate" aria-label="Show my location" aria-pressed="false"><svg class="ico"><use href="#i-locate"/></svg></button>
@@ -811,6 +815,7 @@ h1.long { font-size: 24px; }
   <div class="cap glass" id="conCap"></div>
 </div>
 <div class="layers glass" id="layers" role="menu" aria-label="Show on map" hidden></div>
+<div class="layers glass con-menu" id="conMenu" role="menu" aria-label="Concourses" hidden></div>
 
 <section class="sheet glass" id="sheet" aria-label="Trip tools">
   <div class="sheet-head" id="sheetHead">
@@ -879,9 +884,9 @@ h1.long { font-size: 24px; }
     </div>
 
     <div class="pane" id="pane-air" role="tabpanel" aria-labelledby="tab-air" hidden>
-      <p class="foot" style="margin-top:0">All three concourses connect past security, so you can walk between them.</p>
+      <p class="foot" style="margin-top:0" id="airNote"></p>
       <div class="pane" id="airlines"></div>
-      <div class="group tip"><span class="tile place terminal"><svg class="ico"><use href="#i-info"/></svg></span><span>International arrivals clear U.S. Customs near gate A5. Concourse D has been closed since 2014. Gates change, so check your boarding pass and the departure screens.</span></div>
+      <div class="group tip"><span class="tile place terminal"><svg class="ico"><use href="#i-info"/></svg></span><span id="airTip"></span></div>
     </div>
 
     <div class="pane" id="pane-place" hidden></div>

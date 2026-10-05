@@ -1,41 +1,67 @@
 #!/usr/bin/env python3
-"""Build the CLE base map layers from OpenStreetMap.
+"""Build an airport's base map layers from OpenStreetMap.
 
-Downloads the area around the Cleveland Hopkins terminal from the OSM API
-(or reads a cached cle.osm), projects it to local metres (north up,
-origin 41.4100 N, 81.8395 W), simplifies it and writes basemap.js, which
-index.html embeds between the BASEMAP markers.
+Downloads the area around the terminal from the OSM API (or reads cached
+.osm files), projects it to local metres (north up, around the airport's
+origin), simplifies it and writes airports/<code>/basemap.js.
 
 Map data © OpenStreetMap contributors, ODbL 1.0.
 
-Usage: python3 tools/build_basemap.py [path/to/cle.osm]
-Writes airports/cle/basemap.js (BASEMAP_CLE); then run tools/build.py.
-To add another airport, copy this script's settings (origin, crop, OSM bbox,
-terminal names) for it and write airports/<code>/basemap.js the same way.
+Usage: python3 tools/build_basemap.py <cle|atl> [cache dir]
+Writes airports/<code>/basemap.js (BASEMAP_<CODE>); then run tools/build.py.
+To add an airport, add its settings to AIRPORTS below.
 Needs shapely (pip install shapely) to pave the ramp around the concourses.
 """
 import json, math, os, sys, urllib.request
 import xml.etree.ElementTree as ET
 
-LAT0, LON0 = 41.4100, -81.8395
+# Per airport: origin, crop (x0, y0, x1, y1 in metres), OSM bboxes (the API caps each request,
+# so big airports are fetched in tiles), which terminal buildings become which layer,
+# and which OSM indoor levels are the upper and lower floors.
+AIRPORTS = {
+    'cle': dict(origin=(41.4100, -81.8395), crop=(-700, -800, 800, 800),
+                bboxes=['-81.856,41.398,-81.824,41.422'],
+                terms=[('Concourse D', 'termD'), ('Concourse A', 'termA'), ('Concourse B', 'termB'),
+                       ('Concourse C', 'termC'), ('Main Terminal', 'termM')],
+                ramp=['Concourse A', 'Concourse B', 'Concourse C', 'Concourse D'],
+                levels={'1': 'walk1', '0': 'walk0', '-1': 'walkm1'}),
+    # Hartsfield-Jackson: concourses T, A-F in a row, joined underground by the Transportation Mall
+    # and the Plane Train (level -1); OSM levels 0-2 are the concourses and terminals.
+    'atl': dict(origin=(33.6407, -84.4277), crop=(-1950, -700, 1150, 650),
+                bboxes=[f'{-84.4500 + i * 0.0085:.4f},33.6330,{-84.4500 + (i + 1) * 0.0085:.4f},33.6480' for i in range(4)],
+                terms=[('Concourse T', 'termT'), ('Concourse A', 'termA'), ('Concourse B', 'termB'), ('Concourse C', 'termC'),
+                       ('Concourse D', 'termD'), ('Concourse E', 'termE'), ('Concourse F', 'termF'),
+                       ('Domestic Terminal', 'termM'), ('North Terminal', 'termM'), ('South Terminal', 'termM'),
+                       ('Maynard H. Jackson', 'termM')],
+                ramp=['Concourse T', 'Concourse A', 'Concourse B', 'Concourse C', 'Concourse D', 'Concourse E', 'Concourse F'],
+                levels={'2': 'walk1', '1': 'walk1', '0': 'walk1', '-1': 'walk0'},
+                train='The Plane Train'),
+}
+CODE = (sys.argv[1] if len(sys.argv) > 1 else 'cle').lower()
+CFG = AIRPORTS[CODE]
+LAT0, LON0 = CFG['origin']
 KX = math.cos(math.radians(LAT0)) * 111320
 KY = 110574
-CROP = (-700, -800, 800, 800)          # x0, y0, x1, y1 in metres
-BBOX = '-81.856,41.398,-81.824,41.422'  # what the OSM API is asked for
+CROP = CFG['crop']
 
 def P(lat, lon):
     return ((lon - LON0) * KX, -(lat - LAT0) * KY)
 
-def load(path):
-    if not os.path.exists(path):
-        url = f'https://api.openstreetmap.org/api/0.6/map?bbox={BBOX}'
-        print('downloading', url)
-        urllib.request.urlretrieve(url, path)
-    root = ET.parse(path).getroot()
-    nodes = {n.get('id'): (float(n.get('lat')), float(n.get('lon')), {t.get('k'): t.get('v') for t in n.findall('tag')})
-             for n in root.findall('node')}
-    ways = [(w.get('id'), [nd.get('ref') for nd in w.findall('nd')], {t.get('k'): t.get('v') for t in w.findall('tag')})
-            for w in root.findall('way')]
+def load(folder):
+    nodes, ways, seen = {}, [], set()
+    for i, bbox in enumerate(CFG['bboxes']):
+        path = os.path.join(folder, f'{CODE}{i if len(CFG["bboxes"]) > 1 else ""}.osm')
+        if not os.path.exists(path):
+            url = f'https://api.openstreetmap.org/api/0.6/map?bbox={bbox}'
+            print('downloading', url)
+            urllib.request.urlretrieve(url, path)
+        root = ET.parse(path).getroot()
+        for n in root.findall('node'):
+            nodes[n.get('id')] = (float(n.get('lat')), float(n.get('lon')), {t.get('k'): t.get('v') for t in n.findall('tag')})
+        for w in root.findall('way'):
+            if w.get('id') in seen: continue       # ways crossing tile edges come back from each tile
+            seen.add(w.get('id'))
+            ways.append((w.get('id'), [nd.get('ref') for nd in w.findall('nd')], {t.get('k'): t.get('v') for t in w.findall('tag')}))
     return nodes, ways
 
 def dp(pts, tol):
@@ -60,11 +86,10 @@ def path(pts, closed):
     return s + ('Z' if closed else '')
 
 def main():
-    src = sys.argv[1] if len(sys.argv) > 1 else 'cle.osm'
-    nodes, ways = load(src)
+    nodes, ways = load(sys.argv[2] if len(sys.argv) > 2 else '.')
     L = {k: [] for k in ['grass', 'wood', 'water', 'apron', 'taxiway', 'runway', 'lots', 'motorway', 'major', 'minor',
-                         'service', 'rail', 'buildings', 'garage', 'termA', 'termB', 'termC', 'termM', 'termD', 'bridges',
-                         'walk1', 'walk0', 'walkm1', 'stairs']}
+                         'service', 'rail', 'buildings', 'garage', 'bridges', 'walk1', 'walk0', 'walkm1', 'stairs', 'train']
+         + sorted({layer for _, layer in CFG['terms']})}
     stands = []
     for wid, nds, t in ways:
         pts = [P(*nodes[n][:2]) for n in nds if n in nodes]
@@ -72,20 +97,18 @@ def main():
         closed = nds[0] == nds[-1]
         simp = dp(pts, 0.8)
         aw, hw, lu, nat = t.get('aeroway'), t.get('highway'), t.get('landuse'), t.get('natural')
-        # Indoor walkways by floor. At CLE: level 1 = upper (gates, security, ticketing),
-        # 0 = lower (baggage claim, ground transportation), -1 = RTA platform, 2 = jet bridges (skipped).
+        # Indoor walkways by floor (see levels above); jet bridges are skipped.
         lv = t.get('level')
+        if CFG.get('train') and t.get('railway') == 'monorail' and CFG['train'] in t.get('name', ''):
+            L['train'].append(path(simp, False)); continue
         if lv and hw in ('footway', 'corridor', 'steps') and aw != 'jet_bridge':
-            layer = 'stairs' if (';' in lv or hw == 'steps') else {'1': 'walk1', '0': 'walk0', '-1': 'walkm1'}.get(lv)
+            layer = 'stairs' if (';' in lv or hw == 'steps') else CFG['levels'].get(lv)
             if layer:
                 L[layer].append(path(simp, False))
                 continue
         name = t.get('name', '')
-        if aw == 'terminal' and 'Concourse D' in name: L['termD'].append(path(simp, True))
-        elif aw == 'terminal' and 'Concourse A' in name: L['termA'].append(path(simp, True))
-        elif aw == 'terminal' and 'Concourse B' in name: L['termB'].append(path(simp, True))
-        elif aw == 'terminal' and 'Concourse C' in name: L['termC'].append(path(simp, True))
-        elif aw == 'terminal' and 'Main Terminal' in name: L['termM'].append(path(simp, True))
+        term = next((layer for key, layer in CFG['terms'] if key in name), None) if aw == 'terminal' and closed else None
+        if term: L[term].append(path(simp, True))
         elif t.get('parking') == 'multi-storey': L['garage'].append(path(simp, True))
         elif aw == 'jet_bridge': L['bridges'].append(path(simp, False))
         elif aw == 'parking_position' and len(pts) >= 2: stands.append((pts[0], pts[-1], t.get('ref', '')))
@@ -122,7 +145,7 @@ def main():
     rings = []
     for wid, nds, t in ways:
         name = t.get('name', '')
-        if t.get('aeroway') == 'terminal' and any(c in name for c in ('Concourse A', 'Concourse B', 'Concourse C', 'Concourse D')):
+        if t.get('aeroway') == 'terminal' and any(c in name for c in CFG['ramp']):
             pts = [P(*nodes[n][:2]) for n in nds if n in nodes]
             if len(pts) > 3: rings.append(Polygon(pts).buffer(0))
     ramp = unary_union([r.buffer(57, quad_segs=4) for r in rings]).simplify(2.5)
@@ -130,8 +153,9 @@ def main():
     L['ramp'] = [path(list(g.exterior.coords)[:-1], True) + ''.join(path(list(i.coords)[:-1], True) for i in g.interiors) for g in geoms]
     out = {k: ''.join(v) for k, v in L.items()}
     out['planes'] = planes
-    js = 'const BASEMAP_CLE = ' + json.dumps(out, separators=(',', ':')) + ';\n'
-    dest = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'airports', 'cle', 'basemap.js')
+    js = f'const BASEMAP_{CODE.upper()} = ' + json.dumps(out, separators=(',', ':')) + ';\n'
+    dest = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'airports', CODE, 'basemap.js')
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
     open(dest, 'w').write(js)
     print(dest, len(js) // 1024, 'KB', {k: len(v) for k, v in L.items()}, 'planes', len(planes))
 

@@ -58,6 +58,12 @@ AIRPORTS.CLE = (() => {
     { name: 'JetBlue', code: 'B6', color: '#0033a0', con: 'C' },
   ];
   const CON_RANGE = { A: 'A1–A14', B: 'B1–B11', C: 'C2–C29' };
+  // concourses: id, colour [light, dark], badge shape [lobes, depth]
+  const concourses = [
+    { id: 'A', color: ['#64798a', '#93a6b4'], shape: [0, 0] },
+    { id: 'B', color: ['#2563d8', '#5f97f2'], shape: [4, .16] },
+    { id: 'C', color: ['#7a4cd6', '#a989ee'], shape: [9, .075] },
+  ];
   
   // Gate positions (metres) from OpenStreetMap; the official directory's gate list.
   const GATE_POS = {
@@ -135,6 +141,9 @@ AIRPORTS.CLE = (() => {
   return {
     code: 'CLE', name: 'Cleveland Hopkins International', short: 'Cleveland Hopkins', city: 'Cleveland', tz: 'America/New_York',
     GEO, V, EDGES, SPINES, ROT, MAP_BOUNDS, AIRLINES, CON_RANGE, GATE_POS, ROT_GATES, AMEN, HOURS,
+    concourses,
+    // the lower-level shops and services are in the main terminal south of the checkpoint
+    amenLevel: it => it.zone === 'L' && it.y > -150 ? 'lo' : 'up',
     LOWER_V: ['bag', 'rta', 'gtc', 'taxi', 'rent', 'hotel', 'ride', 'curb', 'lift_r'],
     PLACES: ['chk', 'tix', 'bag', 'rta', 'gtc', 'taxi', 'rent', 'hotel', 'ride', 'curb'],
     // how each place is drawn: [icon, kind]; kinds set the sign colour (terminal, bags, transit, ground)
@@ -148,6 +157,9 @@ AIRPORTS.CLE = (() => {
       labels: [[150, -95, 'Main terminal', , 'up'], [62, -100, 'Baggage claim', , 'lo'], [-185, 271, 'Rotunda'], [255, -40, 'Parking garage'], [125, 385, 'Concourse D · closed'], [140, 60, 'Lower Drive']],
       roundels: [['A', 118, -458], ['B', -236, -171], ['C', 72, 28]],
       securityLine: [100, -167, 124, -143],
+      closedTerms: ['termD'],
+      airlinesNote: 'All three concourses connect past security, so you can walk between them.',
+      airlinesTip: 'International arrivals clear U.S. Customs near gate A5. Concourse D has been closed since 2014.',
       defaults: { from: 'v:chk', to: 'g:C22', gate: 'g:C22', arrGate: 'g:B6' },
       popular: ['v:chk', 'v:bag', 'v:rta'], popularRe: /Great Lakes|Bar Symon|Rock & Roll/,
       floors: { up: 'Upper level · gates, security, ticketing', lo: 'Lower level · baggage claim, ground transportation, RTA' },

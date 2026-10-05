@@ -1,8 +1,20 @@
 // ---------- Active airport ----------
 const AP = AIRPORTS[ACTIVE_AIRPORT] || AIRPORTS[Object.keys(AIRPORTS)[0]];
-const { GEO, V, EDGES, SPINES, ROT, MAP_BOUNDS, AIRLINES, CON_RANGE, GATE_POS, AMEN, HOURS } = AP;
-const ROT_GATES = new Set(AP.ROT_GATES);
+const { GEO, V, EDGES, SPINES, MAP_BOUNDS, AIRLINES, GATE_POS, AMEN } = AP;
+const HOURS = AP.HOURS || {};
+const ROT = AP.ROT || null;                       // a round rotunda with gates around it (CLE's Concourse C)
+const ROT_GATES = new Set(AP.ROT_GATES || []);
 const ROLE = AP.roles;
+// Concourses in display order, each with a colour and a badge shape
+const CONS = AP.concourses.map(c => c.id);
+// An airline can fly from several concourses (Delta at ATL); con is the first
+for (const a of AIRLINES) { a.cons = a.cons || (a.con ? [a.con] : []); a.con = a.cons[0]; }
+// Gate ranges by concourse, e.g. "A1–A34", unless the pack lists them
+const gnumOf = g => parseInt(g.replace(/^\D+/, ''), 10) || 0;
+const CON_RANGE = AP.CON_RANGE || Object.fromEntries(CONS.map(c => {
+  const gs = Object.keys(GATE_POS).filter(g => g[0] === c).sort((a, b) => gnumOf(a) - gnumOf(b));
+  return [c, gs.length ? `${gs[0]}–${gs[gs.length - 1]}` : ''];
+}));
 
 const CATS = {
   food:    { label: 'Food', dwell: 20 },
@@ -44,6 +56,12 @@ function onSpine(ids, p) {
   return best;
 }
 
+function distToSeg(p, a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy || 1;
+  const u = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / L2));
+  return Math.hypot(p.x - a.x - dx * u, p.y - a.y - dy * u);
+}
+
 // ---------- Build items ----------
 const ITEMS = {};   // id -> {id, kind, name, x, y, zone, ...}
 const gateInfo = {};
@@ -68,7 +86,21 @@ for (const id of AP.PLACES) {
 const perGate = {};
 AMEN.forEach(([name, cat, at, dwell, note], i) => {
   const it = { id: 'm:' + i, kind: 'amen', name, cat, dwell: dwell ?? CATS[cat].dwell, note };
-  if (Array.isArray(at)) {
+  if (Array.isArray(at) && at.length === 2) {
+    // a bare position: snap to the nearest walkway it could be on, and name the nearest gate
+    const [x, y] = at, p = { x, y };
+    let best = null;
+    EDGES.forEach(([a, b, z]) => {
+      if (!AP.AMEN_ZONES.includes(z)) return;
+      const d = distToSeg(p, P(a), P(b));
+      if (!best || d < best.d) best = { d, z };
+    });
+    let gate = null, gd = AP.NEAR_GATE || 60;
+    for (const [g, [gx, gy]] of Object.entries(GATE_POS)) { const d = Math.hypot(gx - x, gy - y); if (d < gd) { gd = d; gate = g; } }
+    const zone = best.z;
+    Object.assign(it, { x, y, zone, gate, near: gate ? 'Near gate ' + gate : (AP.ui.zoneNames || {})[zone] || 'Main terminal' });
+  }
+  else if (Array.isArray(at)) {
     const [x, y, zone, gate] = at;
     if (zone === 'LIFT') Object.assign(it, { x, y, zone, lift: gate, near: V[gate][2] });
     else Object.assign(it, { x, y, zone, gate, near: gate ? 'Near gate ' + gate : zone === 'L' ? 'Landside, before security' : 'Main terminal' });
@@ -85,16 +117,15 @@ AMEN.forEach(([name, cat, at, dwell, note], i) => {
   }
   const hs = HOURS[name]; it.hours = typeof hs === 'function' ? hs(it) : hs;
   // icons that differ from their category's
-  it.icon = /^Elevator$/.test(name) ? 'lift' : /^Water fountain/.test(name) ? 'water' : /^Accessible restroom/.test(name) ? 'access' : cat;
+  it.icon = /lounge|club/i.test(name) && cat === 'play' ? 'play' : /^Elevator$/.test(name) ? 'lift' : /^Water fountain/.test(name) ? 'water' : /^Accessible restroom/.test(name) ? 'access' : cat;
   ITEMS[it.id] = it;
 });
 
 // ---------- Floors ----------
-// 'up' = upper level (gates, security, ticketing, airside shops); 'lo' = lower level
-// (baggage claim, ground transportation, and the RTA platform below it).
+// 'up' and 'lo': the two floors the map switches between (see the pack's ui.floors)
 const LOWER_V = new Set(AP.LOWER_V);
 for (const it of Object.values(ITEMS))
-  it.lvl = it.zone === 'LIFT' ? null : it.kind === 'place' ? (LOWER_V.has(it.node) ? 'lo' : 'up') : (it.zone === 'L' && it.y > -150 ? 'lo' : 'up');
+  it.lvl = it.zone === 'LIFT' ? null : it.kind === 'place' ? (LOWER_V.has(it.node) ? 'lo' : 'up') : AP.amenLevel ? AP.amenLevel(it) : 'up';
 function levelOf(node) {
   if (V[node]) return LOWER_V.has(node) ? 'lo' : 'up';
   const it = ITEMS[node.startsWith('p:') ? node.slice(2) : node];
@@ -132,6 +163,8 @@ for (const it of Object.values(ITEMS)) {
 const EDGE_KIND = {};
 EDGES.forEach(([a, b, , kind], ei) => {
   const chain = [a, ...onEdge[ei].sort((p, q) => p.u - q.u).map(p => p.id), b];
+  // 'exit' edges are one way (out through an exit you can't come back in by)
+  if (kind === 'exit') { const w = dist(NODE[a], NODE[b]); G[a].push({ to: b, w, kind }); EDGE_KIND[a + '|' + b] = kind; return; }
   for (let i = 1; i < chain.length; i++) link(chain[i-1], chain[i], kind);
   if (kind) EDGE_KIND[a + '|' + b] = EDGE_KIND[b + '|' + a] = kind;
 });
@@ -140,6 +173,10 @@ const nodeOf = it => it.kind === 'place' ? it.node : it.id;
 // Step-free routing skips escalators; elevators cost a short wait (about a minute) on top of the walk
 let stepFree = false;
 const LIFT_WAIT = 75;   // metres-equivalent at 75 m/min
+// An airport train (ATL's Plane Train): a minute's wait each way on and off the platform, then it covers
+// ground about seven times faster than walking.
+const BOARD_WAIT = 55, TRAIN_SPEED = 7;
+const cost = (w, kind) => kind === 'lift' ? w + LIFT_WAIT : kind === 'board' ? w + BOARD_WAIT : kind === 'train' ? w / TRAIN_SPEED : w;
 function dijkstra(src) {
   const D = { [src]: 0 }, prev = {}, done = new Set();
   const ids = Object.keys(G);
@@ -150,7 +187,7 @@ function dijkstra(src) {
     done.add(u);
     for (const { to, w, kind } of G[u]) {
       if (done.has(to) || (stepFree && kind === 'esc')) continue;
-      const nd = D[u] + w + (kind === 'lift' ? LIFT_WAIT : 0);
+      const nd = D[u] + cost(w, kind);
       if (D[to] === undefined || nd < D[to]) { D[to] = nd; prev[to] = u; }
     }
   }
@@ -162,8 +199,8 @@ function route(aItem, bItem) {
   const s = nodeOf(aItem), t = nodeOf(bItem), { D, prev } = fromSrc(s);
   const path = [t]; while (path[0] !== s) path.unshift(prev[path[0]]);
   // units: time-equivalent (includes elevator waits); len: metres actually walked
-  let len = 0; for (let i = 1; i < path.length; i++) len += dist(NODE[path[i - 1]], NODE[path[i]]);
-  return { path, units: D[t], len, lift: path.some((n, i) => i && EDGE_KIND[path[i - 1] + '|' + n] === 'lift') };
+  let len = 0; for (let i = 1; i < path.length; i++) if (EDGE_KIND[path[i - 1] + '|' + path[i]] !== 'train') len += dist(NODE[path[i - 1]], NODE[path[i]]);
+  return { path, units: D[t], len, lift: path.some((n, i) => i && EDGE_KIND[path[i - 1] + '|' + n] === 'lift'), train: path.some((n, i) => i && EDGE_KIND[path[i - 1] + '|' + n] === 'train') };
 }
 const meters = u => Math.round(u * M_PER_UNIT / 10) * 10;
 const minutes = u => Math.max(1, Math.round(u * M_PER_UNIT / M_PER_MIN));
