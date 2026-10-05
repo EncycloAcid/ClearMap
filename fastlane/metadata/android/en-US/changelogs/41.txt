@@ -1,0 +1,5 @@
+• Live flight status: gate, delays, boarding time and baggage carousel
+• Live security wait times
+• Home-screen widget: gate, boarding and walk, plus nearest restroom and coffee
+• Faster, steadier location; the map moves with you as you walk
+• Turn the map with two fingers, or let it turn with you; tap the compass for north

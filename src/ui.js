@@ -75,7 +75,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', repaint)
 new MutationObserver(repaint).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 // Sharp redraw of the base map on screen (when the map settles). It also drops the gesture cache.
 function drawBase() {
-  paintBase(bctx, baseCanvas.width, baseCanvas.height, view.x + ox, view.y + oy, view.k);
+  paintBase(bctx, baseCanvas.width, baseCanvas.height, view.x + ox, view.y + oy, view.k, view.r);
   cacheView = null; scheduleCache();
 }
 // While a finger or the camera is moving, redrawing every vector each frame is the slow part
@@ -88,7 +88,7 @@ function buildCache(over = OVER) {
   const W = vw, H = vh, mx = Math.round(W * over), my = Math.round(H * over);
   const cw = Math.round((W + 2 * mx) * dpr), ch = Math.round((H + 2 * my) * dpr);
   if (cache.width !== cw || cache.height !== ch) { cache.width = cw; cache.height = ch; }
-  paintBase(cctx, cw, ch, view.x + ox + mx, view.y + oy + my, view.k);
+  paintBase(cctx, cw, ch, view.x + ox + mx, view.y + oy + my, view.k, view.r);
   cacheView = { ...view, mx, my };
 }
 function scheduleCache() {
@@ -96,24 +96,35 @@ function scheduleCache() {
   const run = () => { cacheIdle = null; if (!cacheView && !ptrs.size && !moving) buildCache(); };
   cacheIdle = window.requestIdleCallback ? requestIdleCallback(run, { timeout: 400 }) : setTimeout(run, 80);
 }
+// the screen transform taking something laid out at view `from` (offset by mx, my) to the current view
+function relXf(from, mx = 0, my = 0) {
+  const rho = view.k / from.k, dr = view.r - from.r, a = rho * Math.cos(dr), b = rho * Math.sin(dr);
+  const tx = from.x + mx, ty = from.y + my;
+  return { rho, a, b, e: view.x - (a * tx - b * ty), f: view.y - (b * tx + a * ty) };
+}
 function blitBase() {
   const W = vw, H = vh;
-  let C = cacheView, r = C ? view.k / C.k : 0;
-  // where the cached area lands on screen now; rebuild if the view has left it or zoomed too far
-  const place = () => ({ x: view.x - r * C.x - r * C.mx, y: view.y - r * C.y - r * C.my });
-  let o = C && place();
-  if (!C || r > 1.6 || r < .62 || o.x > 0 || o.y > 0 || o.x + r * (W + 2 * C.mx) < W || o.y + r * (H + 2 * C.my) < H) {
-    buildCache(.12); C = cacheView; r = 1; o = place();   // mid-gesture: a slimmer margin keeps this frame quick
+  let C = cacheView, M = C && relXf(C, C.mx, C.my);
+  // does the cached area still cover the whole screen? (each screen corner, back in cache pixels)
+  const covers = () => [[0, 0], [W, 0], [0, H], [W, H]].every(([sx, sy]) => {
+    const dx = sx - M.e, dy = sy - M.f, q = M.rho * M.rho, x = (M.a * dx + M.b * dy) / q, y = (-M.b * dx + M.a * dy) / q;
+    return x >= 0 && y >= 0 && x <= W + 2 * C.mx && y <= H + 2 * C.my;
+  });
+  if (!C || M.rho > 1.6 || M.rho < .62 || !covers()) {
+    buildCache(.12); C = cacheView; M = relXf(C, C.mx, C.my);   // mid-gesture: a slimmer margin keeps this frame quick
   }
   bctx.setTransform(1, 0, 0, 1, 0, 0);
+  bctx.fillStyle = pal.map; bctx.fillRect(0, 0, baseCanvas.width, baseCanvas.height);
+  bctx.setTransform(M.a, M.b, -M.b, M.a, dpr * M.e, dpr * M.f);
   bctx.imageSmoothingEnabled = true;
-  bctx.drawImage(cache, dpr * o.x, dpr * o.y, cache.width * r, cache.height * r);
+  bctx.drawImage(cache, 0, 0);
 }
-function paintBase(c, cw, ch, tx, ty, k) {
+function paintBase(c, cw, ch, tx, ty, k, rot = 0) {
   pal = pal || readPalette();
   c.setTransform(1, 0, 0, 1, 0, 0);
   c.fillStyle = pal.map; c.fillRect(0, 0, cw, ch);
-  c.setTransform(dpr * k, 0, 0, dpr * k, dpr * tx, dpr * ty);
+  const kc = dpr * k * Math.cos(rot), ks = dpr * k * Math.sin(rot);
+  c.setTransform(kc, ks, -ks, kc, dpr * tx, dpr * ty);
   c.lineCap = c.lineJoin = 'round';
   const fill = (key, color) => { if (P2[key]) { c.fillStyle = color; c.fill(P2[key], 'evenodd'); } };
   const stroke = (key, color, w, dash) => { if (P2[key]) { c.strokeStyle = color; c.lineWidth = w; c.setLineDash(dash || []); c.stroke(P2[key]); } };
@@ -135,7 +146,8 @@ function paintBase(c, cw, ch, tx, ty, k) {
     c.save(); c.translate(x, y); c.rotate(a * Math.PI / 180); c.scale(2.1, 2.1); c.fill(planePath); c.restore();
   }
   // terminals raised on a soft shadow; concourses tinted by their colour
-  c.save(); c.translate(2, 4.5); c.fillStyle = pal['bldg-shadow'];
+  // (the shadow falls down the screen whichever way the map is turned)
+  c.save(); c.translate(2 * Math.cos(rot) + 4.5 * Math.sin(rot), -2 * Math.sin(rot) + 4.5 * Math.cos(rot)); c.fillStyle = pal['bldg-shadow'];
   const closed = AP.ui.closedTerms || [];
   for (const t of ['termM', ...CONS.map(c => 'term' + c), ...closed]) if (P2[t]) c.fill(P2[t]);
   c.restore();
@@ -274,13 +286,13 @@ function setPin(it) {
 function placeDecor() {
   const s = markerScale;
   if (me) { const d = shown || me; meAcc.setAttribute('cx', d.x); meAcc.setAttribute('cy', d.y); meMark.setAttribute('transform', `translate(${d.x} ${d.y}) scale(${s})`); }
-  if (pinItem) pinG.setAttribute('transform', `translate(${pinItem.x} ${pinItem.y}) scale(${s * 1.15})`);
-  for (const e of escBadges) e.g.setAttribute('transform', `translate(${e.x} ${e.y}) scale(${s})`);
+  if (pinItem) pinG.setAttribute('transform', upright(pinItem.x, pinItem.y, s * 1.15));
+  for (const e of escBadges) e.g.setAttribute('transform', upright(e.x, e.y, s));
   if (routePts.length > 1) {
     const a = routePts[0], b = routePts[routePts.length - 1], m = pointAt(routeTotal * 0.5);
-    routeStart.setAttribute('transform', `translate(${a.x} ${a.y}) scale(${s})`);
-    routeEnd.setAttribute('transform', `translate(${b.x} ${b.y}) scale(${s})`);
-    eta.setAttribute('transform', `translate(${m.x} ${m.y}) scale(${s})`);
+    routeStart.setAttribute('transform', upright(a.x, a.y, s));
+    routeEnd.setAttribute('transform', upright(b.x, b.y, s));
+    eta.setAttribute('transform', upright(m.x, m.y, s));
   }
 }
 // escalator badges where a route changes floor; tap one to switch floors
@@ -291,12 +303,22 @@ el('circle', { class: 'puck-halo', r: 9 }, puckG);
 el('circle', { class: 'puck', r: 4.6 }, puckG);
 
 // ---------- Pan / zoom in screen pixels ----------
-const view = { k: 1, x: 0, y: 0 };
+// screen = (x, y) + k · rotate(r) · map point; r turns the map clockwise on screen (0 = north up)
+const view = { k: 1, x: 0, y: 0, r: 0 };
 let markerScale = 1;
+const toScr = (p, v = view) => { const c = Math.cos(v.r || 0), s = Math.sin(v.r || 0); return { x: v.x + v.k * (c * p.x - s * p.y), y: v.y + v.k * (s * p.x + c * p.y) }; };
+const toMapPt = (sx, sy, v = view) => { const c = Math.cos(v.r || 0), s = Math.sin(v.r || 0), dx = (sx - v.x) / v.k, dy = (sy - v.y) / v.k; return { x: c * dx + s * dy, y: -s * dx + c * dy }; };
+// the view at zoom k and turn r that puts map point p at screen point (sx, sy)
+const viewAt = (k, r, p, sx, sy) => { const c = Math.cos(r), s = Math.sin(r); return { k, r, x: sx - k * (c * p.x - s * p.y), y: sy - k * (s * p.x + c * p.y) }; };
+const wrapAngle = a => Math.atan2(Math.sin(a), Math.cos(a));
+const rotDeg = () => +(view.r * 180 / Math.PI).toFixed(3);
+// markers and labels turn back against the map so they always read upright
+const upright = (x, y, s) => `translate(${x} ${y})${view.r ? ` rotate(${-rotDeg()})` : ''} scale(${s})`;
 function clampView() {
   // keep at least part of the airport on screen
-  const W = vw, H = vh, m = 90;
-  const M = MAP_BOUNDS, l = view.x + view.k * M.x0, r = view.x + view.k * M.x1, t = view.y + view.k * M.y0, b = view.y + view.k * M.y1;
+  const W = vw, H = vh, m = 90, M = MAP_BOUNDS;
+  const cs = [[M.x0, M.y0], [M.x1, M.y0], [M.x0, M.y1], [M.x1, M.y1]].map(([x, y]) => toScr({ x, y }));
+  const l = Math.min(...cs.map(q => q.x)), r = Math.max(...cs.map(q => q.x)), t = Math.min(...cs.map(q => q.y)), b = Math.max(...cs.map(q => q.y));
   if (r < m) view.x += m - r; if (l > W - m) view.x -= l - (W - m);
   if (b < m + 60) view.y += m + 60 - b; if (t > H - m) view.y -= t - (H - m);
 }
@@ -318,7 +340,7 @@ function updateScaleBar() {
 //   pre-built, so this is cheap), so it never shows stale or half-drawn areas;
 // - the SVG overlay (markers, labels, route) slides with a CSS transform during a gesture and is
 //   re-laid-out once things settle ("commit"), because laying it out every frame is the slow part.
-let committed = null, commitTimer = null, moving = false, scaledAtK = 0, framePending = false;   // moving: glide or camera animation
+let committed = null, commitTimer = null, moving = false, scaledAtK = 0, scaledAtR = 0, framePending = false;   // moving: glide or camera animation
 const ox = 0, oy = 0;
 const stage = $('#stage');
 let dpr = 1;
@@ -339,11 +361,11 @@ function settle() { if (!ptrs.size && !moving) render(); else commitTimer = setT
 function frame() {
   framePending = false;
   if (!committed) return;
-  const r = view.k / committed.k;
-  // zoomed far enough that sliding markers would look wrong: re-lay-out now
-  if (r > 1.9 || r < .55) return render();
+  const M = relXf(committed);
+  // zoomed or turned far enough that sliding markers would look wrong: re-lay-out now
+  if (M.rho > 1.9 || M.rho < .55 || Math.abs(wrapAngle(view.r - committed.r)) > .35) return render();
   blitBase();
-  svg.style.transform = `translate(${view.x - r * committed.x}px, ${view.y - r * committed.y}px) scale(${r})`;
+  svg.style.transform = `matrix(${M.a},${M.b},${-M.b},${M.a},${M.e},${M.f})`;
 }
 function render() {
   clearTimeout(commitTimer);
@@ -351,13 +373,14 @@ function render() {
   committed = { ...view };
   if (ptrs.size || moving) blitBase(); else drawBase();
   svg.style.transform = '';
-  world.setAttribute('transform', `translate(${view.x} ${view.y}) scale(${view.k})`);
-  // marker sizes only depend on zoom, so a plain pan skips rewriting ~200 transforms
-  if (view.k !== scaledAtK) {
-    scaledAtK = view.k;
+  world.setAttribute('transform', `translate(${view.x} ${view.y})${view.r ? ` rotate(${rotDeg()})` : ''} scale(${view.k})`);
+  // marker transforms only depend on zoom and turn, so a plain pan skips rewriting ~200 of them
+  if (view.k !== scaledAtK || view.r !== scaledAtR) {
+    scaledAtK = view.k; scaledAtR = view.r;
     markerScale = 1 / Math.pow(view.k, 0.62);
-    for (const m of markers) m.setAttribute('transform', `translate(${m.dataset.x} ${m.dataset.y}) scale(${markerScale})`);
-    for (const g of areaLabels) g.setAttribute('transform', `translate(${g.dataset.x} ${g.dataset.y}) scale(${markerScale})`);
+    for (const m of markers) m.setAttribute('transform', upright(m.dataset.x, m.dataset.y, markerScale));
+    for (const g of areaLabels) g.setAttribute('transform', upright(g.dataset.x, g.dataset.y, markerScale));
+    updateCompass();
     svg.dataset.z = view.k >= 2.2 ? 3 : view.k >= 1.4 ? 2 : 1;
     placePuck();
     placeDecor();
@@ -371,7 +394,7 @@ let labelItems = null, chromeCache = null;
 function cullLabels() {
   labelItems = labelItems || Object.values(ITEMS).filter(i => i.kind !== 'gate' && i.el);
   const zoomed = svg.dataset.z === '3', u = markerScale * view.k, taken = [];
-  const scr = p => ({ x: view.x + view.k * p.x, y: view.y + view.k * p.y });
+  const scr = p => toScr(p);
   const rank = it => it.el.classList.contains('sel') ? 0 : it.el.classList.contains('hl') ? 1 : it.kind === 'place' ? 2 : 3;
   const away = it => it.lvl && it.lvl !== floor && !it.el.classList.contains('sel');
   const hidden = it => (it.cat && svg.classList.contains('hide-' + it.cat)) || it.el.hasAttribute('data-off') || away(it);
@@ -473,15 +496,33 @@ function zoomAt(px, py, f) {
   const nk = clampK(view.k * f), r = nk / view.k;
   view.x = px - (px - view.x) * r; view.y = py - (py - view.y) * r; view.k = nk; apply();
 }
+function rotateAt(px, py, da) {
+  const c = Math.cos(da), s = Math.sin(da), dx = view.x - px, dy = view.y - py;
+  view.x = px + c * dx - s * dy; view.y = py + s * dx + c * dy; view.r = wrapAngle(view.r + da);
+}
+// the compass button appears once the map is turned, its needle pointing to north
+const compassBtn = $('#compass'), needle = compassBtn.querySelector('.needle');
+let compassShown = false;
+function updateCompass() {
+  needle.style.transform = `rotate(${rotDeg()}deg)`;
+  const want = Math.abs(view.r) > .004 || (typeof headingUp !== 'undefined' && headingUp);
+  if (want !== compassShown) { compassShown = want; fade(compassBtn, want); }
+}
+function northUp() {
+  const R = visibleRect(), cx = (R.l + R.r) / 2, cy = (R.t + R.b) / 2;
+  animateTo(viewAt(view.k, 0, following && shown ? shown : toMapPt(cx, cy), cx, cy));
+}
+compassBtn.onclick = () => { buzz(); if (headingUp) setLocState('follow'); northUp(); };
 let anim = null, animUntil = 0;
 function animateTo(target) {
   cancelAnimationFrame(anim); cancelAnimationFrame(glide);
-  if (reduced) { Object.assign(view, target); render(); return; }
+  if (reduced) { Object.assign(view, { r: view.r }, target); render(); return; }
   // Fly the centre of the screen in a straight line while zoom changes
   // geometrically, so places don't drift sideways; long hops ease out a
   // little and back in, like Apple Maps.
-  const W = vw / 2, H = vh / 2, from = { ...view };
-  const c0 = { x: (W - from.x) / from.k, y: (H - from.y) / from.k }, c1 = { x: (W - target.x) / target.k, y: (H - target.y) / target.k };
+  if (target.r == null) target = { ...target, r: view.r };
+  const W = vw / 2, H = vh / 2, from = { ...view }, dr = wrapAngle(target.r - from.r);
+  const c0 = toMapPt(W, H, from), c1 = toMapPt(W, H, target);
   const hop = Math.hypot(c1.x - c0.x, c1.y - c0.y) * Math.min(from.k, target.k) / Math.max(W, H);
   const lift = Math.min(0.45, Math.max(0, hop - 0.6) * 0.25);
   const dur = Math.min(900, 480 + hop * 120), t0 = performance.now();
@@ -491,8 +532,8 @@ function animateTo(target) {
     const e = 1 - Math.exp(-7 * p) * (1 + 7 * p);          // critically damped, no overshoot
     const k = from.k * Math.pow(target.k / from.k, e) * (1 - lift * Math.sin(Math.PI * e));
     const cx = c0.x + (c1.x - c0.x) * e, cy = c0.y + (c1.y - c0.y) * e;
-    view.k = k; view.x = W - cx * k; view.y = H - cy * k;
-    if (p < 1) { moving = true; apply(); anim = requestAnimationFrame(step); } else { moving = false; Object.assign(view, target); render(); }
+    Object.assign(view, viewAt(k, from.r + dr * e, { x: cx, y: cy }, W, H));
+    if (p < 1) { moving = true; apply(); anim = requestAnimationFrame(step); } else { moving = false; Object.assign(view, target, { r: wrapAngle(target.r) }); render(); }
   };
   anim = requestAnimationFrame(step);
 }
@@ -509,17 +550,19 @@ function visibleRect() {
   if (R.b - R.t < 140) R.b = R.t + 140;
   return R;
 }
-function fitBox(x0, y0, x1, y1, pad = 20, maxK = 4, instant = false) {
-  const R = visibleRect(), w = Math.max(x1 - x0, 30), h = Math.max(y1 - y0, 30);
+function fitBox(x0, y0, x1, y1, pad = 20, maxK = 4, instant = false, rot = view.r) {
+  const R = visibleRect(), bw = Math.max(x1 - x0, 30), bh = Math.max(y1 - y0, 30);
+  // the box's size on screen once turned with the map
+  const c = Math.abs(Math.cos(rot)), s = Math.abs(Math.sin(rot)), w = c * bw + s * bh, h = s * bw + c * bh;
   const k = clampK(Math.min((R.r - R.l - pad * 2) / w, (R.b - R.t - pad * 2) / h, maxK));
-  const target = { k, x: (R.l + R.r) / 2 - k * (x0 + x1) / 2, y: (R.t + R.b) / 2 - k * (y0 + y1) / 2 };
+  const target = viewAt(k, rot, { x: (x0 + x1) / 2, y: (y0 + y1) / 2 }, (R.l + R.r) / 2, (R.t + R.b) / 2);
   if (instant) { Object.assign(view, target); render(); } else animateTo(target);
 }
 function fitItems(list, pad, maxK, instant) {
   const xs = list.map(i => i.x), ys = list.map(i => i.y);
   fitBox(Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys), pad, maxK, instant);
 }
-const fitAll = instant => fitBox(MAP_BOUNDS.x0, MAP_BOUNDS.y0, MAP_BOUNDS.x1, MAP_BOUNDS.y1, 4, 4, instant);
+const fitAll = instant => fitBox(MAP_BOUNDS.x0, MAP_BOUNDS.y0, MAP_BOUNDS.x1, MAP_BOUNDS.y1, 4, 4, instant, 0);   // the whole airport, north up
 const fitCon = con => fitItems(Object.values(ITEMS).filter(i => i.kind === 'gate' && i.con === con), 24, 5);
 
 let userMoved = false;
@@ -555,16 +598,25 @@ stage.addEventListener('pointermove', e => {
     view.x += dx; view.y += dy; apply();
   } else if (ptrs.size === 2) {
     const [a, b] = [...ptrs.values()];
-    const d = Math.hypot(a.x - b.x, a.y - b.y), mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-    if (pinch) { zoomAt(mid.x, mid.y, d / pinch.d); view.x += mid.x - pinch.mid.x; view.y += mid.y - pinch.mid.y; apply(); }
-    pinch = { d, mid }; moved = 99; panned = false;
+    const d = Math.hypot(a.x - b.x, a.y - b.y), mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, ang = Math.atan2(b.y - a.y, b.x - a.x);
+    // two fingers twisting turn the map, once they've turned past a small threshold (so a pinch to
+    // zoom doesn't wobble it)
+    let turn = 0, twist = pinch ? pinch.twist : 0, on = pinch ? pinch.on : false;
+    if (pinch) {
+      const da = wrapAngle(ang - pinch.ang);
+      if (on) turn = da; else { twist += da; if (Math.abs(twist) > .2) { on = true; turn = twist; buzz(5); } }
+      zoomAt(mid.x, mid.y, d / pinch.d);
+      if (turn) rotateAt(mid.x, mid.y, turn);
+      view.x += mid.x - pinch.mid.x; view.y += mid.y - pinch.mid.y; apply();
+    }
+    pinch = { d, mid, ang, twist, on }; moved = 99; panned = false;
   }
 });
 function nearestMarker(cx, cy, maxPx = 24) {
   let best = null, bd = maxPx;
   for (const m of markers) {
     if (!m.dataset.id || m.getBoundingClientRect().width === 0) continue;
-    const sx = view.x + view.k * +m.dataset.x, sy = view.y + view.k * +m.dataset.y, d = Math.hypot(sx - cx, sy - cy);
+    const q = toScr({ x: +m.dataset.x, y: +m.dataset.y }), d = Math.hypot(q.x - cx, q.y - cy);
     if (d < bd) { bd = d; best = m; }
   }
   return best;
@@ -630,7 +682,7 @@ function placePuck(p) {
   p = p || puckG._p || routePts[0];
   puckG._p = p;
   puckG.setAttribute('opacity', 1);
-  puckG.setAttribute('transform', `translate(${p.x} ${p.y}) scale(${markerScale})`);
+  puckG.setAttribute('transform', upright(p.x, p.y, markerScale));
 }
 function pointAt(d) {
   let i = 1; while (i < routeLens.length && routeLens[i] < d) i++;
@@ -771,11 +823,18 @@ function toast(msg, action, label = 'Settings') {
 }
 const toMap = (lat, lon) => ({ x: (lon - GEO.lon0) * GEO.kx, y: -(lat - GEO.lat0) * GEO.ky });
 const locBtn = $('#locate');
+// off · on (dot shown) · follow (the map moves with you) · heading (and turns so you face up)
 function setLocState(state) {
   locBtn.classList.toggle('busy', state === 'busy');
-  locBtn.setAttribute('aria-pressed', String(state === 'follow'));
-  following = state === 'follow';
+  locBtn.classList.toggle('heading', state === 'heading');
+  locBtn.setAttribute('aria-pressed', String(state === 'follow' || state === 'heading'));
+  locBtn.setAttribute('aria-label', state === 'follow' && compassFresh() ? 'Turn the map with you' : state === 'heading' ? 'Stop showing my location' : 'Show my location');
+  locBtn.querySelector('use').setAttribute('href', state === 'heading' ? '#i-compass' : '#i-locate');
+  following = state === 'follow' || state === 'heading';
+  headingUp = state === 'heading';
+  if (following) kickCam();
 }
+const compassFresh = () => heading != null && Date.now() - headingAt < 5000;
 function nearestWalkNode(p) {
   let best = null, bd = Infinity;
   for (const id in NODE) {
@@ -853,30 +912,36 @@ function drawMe(p, acc) {
 // than in hops; standing: a short ease into place
 function glideTo(target, acc, walking) {
   cancelAnimationFrame(glideRAF);
-  if (!shown || reduced || Math.hypot(target.x - shown.x, target.y - shown.y) > 150) { shown = { ...target }; drawMe(shown, acc); followCam(shown, true); return; }
+  if (!shown || reduced || Math.hypot(target.x - shown.x, target.y - shown.y) > 150) { shown = { ...target }; drawMe(shown, acc); kickCam(); return; }
   const from = { ...shown }, t0 = performance.now(), dur = walking ? 1050 : 450;
   const step = now => {
     const k = Math.min(1, (now - t0) / dur), e = walking ? k : 1 - Math.pow(1 - k, 3);
     shown = { x: from.x + (target.x - from.x) * e, y: from.y + (target.y - from.y) * e };
-    drawMe(shown, acc); followCam(shown, k >= 1);
+    drawMe(shown, acc); kickCam();
     if (k < 1) glideRAF = requestAnimationFrame(step);
   };
   glideRAF = requestAnimationFrame(step);
 }
-// While following, the camera moves with you: each frame of the dot's glide also slides the map so
-// the dot stays in the middle of the visible map, at whatever zoom you chose.
-let camLast = 0;
-function followCam(p, last) {
-  if (!following || ptrs.size || performance.now() < animUntil) return;
+// While following, the camera moves with you: it keeps the dot in the middle of the visible map at
+// whatever zoom you chose, and in compass mode also turns the map so the way you face is up.
+// One loop eases it there and stops once it's caught up; the dot's glide and the compass wake it.
+let camRAF = null, camMoving = false, headingUp = false;
+function camStep() {
+  camRAF = null;
+  const stop = () => { if (camMoving) { camMoving = false; moving = false; apply(); } };
+  if (!following || !shown || ptrs.size || performance.now() < animUntil) return stop();
   const R = visibleRect(), cx = (R.l + R.r) / 2, cy = (R.t + R.b) / 2;
-  const nx = cx - view.k * p.x, ny = cy - view.k * p.y;
-  const dx = nx - view.x, dy = ny - view.y;
-  if (Math.abs(dx) < .3 && Math.abs(dy) < .3) { if (last && moving) { moving = false; render(); } return; }
+  const tr = headingUp && heading != null ? wrapAngle(-heading * Math.PI / 180) : view.r, dr = wrapAngle(tr - view.r);
+  const r = Math.abs(dr) < .003 ? tr : view.r + dr * .14;
+  const t = viewAt(view.k, r, shown, cx, cy), dx = t.x - view.x, dy = t.y - view.y;
+  if (Math.abs(dx) < .3 && Math.abs(dy) < .3 && r === tr) { if (dx || dy || view.r !== r) { Object.assign(view, t); moving = true; apply(); } return stop(); }
   // a spring, not a snap: a far-off camera (after you panned, or a step overview) eases back to you
   const f = Math.hypot(dx, dy) > 24 ? .2 : 1;
-  view.x += dx * f; view.y += dy * f;
-  if (last) { moving = false; render(); } else { moving = true; apply(); }
+  view.r = r; view.x += dx * f; view.y += dy * f;
+  camMoving = true; moving = true; apply();
+  camRAF = requestAnimationFrame(camStep);
 }
+const kickCam = () => { if (!camRAF && following) camRAF = requestAnimationFrame(camStep); };
 function onFix(pos) {
   const { latitude, longitude, accuracy, heading: gpsHeading, speed } = pos.coords;
   const raw = toMap(latitude, longitude), far = Math.hypot(raw.x, raw.y);
@@ -888,7 +953,7 @@ function onFix(pos) {
   // a very rough fix (cell towers) once we've had a good one recently adds nothing
   if (accuracy > 200 && kf.t && kfSigma() < 100 && Date.now() - kf.t < 60000) return;
   if (!kalman(raw, accuracy, pos.timestamp || Date.now())) return;
-  if (gpsHeading != null && !isNaN(gpsHeading) && (speed || 0) > 0.8) { heading = gpsHeading; headingAt = gpsHeadingAt = Date.now(); }
+  if (gpsHeading != null && !isNaN(gpsHeading) && (speed || 0) > 0.8) { heading = gpsHeading; headingAt = gpsHeadingAt = Date.now(); if (headingUp) kickCam(); }
   // the ring shows how sure we really are: the filter's spread, never much tighter than the fix itself
   const acc = Math.max(kfSigma(), accuracy * .5), est = kfPos(), snap = q => acc < 60 ? snapToWalkway(q, Math.max(12, Math.min(acc * 1.5, 40))) : q;
   const p = snap(est);
@@ -922,6 +987,7 @@ function onCompass(deg) {
   if (deg == null || isNaN(deg) || Date.now() - gpsHeadingAt < 3000) return;
   heading = (deg + 360) % 360; headingAt = Date.now();
   if (shown && me) drawMe(shown, me.acc);
+  if (headingUp) kickCam();
 }
 window.cleHeading = deg => onCompass(deg);
 window.cleLocation = o => onFix({ coords: { latitude: o.lat, longitude: o.lon, accuracy: o.acc, heading: o.heading, speed: o.speed }, timestamp: o.t || Date.now() });
@@ -964,8 +1030,10 @@ function startLocating() {
 locBtn.onclick = () => {
   buzz();
   if (watchId == null) startLocating();
-  else if (!following && me && Math.hypot(me.x, me.y) <= 2500) { setLocState('follow'); pingMe(false); const d = shown || me, R = visibleRect(), k = Math.max(view.k, 2.4); animateTo({ k, x: (R.l + R.r) / 2 - k * d.x, y: (R.t + R.b) / 2 - k * d.y }); }
-  else { setLocState('off'); stopLocating(false); }
+  else if (!following && me && Math.hypot(me.x, me.y) <= 2500) { setLocState('follow'); pingMe(false); const d = shown || me, R = visibleRect(); animateTo(viewAt(Math.max(view.k, 2.4), view.r, d, (R.l + R.r) / 2, (R.t + R.b) / 2)); }
+  // following, with a compass: turn the map so the way you face is up (like Google and Apple Maps)
+  else if (following && !headingUp && compassFresh()) { setLocState('heading'); toast('The map now turns with you. Tap the compass to put north back up.'); }
+  else { const wasUp = headingUp; setLocState('off'); stopLocating(false); if (wasUp) northUp(); }
 };
 
 // ---------- Sheet (iOS detents) ----------
@@ -1170,7 +1238,7 @@ function showPlace(it, fromMap) {
   if (!fromMap) fitItems([it], 60, 3.5);
   else requestAnimationFrame(() => {
     // keep the tapped marker in view above the sheet
-    const R = visibleRect(), sx = view.x + view.k * it.x, sy = view.y + view.k * it.y;
+    const R = visibleRect(), { x: sx, y: sy } = toScr(it);
     if (sy > R.b - 20 || sy < R.t || sx < R.l || sx > R.r) animateTo({ k: view.k, x: view.x + ((R.l + R.r) / 2 - sx), y: view.y + ((R.t + R.b) / 2 - sy) });
   });
 }
@@ -1216,7 +1284,7 @@ function startNav() {
   document.body.classList.add('navigating'); chromeCache = null;
   fade($('#navBanner'), true); fade($('#navBar'), true);
   showLeg(0, 1);
-  if (me && $('#from').value === 'v:me' && Math.hypot(me.x, me.y) <= 2500) setLocState('follow');
+  if (me && !following && $('#from').value === 'v:me' && Math.hypot(me.x, me.y) <= 2500) setLocState('follow');
 }
 function endNav() {
   if (!nav) return;

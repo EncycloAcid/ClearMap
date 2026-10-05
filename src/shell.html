@@ -516,6 +516,13 @@ button.tag { border: 0; color: inherit; font: inherit; font-size: 14px; font-wei
 .cap button:active { transform: scale(.86); }
 .cap button + button { border-top: .5px solid var(--hairline); }
 .cap .shape-btn svg { width: 28px; height: 28px; }
+/* compass: shows which way north is once the map is turned; tap to put north back up */
+.compass { width: 44px; height: 44px; border-radius: 50%; border: 0; padding: 0; display: grid; place-items: center; align-self: center; transition: transform .35s var(--spring); }
+.compass:active { transform: scale(.86); }
+.compass svg { width: 30px; height: 30px; overflow: visible; }
+.compass .needle { transform-origin: 12px 12px; }
+.compass .n { fill: #e5484d; }
+.compass .s { fill: var(--label-2); }
 
 /* ---------- Sheet ---------- */
 .sheet {
@@ -779,6 +786,7 @@ h1.long { font-size: 24px; }
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
   <symbol id="i-fit" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+  <symbol id="i-compass" viewBox="0 0 24 24"><path d="M12 2.6l6.4 17.6-6.4-3.7-6.4 3.7z"/></symbol>
   <symbol id="i-locate" viewBox="0 0 24 24"><path d="M20.5 3.5L3.5 10.6l7.2 2.7 2.7 7.2z"/></symbol>
   <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0"/></symbol>
   <symbol id="i-lift" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9.5 9.5L12 7l2.5 2.5M9.5 14.5L12 17l2.5-2.5"/></symbol>
@@ -849,6 +857,7 @@ h1.long { font-size: 24px; }
 <div class="scalebar" id="scalebar" aria-hidden="true"><span class="txt"></span><span class="bar"></span></div>
 
 <div class="controls">
+  <button id="compass" class="compass glass" aria-label="Turn the map north up" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><g class="needle"><path class="n" d="M12 3.2l3.3 8.8H8.7z"/><path class="s" d="M12 20.8L8.7 12h6.6z"/></g></svg></button>
   <div class="cap glass floor" id="floorCap" role="group" aria-label="Floor">
     <button data-floor="up" aria-pressed="true">U</button>
     <button data-floor="lo" aria-pressed="false">L</button>

@@ -1,5 +1,0 @@
-• Live flight status: gates, delays, boarding time and baggage carousel
-• Live security wait times
-• Home-screen widget: your gate, boarding time and walk, with nearest restroom and coffee
-• Faster, steadier location: the dot appears sooner, follows you closely and stays on walkways
-• A cleaner location dot with a direction beam; it turns grey if your location is out of date
