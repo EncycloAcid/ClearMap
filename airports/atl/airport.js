@@ -82,7 +82,6 @@ AIRPORTS.ATL = (() => {
     { name: 'United', code: 'UA', color: '#005daa', cons: ['T'] },
     { name: 'Southwest', code: 'WN', color: '#304cb2', cons: ['C'] },
     { name: 'Alaska', code: 'AS', color: '#01426a', cons: ['C'] },
-    { name: 'Spirit', code: 'NK', color: '#ffe600', ink: '#111', cons: ['C', 'D'] },
     { name: 'Frontier', code: 'F9', color: '#0b6b4f', cons: ['C', 'D', 'E'] },
     { name: 'JetBlue', code: 'B6', color: '#0033a0', cons: [], note: 'Check in at the North Terminal' },
     { name: 'Avelo', code: 'XP', color: '#5b2d8e', cons: [], note: 'Check in at the North Terminal' },

@@ -46,7 +46,6 @@ AIRPORTS.CLE = (() => {
   // code: IATA designator; color/ink: the airline's brand colour for its mark
   const AIRLINES = [
     { name: 'Frontier', code: 'F9', color: '#0b6b4f', con: 'A', note: 'Domestic and international' },
-    { name: 'Spirit', code: 'NK', color: '#ffe600', ink: '#111', con: 'A' },
     { name: 'Avelo', code: 'XP', color: '#5b2d8e', con: 'A' },
     { name: 'Delta', code: 'DL', color: '#c8102e', con: 'B' },
     { name: 'Southwest', code: 'WN', color: '#304cb2', con: 'B' },
