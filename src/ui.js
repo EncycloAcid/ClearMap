@@ -364,7 +364,7 @@ function frame() {
   const M = relXf(committed);
   // zoomed or turned far enough that sliding markers would look wrong: re-lay-out now
   if (M.rho > 1.9 || M.rho < .55 || Math.abs(wrapAngle(view.r - committed.r)) > .35) return render();
-  blitBase();
+  blitBase(); updateCompass();
   svg.style.transform = `matrix(${M.a},${M.b},${-M.b},${M.a},${M.e},${M.f})`;
 }
 function render() {
@@ -501,12 +501,17 @@ function rotateAt(px, py, da) {
   view.x = px + c * dx - s * dy; view.y = py + s * dx + c * dy; view.r = wrapAngle(view.r + da);
 }
 // the compass button appears once the map is turned, its needle pointing to north
-const compassBtn = $('#compass'), needle = compassBtn.querySelector('.needle');
-let compassShown = false;
+const compassBtn = $('#compass'), dial = compassBtn.querySelector('.dial');
+let compassShown = false, compassDeg = null, compassLive = false;
 function updateCompass() {
-  needle.style.transform = `rotate(${rotDeg()}deg)`;
-  const want = Math.abs(view.r) > .004 || (typeof headingUp !== 'undefined' && headingUp);
-  if (want !== compassShown) { compassShown = want; fade(compassBtn, want); }
+  const d = rotDeg(), live = typeof headingUp !== 'undefined' && headingUp;
+  if (d !== compassDeg) { compassDeg = d; dial.setAttribute('transform', `rotate(${d})`); }
+  if (live !== compassLive) { compassLive = live; compassBtn.classList.toggle('live', live); }
+  const want = Math.abs(view.r) > .004 || live;
+  if (want !== compassShown) {
+    compassShown = want; fade(compassBtn, want);
+    if (want) compassBtn.setAttribute('aria-label', 'Turn the map north up');
+  }
 }
 function northUp() {
   const R = visibleRect(), cx = (R.l + R.r) / 2, cy = (R.t + R.b) / 2;
@@ -832,6 +837,7 @@ function setLocState(state) {
   locBtn.querySelector('use').setAttribute('href', state === 'heading' ? '#i-compass' : '#i-locate');
   following = state === 'follow' || state === 'heading';
   headingUp = state === 'heading';
+  updateCompass();
   if (following) kickCam();
 }
 const compassFresh = () => heading != null && Date.now() - headingAt < 5000;

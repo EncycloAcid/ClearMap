@@ -516,13 +516,21 @@ button.tag { border: 0; color: inherit; font: inherit; font-size: 14px; font-wei
 .cap button:active { transform: scale(.86); }
 .cap button + button { border-top: .5px solid var(--hairline); }
 .cap .shape-btn svg { width: 28px; height: 28px; }
-/* compass: shows which way north is once the map is turned; tap to put north back up */
-.compass { width: 44px; height: 44px; border-radius: 50%; border: 0; padding: 0; display: grid; place-items: center; align-self: center; transition: transform .35s var(--spring); }
+/* compass: a small dial that turns with the map (red tip and N to north); tap to put north back up.
+   It floats beside the location button, so the controls don't shift when it appears and toasts don't cover it. */
+.compass { position: absolute; top: 98px; right: calc(100% + 10px); width: 44px; height: 44px; border-radius: 50%; padding: 0;
+  display: grid; place-items: center; color: var(--label); transition: transform .35s var(--spring); }
+.compass:not([hidden]):not(.leaving) { animation: compass-in .5s var(--spring) both; }
+@keyframes compass-in { from { opacity: 0; transform: scale(.5) rotate(-40deg); } }
 .compass:active { transform: scale(.86); }
-.compass svg { width: 30px; height: 30px; overflow: visible; }
-.compass .needle { transform-origin: 12px 12px; }
-.compass .n { fill: #e5484d; }
-.compass .s { fill: var(--label-2); }
+.compass svg { width: 40px; height: 40px; overflow: visible; }
+.compass .ticks { stroke: var(--label-3); stroke-width: 1.3; stroke-linecap: round; }
+.compass .tip { fill: #e5484d; }
+.compass .n { fill: #e5484d; font: 800 13.5px/1 var(--font-display); text-anchor: middle; dominant-baseline: middle; }
+.compass .s { fill: var(--label-3); }
+/* turning with you (compass mode): a blue ring says the map follows the way you face */
+.compass.live { box-shadow: var(--shadow), inset 0 0 0 2px var(--route); }
+.compass.live .tip, .compass.live .n { fill: var(--route); }
 
 /* ---------- Sheet ---------- */
 .sheet {
@@ -857,7 +865,7 @@ h1.long { font-size: 24px; }
 <div class="scalebar" id="scalebar" aria-hidden="true"><span class="txt"></span><span class="bar"></span></div>
 
 <div class="controls">
-  <button id="compass" class="compass glass" aria-label="Turn the map north up" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><g class="needle"><path class="n" d="M12 3.2l3.3 8.8H8.7z"/><path class="s" d="M12 20.8L8.7 12h6.6z"/></g></svg></button>
+  <button id="compass" class="compass glass" aria-label="Turn the map north up" hidden><svg viewBox="-22 -22 44 44" aria-hidden="true"><g class="dial"><g class="ticks"><path d="M8.50 -14.72L7.30 -12.64"/><path d="M14.72 -8.50L12.64 -7.30"/><path d="M17.00 -0.00L13.80 -0.00"/><path d="M14.72 8.50L12.64 7.30"/><path d="M8.50 14.72L7.30 12.64"/><path d="M0.00 17.00L0.00 13.80"/><path d="M-8.50 14.72L-7.30 12.64"/><path d="M-14.72 8.50L-12.64 7.30"/><path d="M-17.00 0.00L-13.80 0.00"/><path d="M-14.72 -8.50L-12.64 -7.30"/><path d="M-8.50 -14.72L-7.30 -12.64"/></g><path class="tip" d="M0 -20.6L3.4 -15.2H-3.4Z"/><text class="n" y="-2.6">N</text><path class="s" d="M0 20.6L3.4 15.2H-3.4Z"/></g></svg></button>
   <div class="cap glass floor" id="floorCap" role="group" aria-label="Floor">
     <button data-floor="up" aria-pressed="true">U</button>
     <button data-floor="lo" aria-pressed="false">L</button>
