@@ -20,6 +20,7 @@
   --primary: #2f50d0; --on-primary: #ffffff; --primary-c: #dee3ff; --on-primary-c: #0c1a66;
   --tertiary-c: #ffe07d; --on-tertiary-c: #3b2c00;
   --route: #1f6bff; --route-case: #ffffff;
+  --closed-fill: #c9ced6; --closed-ink: #f4f5f7;
   --p-terminal: #2b3340; --p-bags: #2a72c9; --p-transit: #d42a32; --p-ground: #4a5568;
   /* Concourse identity: A circle, B clover, C cookie */
   --conA: #64798a; --conB: #2563d8; --conC: #7a4cd6;
@@ -51,8 +52,8 @@
     --primary: #b9c4ff; --on-primary: #0f1f6e; --primary-c: #2c3f9c; --on-primary-c: #e0e5ff;
     --tertiary-c: #5a4600; --on-tertiary-c: #ffe07d;
     --route: #4d8dff; --route-case: #0c0f13;
-  --p-terminal: #d9dee6; --p-bags: #4a8fe0; --p-transit: #e5484f; --p-ground: #7a8699;
-    --p-terminal: #d9dee6; --p-bags: #4a8fe0; --p-transit: #e5484f; --p-ground: #7a8699;
+  --closed-fill: #4a505a; --closed-ink: #9aa1ac; --p-terminal: #d9dee6; --p-bags: #4a8fe0; --p-transit: #e5484f; --p-ground: #7a8699;
+    --closed-fill: #4a505a; --closed-ink: #9aa1ac; --p-terminal: #d9dee6; --p-bags: #4a8fe0; --p-transit: #e5484f; --p-ground: #7a8699;
     --conA: #93a6b4; --conB: #5f97f2; --conC: #a989ee;
     --c-food: #ff9a45; --c-coffee: #c98d63; --c-bar: #f06aa9; --c-shop: #ff6366; --c-play: #4fd07a; --c-service: #33c2b6; --c-rest: #7f99ff;
     --ok: #4fd07a; --warn: #f0b04a; --no: #ff6b63;
@@ -68,7 +69,7 @@
   --primary: #b9c4ff; --on-primary: #0f1f6e; --primary-c: #2c3f9c; --on-primary-c: #e0e5ff;
   --tertiary-c: #5a4600; --on-tertiary-c: #ffe07d;
   --route: #4d8dff; --route-case: #0c0f13;
-  --p-terminal: #d9dee6; --p-bags: #4a8fe0; --p-transit: #e5484f; --p-ground: #7a8699;
+  --closed-fill: #4a505a; --closed-ink: #9aa1ac; --p-terminal: #d9dee6; --p-bags: #4a8fe0; --p-transit: #e5484f; --p-ground: #7a8699;
   --conA: #93a6b4; --conB: #5f97f2; --conC: #a989ee;
   --c-food: #ff9a45; --c-coffee: #c98d63; --c-bar: #f06aa9; --c-shop: #ff6366; --c-play: #4fd07a; --c-service: #33c2b6; --c-rest: #7f99ff;
   --ok: #4fd07a; --warn: #f0b04a; --no: #ff6b63;
@@ -136,7 +137,12 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 .route-endpt .core { fill: var(--route-case); stroke: none; }
 .eta rect, .eta path { fill: var(--route); }
 .eta text { font: 800 9px var(--font-display); font-variation-settings: "wdth" 108; fill: #fff; text-anchor: middle; dominant-baseline: central; }
-.pin-shadow { fill: rgba(0, 0, 0, .25); }
+.pin-shadow { fill: rgba(0, 0, 0, .28); }
+.pin-label { font: 750 5.4px var(--font-display); font-variation-settings: "wdth" 105; fill: var(--label); text-anchor: middle; paint-order: stroke; stroke: var(--map); stroke-width: 2.6px; stroke-linejoin: round; text-rendering: geometricPrecision; }
+.pin.drop .pin-label { animation: pin-shadow .5s .15s ease-out both; }
+/* the pin replaces the selected place's own marker */
+#map g.mk.amen.sel, #map g.mk.place.sel { opacity: 0 !important; }
+.mk .drop { fill: rgba(20, 30, 50, .22); }
 .pin-body { stroke: var(--bldg); stroke-width: 1.6; fill: var(--label); }
 .pin[data-cat="food"] .pin-body { fill: var(--c-food); } .pin[data-cat="coffee"] .pin-body { fill: var(--c-coffee); }
 .pin[data-cat="bar"] .pin-body { fill: var(--c-bar); } .pin[data-cat="shop"] .pin-body { fill: var(--c-shop); }
@@ -195,7 +201,9 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 .mk .sz { transform-box: fill-box; transform-origin: center; transition: transform .3s var(--spring); }
 #map[data-z="1"] .amen .sz { transform: scale(.62); }
 #map .amen[data-off] { display: none; }
-#map .amen.closed .sz { opacity: .45; filter: grayscale(1); }
+#map .amen.closed .sym { fill: var(--closed-fill) !important; }
+#map .amen.closed .glyph { stroke: var(--closed-ink); }
+#map .amen.closed .drop { opacity: .4; }
 #map[data-z="1"] .glyph { display: none; }
 #map[data-z="1"] .place .glyph { display: block; }
 .glyph { fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
@@ -1391,14 +1399,15 @@ for (const it of Object.values(ITEMS)) {
   } else if (it.kind === 'amen') {
     g = el('g', { class: 'mk amen', 'data-id': it.id, 'data-cat': it.cat }, layerAmen);
     const sz = el('g', { class: 'sz' }, el('g', { class: 'pop' }, g));
-    if (it.cat === 'rest') el('rect', { class: 'sym', x: -5, y: -5, width: 10, height: 10, rx: 3 }, sz);
-    else el('circle', { class: 'sym', r: 5.2 }, sz);
+    if (it.cat === 'rest') { el('rect', { class: 'drop', x: -5.4, y: -4.6, width: 10.8, height: 10.8, rx: 3.4 }, sz); el('rect', { class: 'sym', x: -5, y: -5, width: 10, height: 10, rx: 3 }, sz); }
+    else { el('circle', { class: 'drop', r: 5.9, cy: .7 }, sz); el('circle', { class: 'sym', r: 5.2 }, sz); }
     el('use', { class: 'glyph', href: '#i-' + (it.icon || it.cat), x: -3.6, y: -3.6, width: 7.2, height: 7.2 }, sz);
     el('text', { x: 8, y: 2 }, g).textContent = it.name;
   } else {
     // places are drawn as signs: a rounded square in their kind's colour
     g = el('g', { class: 'mk place', 'data-id': it.id, 'data-pk': it.pk || 'terminal' }, layerPlaces);
     const sz = el('g', { class: 'sz' }, el('g', { class: 'pop' }, g));
+    el('rect', { class: 'drop', x: -6.1, y: -5.3, width: 12.2, height: 12.2, rx: 3.8 }, sz);
     el('rect', { class: 'sym', x: -5.6, y: -5.6, width: 11.2, height: 11.2, rx: 3.4 }, sz);
     el('use', { class: 'glyph', href: '#i-' + (it.icon || 'place'), x: -3.7, y: -3.7, width: 7.4, height: 7.4 }, sz);
     // the map already shows which floor, so "(lower level)" and the like are dropped from the name
@@ -1435,12 +1444,15 @@ el('ellipse', { class: 'pin-shadow', rx: 4.5, ry: 1.6 }, pinG);
 const pinInner = el('g', { class: 'pin-inner' }, pinG);
 el('path', { class: 'pin-body', d: 'M0 -2C-2.6 -5.6 -10 -9.6 -10 -18.5A10 10 0 1 1 10 -18.5C10 -9.6 2.6 -5.6 0 -2Z' }, pinInner);
 const pinUse = el('use', { class: 'pin-ico', href: '#i-place', x: -6.5, y: -25, width: 13, height: 13 }, pinInner);
+// the selected place's name, under the pin's tip
+const pinLabel = el('text', { class: 'pin-label', y: 7.5 }, pinG);
 let pinItem = null;
 function setPin(it) {
   pinItem = it && it.kind !== 'gate' ? it : null;
   if (!pinItem) { pinG.setAttribute('opacity', 0); return; }
   pinG.dataset.cat = pinItem.cat || 'place'; pinG.dataset.pk = pinItem.pk || '';
   pinUse.setAttribute('href', '#i-' + (pinItem.icon || pinItem.cat || 'place'));
+  pinLabel.textContent = pinItem.name.replace(/\s*\([^)]*\)$/, '');
   pinG.setAttribute('opacity', 1);
   placeDecor();
   if (!reduced) { pinG.classList.remove('drop'); void pinG.getBBox(); pinG.classList.add('drop'); }
@@ -1603,6 +1615,8 @@ function cullLabels() {
   if (pinItem) {
     const p = scr(pinItem), pu = u * 1.15;
     taken.push({ l: p.x - 11 * pu, r: p.x + 11 * pu, t: p.y - 30 * pu, b: p.y - 3 * pu });
+    const lw = pinLabel.textContent.length * 1.7 * pu;
+    taken.push({ l: p.x - lw, r: p.x + lw, t: p.y + 2 * pu, b: p.y + 9 * pu });
   }
   if (routePts.length > 1 && eta.getAttribute('opacity') === '1') {
     const m = scr(pointAt(routeTotal * 0.5)), w = +etaRect.getAttribute('width') / 2;

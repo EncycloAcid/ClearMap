@@ -176,14 +176,15 @@ for (const it of Object.values(ITEMS)) {
   } else if (it.kind === 'amen') {
     g = el('g', { class: 'mk amen', 'data-id': it.id, 'data-cat': it.cat }, layerAmen);
     const sz = el('g', { class: 'sz' }, el('g', { class: 'pop' }, g));
-    if (it.cat === 'rest') el('rect', { class: 'sym', x: -5, y: -5, width: 10, height: 10, rx: 3 }, sz);
-    else el('circle', { class: 'sym', r: 5.2 }, sz);
+    if (it.cat === 'rest') { el('rect', { class: 'drop', x: -5.4, y: -4.6, width: 10.8, height: 10.8, rx: 3.4 }, sz); el('rect', { class: 'sym', x: -5, y: -5, width: 10, height: 10, rx: 3 }, sz); }
+    else { el('circle', { class: 'drop', r: 5.9, cy: .7 }, sz); el('circle', { class: 'sym', r: 5.2 }, sz); }
     el('use', { class: 'glyph', href: '#i-' + (it.icon || it.cat), x: -3.6, y: -3.6, width: 7.2, height: 7.2 }, sz);
     el('text', { x: 8, y: 2 }, g).textContent = it.name;
   } else {
     // places are drawn as signs: a rounded square in their kind's colour
     g = el('g', { class: 'mk place', 'data-id': it.id, 'data-pk': it.pk || 'terminal' }, layerPlaces);
     const sz = el('g', { class: 'sz' }, el('g', { class: 'pop' }, g));
+    el('rect', { class: 'drop', x: -6.1, y: -5.3, width: 12.2, height: 12.2, rx: 3.8 }, sz);
     el('rect', { class: 'sym', x: -5.6, y: -5.6, width: 11.2, height: 11.2, rx: 3.4 }, sz);
     el('use', { class: 'glyph', href: '#i-' + (it.icon || 'place'), x: -3.7, y: -3.7, width: 7.4, height: 7.4 }, sz);
     // the map already shows which floor, so "(lower level)" and the like are dropped from the name
@@ -220,12 +221,15 @@ el('ellipse', { class: 'pin-shadow', rx: 4.5, ry: 1.6 }, pinG);
 const pinInner = el('g', { class: 'pin-inner' }, pinG);
 el('path', { class: 'pin-body', d: 'M0 -2C-2.6 -5.6 -10 -9.6 -10 -18.5A10 10 0 1 1 10 -18.5C10 -9.6 2.6 -5.6 0 -2Z' }, pinInner);
 const pinUse = el('use', { class: 'pin-ico', href: '#i-place', x: -6.5, y: -25, width: 13, height: 13 }, pinInner);
+// the selected place's name, under the pin's tip
+const pinLabel = el('text', { class: 'pin-label', y: 7.5 }, pinG);
 let pinItem = null;
 function setPin(it) {
   pinItem = it && it.kind !== 'gate' ? it : null;
   if (!pinItem) { pinG.setAttribute('opacity', 0); return; }
   pinG.dataset.cat = pinItem.cat || 'place'; pinG.dataset.pk = pinItem.pk || '';
   pinUse.setAttribute('href', '#i-' + (pinItem.icon || pinItem.cat || 'place'));
+  pinLabel.textContent = pinItem.name.replace(/\s*\([^)]*\)$/, '');
   pinG.setAttribute('opacity', 1);
   placeDecor();
   if (!reduced) { pinG.classList.remove('drop'); void pinG.getBBox(); pinG.classList.add('drop'); }
@@ -388,6 +392,8 @@ function cullLabels() {
   if (pinItem) {
     const p = scr(pinItem), pu = u * 1.15;
     taken.push({ l: p.x - 11 * pu, r: p.x + 11 * pu, t: p.y - 30 * pu, b: p.y - 3 * pu });
+    const lw = pinLabel.textContent.length * 1.7 * pu;
+    taken.push({ l: p.x - lw, r: p.x + lw, t: p.y + 2 * pu, b: p.y + 9 * pu });
   }
   if (routePts.length > 1 && eta.getAttribute('opacity') === '1') {
     const m = scr(pointAt(routeTotal * 0.5)), w = +etaRect.getAttribute('width') / 2;

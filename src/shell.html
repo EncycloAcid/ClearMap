@@ -20,6 +20,7 @@
   --primary: #2f50d0; --on-primary: #ffffff; --primary-c: #dee3ff; --on-primary-c: #0c1a66;
   --tertiary-c: #ffe07d; --on-tertiary-c: #3b2c00;
   --route: #1f6bff; --route-case: #ffffff;
+  --closed-fill: #c9ced6; --closed-ink: #f4f5f7;
   --p-terminal: #2b3340; --p-bags: #2a72c9; --p-transit: #d42a32; --p-ground: #4a5568;
   /* Concourse identity: A circle, B clover, C cookie */
   --conA: #64798a; --conB: #2563d8; --conC: #7a4cd6;
@@ -51,8 +52,8 @@
     --primary: #b9c4ff; --on-primary: #0f1f6e; --primary-c: #2c3f9c; --on-primary-c: #e0e5ff;
     --tertiary-c: #5a4600; --on-tertiary-c: #ffe07d;
     --route: #4d8dff; --route-case: #0c0f13;
-  --p-terminal: #d9dee6; --p-bags: #4a8fe0; --p-transit: #e5484f; --p-ground: #7a8699;
-    --p-terminal: #d9dee6; --p-bags: #4a8fe0; --p-transit: #e5484f; --p-ground: #7a8699;
+  --closed-fill: #4a505a; --closed-ink: #9aa1ac; --p-terminal: #d9dee6; --p-bags: #4a8fe0; --p-transit: #e5484f; --p-ground: #7a8699;
+    --closed-fill: #4a505a; --closed-ink: #9aa1ac; --p-terminal: #d9dee6; --p-bags: #4a8fe0; --p-transit: #e5484f; --p-ground: #7a8699;
     --conA: #93a6b4; --conB: #5f97f2; --conC: #a989ee;
     --c-food: #ff9a45; --c-coffee: #c98d63; --c-bar: #f06aa9; --c-shop: #ff6366; --c-play: #4fd07a; --c-service: #33c2b6; --c-rest: #7f99ff;
     --ok: #4fd07a; --warn: #f0b04a; --no: #ff6b63;
@@ -68,7 +69,7 @@
   --primary: #b9c4ff; --on-primary: #0f1f6e; --primary-c: #2c3f9c; --on-primary-c: #e0e5ff;
   --tertiary-c: #5a4600; --on-tertiary-c: #ffe07d;
   --route: #4d8dff; --route-case: #0c0f13;
-  --p-terminal: #d9dee6; --p-bags: #4a8fe0; --p-transit: #e5484f; --p-ground: #7a8699;
+  --closed-fill: #4a505a; --closed-ink: #9aa1ac; --p-terminal: #d9dee6; --p-bags: #4a8fe0; --p-transit: #e5484f; --p-ground: #7a8699;
   --conA: #93a6b4; --conB: #5f97f2; --conC: #a989ee;
   --c-food: #ff9a45; --c-coffee: #c98d63; --c-bar: #f06aa9; --c-shop: #ff6366; --c-play: #4fd07a; --c-service: #33c2b6; --c-rest: #7f99ff;
   --ok: #4fd07a; --warn: #f0b04a; --no: #ff6b63;
@@ -136,7 +137,12 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 .route-endpt .core { fill: var(--route-case); stroke: none; }
 .eta rect, .eta path { fill: var(--route); }
 .eta text { font: 800 9px var(--font-display); font-variation-settings: "wdth" 108; fill: #fff; text-anchor: middle; dominant-baseline: central; }
-.pin-shadow { fill: rgba(0, 0, 0, .25); }
+.pin-shadow { fill: rgba(0, 0, 0, .28); }
+.pin-label { font: 750 5.4px var(--font-display); font-variation-settings: "wdth" 105; fill: var(--label); text-anchor: middle; paint-order: stroke; stroke: var(--map); stroke-width: 2.6px; stroke-linejoin: round; text-rendering: geometricPrecision; }
+.pin.drop .pin-label { animation: pin-shadow .5s .15s ease-out both; }
+/* the pin replaces the selected place's own marker */
+#map g.mk.amen.sel, #map g.mk.place.sel { opacity: 0 !important; }
+.mk .drop { fill: rgba(20, 30, 50, .22); }
 .pin-body { stroke: var(--bldg); stroke-width: 1.6; fill: var(--label); }
 .pin[data-cat="food"] .pin-body { fill: var(--c-food); } .pin[data-cat="coffee"] .pin-body { fill: var(--c-coffee); }
 .pin[data-cat="bar"] .pin-body { fill: var(--c-bar); } .pin[data-cat="shop"] .pin-body { fill: var(--c-shop); }
@@ -195,7 +201,9 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 .mk .sz { transform-box: fill-box; transform-origin: center; transition: transform .3s var(--spring); }
 #map[data-z="1"] .amen .sz { transform: scale(.62); }
 #map .amen[data-off] { display: none; }
-#map .amen.closed .sz { opacity: .45; filter: grayscale(1); }
+#map .amen.closed .sym { fill: var(--closed-fill) !important; }
+#map .amen.closed .glyph { stroke: var(--closed-ink); }
+#map .amen.closed .drop { opacity: .4; }
 #map[data-z="1"] .glyph { display: none; }
 #map[data-z="1"] .place .glyph { display: block; }
 .glyph { fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }

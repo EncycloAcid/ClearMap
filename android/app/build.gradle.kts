@@ -11,8 +11,8 @@ android {
         applicationId = "io.github.encycloacid.clearmap"
         minSdk = 26
         targetSdk = 35
-        versionCode = 27
-        versionName = "5.2"
+        versionCode = 28
+        versionName = "5.3"
     }
 
     buildTypes {
