@@ -291,7 +291,7 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 .grabber { width: 38px; height: 5px; border-radius: 3px; background: var(--label-3); margin: 0 auto 10px; }
 .titlebar { display: flex; align-items: flex-start; gap: 12px; min-height: 44px; }
 .titlebar > div { flex: 1; min-width: 0; }
-.eyebrow { font-size: 13px; font-weight: 600; color: var(--label-2); letter-spacing: 0; }
+.eyebrow { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; font-weight: 600; color: var(--label-2); letter-spacing: 0; }
 h1 {
   margin: 0; font: 800 30px/1.05 var(--font-display); font-variation-settings: "wdth" 112, "opsz" 40;
   letter-spacing: -.02em; text-wrap: balance;
@@ -420,6 +420,17 @@ input.xs::-moz-range-thumb { width: 4px; height: 44px; border: 0; border-radius:
   transition: border-radius .45s var(--spring), transform .4s var(--spring);
 }
 .tonal-btn:active { border-radius: 12px; transform: scale(.97); }
+.titlebar > .mode { flex: none; }
+.mode { display: flex; gap: 2px; padding: 2px; border-radius: 12px; background: var(--fill); flex: none; align-self: center; }
+.mode button { height: 30px; padding: 0 10px; border: 0; border-radius: 10px; background: none; font-size: 13px; font-weight: 700; color: var(--label-2);
+  transition: background-color .25s, color .25s, border-radius .4s var(--spring); }
+.mode button[aria-pressed="true"] { background: var(--on-primary-c); color: var(--primary-c); border-radius: 8px; }
+/* iOS-style switch */
+input.switch { -webkit-appearance: none; appearance: none; width: 51px; height: 31px; border-radius: 16px; background: var(--fill-2); position: relative; flex: none; margin: 0; cursor: pointer; transition: background-color .25s; }
+input.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.2); transition: transform .4s var(--spring); }
+input.switch:checked { background: var(--ok); }
+input.switch:checked::after { transform: translateX(20px); }
+.car-in { width: 64px; height: 34px; border: 0; border-radius: 10px; background: var(--fill); text-align: center; font-weight: 700; font-size: 17px; outline: none; }
 .tonal-btn[aria-pressed="true"] { background: var(--on-primary-c); color: var(--primary-c); }
 .filter .chip { background: var(--card); box-shadow: none; }
 .filter .chip[aria-pressed="true"] { background: var(--on-primary-c); color: var(--primary-c); border-color: transparent; padding-left: 14px; }
@@ -538,6 +549,9 @@ input.xs::-moz-range-thumb { width: 4px; height: 44px; border: 0; border-radius:
     <div class="grabber" aria-hidden="true"></div>
     <div class="titlebar">
       <div><div class="eyebrow" id="eyebrow">Cleveland Hopkins · CLE</div><h1 id="title">Directions</h1></div>
+      <div class="mode" id="modeSw" role="group" aria-label="Trip direction">
+        <button data-mode="dep" aria-pressed="true">Depart</button><button data-mode="arr" aria-pressed="false">Arrive</button>
+      </div>
       <button class="iconbtn" id="closePlace" aria-label="Close" hidden><svg class="ico"><use href="#i-x"/></svg></button>
     </div>
     <div class="seg" role="tablist" id="seg">
@@ -552,6 +566,12 @@ input.xs::-moz-range-thumb { width: 4px; height: 44px; border: 0; border-radius:
     <div class="pane" id="pane-dir" role="tabpanel" aria-labelledby="tab-dir">
       <div class="hero" id="hero"></div>
       <div class="chips quick" id="quick" role="group" aria-label="Go to the nearest"></div>
+      <div class="group" id="arrForm" hidden>
+        <label class="row"><span class="tile gate"><svg class="ico"><use href="#i-gate"/></svg></span><span class="rl">Arrived at</span><select id="arrGate" aria-label="Arrival gate"></select></label>
+        <label class="row"><span class="tile place"><svg class="ico"><use href="#i-place"/></svg></span><span class="rl">Going to</span><select id="arrDest" aria-label="Going to"></select></label>
+        <label class="row"><span class="tile rest" style="background:var(--c-shop)"><svg class="ico"><use href="#i-shop"/></svg></span><span class="rl grow">Checked bags</span><input type="checkbox" class="switch" id="arrBags" checked></label>
+        <label class="row" id="carRow"><span class="tile" style="background:var(--label-2)"><svg class="ico"><use href="#i-fit"/></svg></span><span class="rl grow">Carousel <span class="s" style="display:inline">(if you know it)</span></span><input type="number" inputmode="numeric" min="1" max="20" id="arrCarousel" class="car-in" placeholder="—" aria-label="Carousel number"></label>
+      </div>
       <div class="group fromto">
         <label class="row"><span class="pt a"></span><span class="rl">From</span><select id="from" aria-label="From"></select></label>
         <label class="row"><span class="pt b"></span><span class="rl">To</span><select id="to" aria-label="To"></select></label>
@@ -619,11 +639,14 @@ const V = {
   taxi: [128, -12, 'Taxi stand'],
   rent: [182, -12, 'Rental car shuttle'],
   hotel:[184, 24, 'Hotel & parking shuttles'],
+  ride: [178, -44, 'Rideshare pickup'],
+  curb: [124, -44, 'Arrivals curb (Lower Drive)'],
 };
 const EDGES = [
   ['chk','hub','S'], ['hub','fc','M'], ['fc','c0','M'], ['c0','c1','C'], ['c1','c2','C'], ['c2','c3','C'], ['c3','c4','C'], ['c4','crot','R'],
   ['hub','b0','M'], ['b0','b1','B'], ['b1','b2','B'], ['hub','a0','M'], ['a0','a1','A'], ['a1','a2','A'],
-  ['tix','chk','L'], ['tix','bag','L'], ['bag','rta','L'], ['bag','gtc','L'], ['bag','taxi','L'], ['gtc','rent','L'], ['gtc','hotel','L'],
+  ['tix','chk','L'], ['tix','bag','L'], ['bag','rta','L'], ['bag','gtc','L'], ['bag','taxi','L'], ['gtc','rent','L'], ['gtc','hotel','L'], ['gtc','ride','L'], ['bag','curb','L'],
+  ['chk','bag','L'],   // escalators beside the checkpoint between the upper and lower levels
 ];
 const SPINES = { A: ['a0','a1','a2'], B: ['b0','b1','b2'], C: ['c0','c1','c2','c3','c4'] };
 const ROT = { x: -185, y: 268, r: 43 };
@@ -745,7 +768,7 @@ for (const [g, [x, y]] of Object.entries(GATE_POS)) {
   }
   ITEMS[it.id] = it;
 }
-for (const id of ['chk','tix','bag','rta','gtc','taxi','rent','hotel']) {
+for (const id of ['chk','tix','bag','rta','gtc','taxi','rent','hotel','ride','curb']) {
   ITEMS['v:' + id] = { id: 'v:' + id, kind: 'place', name: V[id][2], node: id, zone: 'L', ...P(id) };
 }
 const perGate = {};
@@ -1462,7 +1485,7 @@ function visibleFor(d) {
   let extra = first ? Math.min(first.offsetHeight, 132) + 20 : 90;
   // keep the "nearest" buttons in the collapsed sheet too
   const next = first && first.nextElementSibling;
-  if (next && next.classList.contains('quick')) extra += next.offsetHeight + 16;
+  if (next && next.classList.contains('quick') && !next.hidden) extra += next.offsetHeight + 16;
   return Math.min(H, sheetHead.offsetHeight + extra + cssPx('--sab'));
 }
 sheet.addEventListener('transitionend', () => { chromeCache = null; cullLabels(); });
@@ -1537,14 +1560,14 @@ const TAB_TITLES = { dir: 'Directions', kill: 'Pass the time', air: 'Airlines' }
 let tab = 'dir';
 function setTab(name, quiet) {
   tab = name; placeMode = false;
-  $('#seg').hidden = false; $('#closePlace').hidden = true; $('#pane-place').hidden = true;
+  $('#seg').hidden = false; $('#closePlace').hidden = true; $('#pane-place').hidden = true; $('#modeSw').hidden = name !== 'dir';
   ['dir', 'kill', 'air'].forEach((t, i) => {
     $('#tab-' + t).setAttribute('aria-selected', String(t === name));
     $('#pane-' + t).hidden = t !== name;
     if (t === name) $('#seg').style.setProperty('--i', i);
   });
   replay($('#pane-' + name)); replay($('#title'));
-  $('#title').textContent = TAB_TITLES[name];
+  $('#title').textContent = name === 'dir' && mode === 'arr' ? 'Arrivals' : TAB_TITLES[name];
   $('#eyebrow').textContent = 'Cleveland Hopkins · CLE';
   if (selected) { selected.el.classList.remove('sel'); selected = null; }
   setPin(null);
@@ -1573,7 +1596,7 @@ function showPlace(it, fromMap) {
   if (selected) selected.el.classList.remove('sel');
   selected = it; it.el.classList.add('sel'); setPin(it); cullLabels();
   placeMode = true;
-  $('#seg').hidden = true; $('#closePlace').hidden = false;
+  $('#seg').hidden = true; $('#closePlace').hidden = false; $('#modeSw').hidden = true;
   ['dir', 'kill', 'air'].forEach(t => $('#pane-' + t).hidden = true);
   const pane = $('#pane-place'); pane.hidden = false; replay(pane); replay($('#title'));
   $('#title').textContent = it.name;
@@ -1648,7 +1671,7 @@ function describe(path, a, b) {
     const n = path[i];
     if (V[n] && V[n][2] && n !== lastLabel) {
       let note = '';
-      if (n === 'chk' && crossesSecurity) note = path.indexOf('hub') > i ? 'Screen through TSA, then continue straight ahead' : 'Leave through the exit lane';
+      if (n === 'chk' && crossesSecurity) note = path.indexOf('hub') > i ? (path[i - 1] === 'bag' || lastLabel === 'bag' || lastLabel === 'rta' ? 'Take the escalators up, screen through TSA, then continue straight ahead' : 'Screen through TSA, then continue straight ahead') : 'Leave through the exit lane';
       if (n === 'tix' && path[i + 1] === 'bag') note = 'Take the escalator down a level';
       if (n === 'bag' && path[i - 1] === 'tix') note = 'Lower level';
       if (n === 'c4') note = 'Gates C17–C29 ring the rotunda';
@@ -1674,6 +1697,7 @@ function highlight(ids) {
   cullLabels();
 }
 function updateRoute(fit) {
+  if (mode === 'arr') return updateArrival(fit);
   for (const sel of [$('#from'), $('#to')]) if (sel.value === 'v:me' && !ITEMS['v:me']) {
     // no fix yet: ask for location and route once it arrives
     if (watchId == null) startLocating();
@@ -1721,6 +1745,74 @@ function updateRoute(fit) {
   if (fit) fitItems(path.map(n => NODE[n]), 24, 3.5);
 }
 $('#from').onchange = $('#to').onchange = () => updateRoute(true);
+
+// ---------- Arrivals: gate → exit → baggage claim → your ride ----------
+let mode = 'dep';
+const ARR_DEST = [
+  ['v:rta', 'RTA Red Line to downtown', 'Red Line trains run to downtown (Tower City) in about 25 minutes. Buy a fare at the machines before you board.'],
+  ['v:ride', 'Rideshare (Uber, Lyft)', 'Follow the Ground Transportation signs. Your app shows the exact pickup spot, so request once you have your bags.'],
+  ['v:taxi', 'Taxi', 'Taxis wait at the stand on Lower Drive.'],
+  ['v:curb', 'Someone picking me up', 'Arrivals pickup is on Lower Drive. Drivers can wait in the free cell phone lot until you’re outside.'],
+  ['v:rent', 'Rental car shuttle', 'Shuttles run to the off-airport Rental Car Center.'],
+  ['v:hotel', 'Hotel or parking shuttle', 'Hotel and off-airport parking shuttles stop by the Ground Transportation Center.'],
+  ['v:bag', 'Meeting someone at baggage claim', 'Baggage claim is on the lower level, past the escalators.'],
+];
+const BAG_WAIT = 20;   // typical minutes from landing until bags are out
+buildOptions($('#arrGate'), false, true);
+$('#arrGate').value = 'g:B6';
+$('#arrDest').innerHTML = ARR_DEST.map(([v, label]) => `<option value="${v}">${esc(label)}</option>`).join('');
+function updateArrival(fit) {
+  const gate = ITEMS[$('#arrGate').value], dest = ITEMS[$('#arrDest').value], bag = ITEMS['v:bag'];
+  const bags = $('#arrBags').checked, car = parseInt($('#arrCarousel').value, 10);
+  $('#carRow').hidden = !bags;
+  const p1 = route(gate, bag), p2 = route(bag, dest);
+  const path = p1.path.concat(p2.path.slice(1)), units = p1.units + p2.units;
+  setRoute(path);
+  const { steps, passed } = describe(path, gate, dest);
+  for (const s of steps) {
+    if (s.node === 'tix') { s.t = 'Escalators down to the lower level'; s.n = ''; }
+    if (s.node === 'chk') { s.t = 'Exit lane by the security checkpoint'; s.n = 'Then take the escalators down to baggage claim. Once you’re through, you can’t go back to the gates.'; }
+    if (s.node === 'bag' && !s.end) {
+      s.n = !bags ? 'No bags? Walk straight through.'
+        : car > 0 ? `Carousel ${car}. Bags usually arrive 15–25 min after landing.`
+        : 'Your carousel is on the arrival screens by the escalators. Bags usually arrive 15–25 min after landing.';
+    }
+  }
+  const info = ARR_DEST.find(x => x[0] === dest.id);
+  if (steps.length && info) steps[steps.length - 1].n = info[2];
+  if (dest.id === 'v:bag') { const last = steps[steps.length - 1]; last.n = bags ? (car > 0 ? `Carousel ${car}. ` : '') + info[2] : info[2]; }
+  const walk = minutes(units), total = walk + (bags ? BAG_WAIT : 0);
+  $('#hero').className = 'hero';
+  $('#hero').innerHTML = `<span class="num">${total}<small>min</small></span>
+    <span class="m1">${meters(units)} m walk${bags ? ` + ~${BAG_WAIT} min for bags` : ''}</span>
+    <span class="m2">${esc(gate.name)} to ${esc(info ? info[1] : dest.name)}</span>`;
+  $('#steps').innerHTML = steps.map(s => `<li class="${s.end ? 'end' : ''}" data-node="${esc(s.node)}" tabindex="0" role="button"><span class="stop"></span><span><span class="t">${esc(s.t)}</span>${s.n ? `<span class="n">${esc(s.n)}</span>` : ''}</span></li>`).join('')
+    + (passed.length ? `<li class="passing">On the way: ${passed.map(esc).join(', ')}</li>` : '');
+  $('#steps').querySelectorAll('[data-node]').forEach(li => {
+    const go = () => { const p = NODE[li.dataset.node]; if (!p) return; buzz(5); userMoved = true; if (!wide() && detent === 'full') setDetent('half'); fitBox(p.x - 45, p.y - 45, p.x + 45, p.y + 45, 10, 3.6); };
+    li.onclick = go; li.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } };
+  });
+  const ids = [gate.id, dest.id, bag.id];
+  for (const n of path) { if (ITEMS[n]) ids.push(n); if (n.startsWith('p:') && ITEMS[n.slice(2)]) ids.push(n.slice(2)); }
+  highlight(ids);
+  if (fit) fitItems(path.map(n => NODE[n]), 24, 3.5);
+}
+function setMode(m, quiet) {
+  mode = m;
+  document.querySelectorAll('#modeSw [data-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === m)));
+  const arr = m === 'arr';
+  $('#arrForm').hidden = !arr;
+  document.querySelector('#pane-dir .fromto').hidden = arr;
+  $('#quick').hidden = arr;
+  if (tab === 'dir' && !placeMode) $('#title').textContent = arr ? 'Arrivals' : TAB_TITLES.dir;
+  if (!quiet) { buzz(5); replay($('#pane-dir')); if (!wide()) setDetent('peek'); }
+  updateRoute(!quiet);
+  if (!quiet) saveTrip();
+}
+document.querySelectorAll('#modeSw [data-mode]').forEach(b => b.onclick = () => { if (mode !== b.dataset.mode) setMode(b.dataset.mode); });
+for (const id of ['arrGate', 'arrDest', 'arrBags', 'arrCarousel']) $('#' + id).addEventListener('change', () => { updateArrival(id !== 'arrCarousel' && id !== 'arrBags'); saveTrip(); });
+$('#arrCarousel').addEventListener('input', () => updateArrival(false));
+
 $('#swap').onclick = () => {
   const f = $('#from').value; $('#from').value = $('#to').value; $('#to').value = f;
   $('#swap').classList.toggle('spin'); buzz(); updateRoute(false);
@@ -1747,6 +1839,7 @@ function goNearest(key) {
   }
   if (!best) return;
   buzz();
+  if (mode === 'arr') setMode('dep', true);
   if (tab !== 'dir' || placeMode) setTab('dir', true);
   $('#to').value = best.id;
   if (!wide()) setDetent('peek');
@@ -1970,7 +2063,8 @@ window.cleBack = () => {
 // ---------- Remember the trip between launches ----------
 function saveTrip() {
   const keep = v => v === 'v:me' ? null : v;
-  store.set('trip', { from: keep($('#from').value), to: keep($('#to').value), gate: $('#ktGate').value, boardAt, reminderAt, cat: ktCat, tab });
+  store.set('trip', { from: keep($('#from').value), to: keep($('#to').value), gate: $('#ktGate').value, boardAt, reminderAt, cat: ktCat, tab,
+    mode, arr: { gate: $('#arrGate').value, dest: $('#arrDest').value, bags: $('#arrBags').checked, car: $('#arrCarousel').value } });
 }
 (() => {
   const t = store.get('trip', null);
@@ -1982,6 +2076,13 @@ function saveTrip() {
   if (t.reminderAt > Date.now()) reminderAt = t.reminderAt;
   if (t.cat && ktCats.querySelector(`[data-cat="${t.cat}"]`)) ktCats.querySelector(`[data-cat="${t.cat}"]`).click();
   if (['dir', 'kill', 'air'].includes(t.tab)) tab = t.tab;
+  if (t.arr) {
+    if (ITEMS[t.arr.gate]) $('#arrGate').value = t.arr.gate;
+    if (ARR_DEST.some(x => x[0] === t.arr.dest)) $('#arrDest').value = t.arr.dest;
+    $('#arrBags').checked = t.arr.bags !== false;
+    if (/^\d{1,2}$/.test(t.arr.car || '')) $('#arrCarousel').value = t.arr.car;
+  }
+  if (t.mode === 'arr') mode = 'arr';
 })();
 for (const id of ['from', 'to', 'ktGate', 'ktMin']) $('#' + id).addEventListener('change', saveTrip);
 $('#ktGate').addEventListener('change', updateClock);
@@ -1996,6 +2097,7 @@ addEventListener('resize', () => {
   sizeSvg();
   if (wide() !== lastWide) { lastWide = wide(); fitAll(true); } else render();
 });
+if (mode === 'arr') setMode('arr', true);
 updateRoute(false);
 setTab(tab, true);
 const launchAction = (location.hash || '').slice(1);
