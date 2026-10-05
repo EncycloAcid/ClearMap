@@ -603,7 +603,12 @@ function startPuck() {
   };
   puckRAF = requestAnimationFrame(loop);
 }
+function markFloors(nodes) {
+  const used = new Set(nodes.map(levelOf));
+  document.querySelectorAll('#floorCap [data-floor]').forEach(b => b.classList.toggle('has-route', nodes.length > 1 && used.has(b.dataset.floor) && used.size > 1));
+}
 function setRoute(nodes, mins) {
+  markFloors(nodes);
   for (const m of markers) m.classList.remove('dest');
   const endGate = id => ITEMS[id] && ITEMS[id].kind === 'gate' ? ITEMS[id] : null;
   const g0 = nodes.length > 1 && endGate(nodes[0]), g1 = nodes.length > 1 && endGate(nodes[nodes.length - 1]);
@@ -673,6 +678,15 @@ function drawRoute(f) {
 const FLOOR_NAME = AP.ui.floors;
 function setFloor(f, quiet) {
   if (!f || f === floor) return;
+  // cross-fade: hold a copy of the old floor over the map and fade it out
+  if (!reduced && committed) {
+    const fc = $('#baseFade');
+    if (fc.width !== baseCanvas.width || fc.height !== baseCanvas.height) { fc.width = baseCanvas.width; fc.height = baseCanvas.height; }
+    fc.getContext('2d').drawImage(baseCanvas, 0, 0);
+    fc.classList.remove('out'); void fc.offsetWidth; fc.classList.add('out');
+    svg.classList.remove('floor-in'); void svg.getBBox(); svg.classList.add('floor-in');
+    clearTimeout(setFloor.t); setFloor.t = setTimeout(() => svg.classList.remove('floor-in'), 400);
+  }
   floor = f; svg.dataset.floor = f;
   document.querySelectorAll('#floorCap [data-floor]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.floor === f)));
   $('#floorCap').style.setProperty('--i', f === 'lo' ? 1 : 0);

@@ -97,7 +97,12 @@ button { cursor: pointer; }
 
 /* ---------- Map ---------- */
 #stage { position: fixed; inset: 0; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
-#base, svg#map { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#base, #baseFade, svg#map { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#baseFade { pointer-events: none; opacity: 0; }
+#baseFade.out { animation: floor-fade .32s ease-out both; }
+@keyframes floor-fade { from { opacity: 1; } to { opacity: 0; } }
+/* markers from the floor you've left fade back in on the new one */
+#map.floor-in .mk, #map.floor-in .route, #map.floor-in .route-case { animation: mk-in .35s ease-out both; }
 svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touch-action: none; }
 .apron { fill: none; pointer-events: all; }
 .grid-line { stroke: var(--map-grid); }
@@ -412,6 +417,13 @@ button.tag { border: 0; color: inherit; font: inherit; font-size: 14px; font-wei
   transform: translateY(calc(var(--i, 0) * 100%)); transition: transform .45s var(--spring); }
 .floor button { position: relative; font: 800 16px var(--font-display); color: var(--label-2); transition: color .25s, transform .35s var(--spring); }
 .floor button[aria-pressed="true"] { color: var(--primary-c); }
+.floor button:active { transform: scale(.88); }
+/* the route continues on this floor */
+.floor button::after { content: ""; position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--route); box-shadow: 0 0 0 2px var(--solid); transform: scale(0); transition: transform .4s var(--spring); }
+.floor button.has-route:not([aria-pressed="true"])::after { transform: scale(1); }
+.floor button.has-route:not([aria-pressed="true"])::after { animation: floor-ping 1.6s ease-out 2; }
+@keyframes floor-ping { 0% { box-shadow: 0 0 0 2px var(--solid), 0 0 0 2px color-mix(in srgb, var(--route) 60%, transparent); } 100% { box-shadow: 0 0 0 2px var(--solid), 0 0 0 10px transparent; } }
 #map[data-floor="up"] .mk[data-lv="lo"]:not(.sel), #map[data-floor="lo"] .mk[data-lv="up"]:not(.sel) { display: none; }
 .ghost { opacity: .32; }
 .esc { cursor: pointer; }
@@ -756,6 +768,7 @@ h1.long { font-size: 24px; }
 
 <div id="stage">
 <canvas id="base" aria-hidden="true"></canvas>
+<canvas id="baseFade" aria-hidden="true"></canvas>
 <svg id="map" role="img" aria-label="Map of Cleveland Hopkins terminal and concourses">
   <g id="world">
     <rect x="-3000" y="-3000" width="7000" height="7000" class="apron"/>
@@ -785,8 +798,8 @@ h1.long { font-size: 24px; }
 
 <div class="controls">
   <div class="cap glass floor" id="floorCap" role="group" aria-label="Floor">
-    <button data-floor="up" aria-pressed="true" title="Upper level: gates, security, ticketing" aria-label="Upper level">U</button>
-    <button data-floor="lo" aria-pressed="false" title="Lower level: baggage claim, ground transportation, RTA" aria-label="Lower level">L</button>
+    <button data-floor="up" aria-pressed="true" title="Upper level: gates, security, ticketing" aria-label="Upper level: gates, security, ticketing">U</button>
+    <button data-floor="lo" aria-pressed="false" title="Lower level: baggage claim, ground transportation, RTA" aria-label="Lower level: baggage claim, ground transportation, RTA">L</button>
   </div>
   <div class="cap glass">
     <button id="locate" aria-label="Show my location" aria-pressed="false"><svg class="ico"><use href="#i-locate"/></svg></button>
@@ -1835,7 +1848,12 @@ function startPuck() {
   };
   puckRAF = requestAnimationFrame(loop);
 }
+function markFloors(nodes) {
+  const used = new Set(nodes.map(levelOf));
+  document.querySelectorAll('#floorCap [data-floor]').forEach(b => b.classList.toggle('has-route', nodes.length > 1 && used.has(b.dataset.floor) && used.size > 1));
+}
 function setRoute(nodes, mins) {
+  markFloors(nodes);
   for (const m of markers) m.classList.remove('dest');
   const endGate = id => ITEMS[id] && ITEMS[id].kind === 'gate' ? ITEMS[id] : null;
   const g0 = nodes.length > 1 && endGate(nodes[0]), g1 = nodes.length > 1 && endGate(nodes[nodes.length - 1]);
@@ -1905,6 +1923,15 @@ function drawRoute(f) {
 const FLOOR_NAME = AP.ui.floors;
 function setFloor(f, quiet) {
   if (!f || f === floor) return;
+  // cross-fade: hold a copy of the old floor over the map and fade it out
+  if (!reduced && committed) {
+    const fc = $('#baseFade');
+    if (fc.width !== baseCanvas.width || fc.height !== baseCanvas.height) { fc.width = baseCanvas.width; fc.height = baseCanvas.height; }
+    fc.getContext('2d').drawImage(baseCanvas, 0, 0);
+    fc.classList.remove('out'); void fc.offsetWidth; fc.classList.add('out');
+    svg.classList.remove('floor-in'); void svg.getBBox(); svg.classList.add('floor-in');
+    clearTimeout(setFloor.t); setFloor.t = setTimeout(() => svg.classList.remove('floor-in'), 400);
+  }
   floor = f; svg.dataset.floor = f;
   document.querySelectorAll('#floorCap [data-floor]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.floor === f)));
   $('#floorCap').style.setProperty('--i', f === 'lo' ? 1 : 0);
