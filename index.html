@@ -179,6 +179,7 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 .mk .sz { transform-box: fill-box; transform-origin: center; transition: transform .3s var(--spring); }
 #map[data-z="1"] .amen .sz { transform: scale(.62); }
 #map .amen[data-off] { display: none; }
+#map .amen.closed .sz { opacity: .45; filter: grayscale(1); }
 #map[data-z="1"] .glyph { display: none; }
 .glyph { fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
 .place .glyph { stroke: var(--map); }
@@ -757,6 +758,28 @@ const AMEN = [
   ['Welcome Center','service',[108,-58,'L'],5], ['Hudson Aero Mart','shop',[104,-84,'L']], ['SIM card vending','service',[110,-96,'L'],5],
 ];
 
+// Opening hours from the airport's official directory (shop-cle.com, Fraport USA), checked Oct 2026.
+// The directory gives opening times only; closing times aren't published (they follow the last flights).
+const H = (open, more = {}) => ({ open, ...more });
+const H24 = { h24: true };
+const HOURS = {
+  '800 Degrees Wood Fired Kitchen': H('4:00'), "Auntie Anne's": it => H(it.gate === 'B6' ? '4:30' : '4:00'),
+  'Bar Symon': H('4:00'), "Bruegger's Bagels": H('4:00'), 'Cantina Taqueria & Tequila Bar': H('4:30'),
+  'Chick-fil-A': H('4:00', { days: [1, 2, 3, 4, 5, 6] }), 'Cinnabon': it => H(it.gate === 'B6' ? '4:30' : '4:00'),
+  'Currito Burritos': H('5:00'), "Dunkin' (open 24 hrs)": H24, 'Embers Fire & Ice Bar': H('5:30'),
+  "Farmer's Fridge vending": H24, 'Great Lakes Brewing Co.': H('4:00'), 'Hudson News Euro Café': H('4:00'),
+  'Inca Tea Café': H('4:00'), 'Jamba': H('4:00'), "Panini's Bar & Grill": H('4:00'), 'Potbelly Sandwich Shop': H('4:30'),
+  'The Pub': H('4:00'), 'Quaker Steak & Lube': H('4:00'), "Sammy's Beach Bar & Grill": H('4:00'), 'Shake Shack': H('4:00'),
+  'Starbucks': H('4:00'), 'Subway': H('4:00'), 'Vino Volo': { vary: true }, 'Destination Cleveland vending': H24,
+  'Hudson Booksellers': H('4:00'), 'Illy Coffee vending': H24, 'InMotion electronics': H('5:00'), 'Johnston & Murphy': H('5:00'),
+  'Kids Works': H('5:00'), 'La Boutique': H('5:00'), 'LEGO vending': H24, 'Caramel & Licorice & Taffy vending': H24,
+  'Ohio Game Day Sports': H('5:00'), 'Rock & Roll Hall of Fame store': H('5:00'), 'Shop All Pharmacy vending': H24,
+  'Sunglass Hut': H('5:00'), 'TUMI': H('5:00'), 'Hudson': it => H(it.gate === 'C26' ? '4:30' : '4:00'),
+  'Hudson Aero Mart': H('8:00'), 'Cleveland Shines shoe shine': H('6:00', { close: '18:00', days: [1, 2, 3, 4, 5] }),
+  'First Class Seats massage chairs': H24, 'FuelRod phone charging': H24, 'Ohio Lottery': H24, 'SIM card vending': H24,
+  'The Club CLE lounge': H('4:00'), 'Petit Gourmet': H('4:00'),
+};
+
 // ---------- Geometry helpers ----------
 const P = id => ({ x: V[id][0], y: V[id][1] });
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -824,6 +847,7 @@ AMEN.forEach(([name, cat, at, dwell, note], i) => {
       Object.assign(it, along(SPINES[gi.con], Math.min(gi.t, .985) + (shift * 7 - 2) / len, gi.s, 5), { zone: gi.con });
     }
   }
+  const hs = HOURS[name]; it.hours = typeof hs === 'function' ? hs(it) : hs;
   // icons that differ from their category's
   it.icon = /^Elevator$/.test(name) ? 'lift' : /^Water fountain/.test(name) ? 'water' : /^Accessible restroom/.test(name) ? 'access' : cat;
   ITEMS[it.id] = it;
@@ -1728,6 +1752,9 @@ function showPlace(it, fromMap) {
   const rows = [];
   if (it.kind === 'amen') rows.push(['Location', esc(it.near)]);
   if (it.note) rows.push(['About', esc(it.note)]);
+  const hs = hoursStatus(it);
+  if (hs) rows.push(['Hours', `<span class="status ${hs.state === 'open' ? 'ok' : hs.state === 'closed' ? 'no' : 'warn'}">${esc(hs.text)}</span>`]);
+  if (it.hours) rows.push(['Schedule', esc(hoursLine(it))]);
   if (it.kind === 'amen' && it.cat !== 'rest') rows.push(['Typical visit', `About ${it.dwell} min`]);
   if (it.zone !== 'L' && it.id !== 'v:chk') {
     const { units, len } = route(ITEMS['v:chk'], it);
@@ -1735,10 +1762,11 @@ function showPlace(it, fromMap) {
   }
   if (it.zone === 'L' || it.kind === 'place') rows.push(['Level', it.lvl === 'lo' ? 'Lower level' : 'Upper level']);
   if (it.kind === 'gate') rows.push(['Concourse', `${it.con} · ${CON_RANGE[it.con]}`]);
-  html += `<div class="group">${rows.map(([k, v]) => `<div class="row"><span class="grow rl">${k}</span><span style="color:var(--label-2);text-align:right">${v}</span></div>`).join('')}</div>`;
+  html += `<div class="group">${rows.map(([k, v]) => `<div class="row"><span class="rl" style="flex:none">${k}</span><span style="flex:1;min-width:0;color:var(--label-2);text-align:right">${v}</span></div>`).join('')}</div>`;
   if (it.kind === 'gate') {
     html += `<div class="group-title">Airlines in Concourse ${it.con}</div><div class="group tags">${AIRLINES.filter(a => a.con === it.con).map(a => `<span class="tag">${esc(a.name)}</span>`).join('')}</div>`;
   }
+  if (it.hours && !it.hours.h24 && !it.hours.close) html += `<p class="foot" style="margin:-6px 16px 0">Opening times from the airport's directory. Closing times aren't published; they follow the last flights.</p>`;
   const near = it.kind !== 'place' ? nearbyNames(it) : [];
   if (near.length) html += `<div class="group-title">Nearby</div><div class="group tags">${near.map(n => `<span class="tag">${esc(n)}</span>`).join('')}</div>`;
   pane.innerHTML = html;
@@ -1950,6 +1978,43 @@ $('#swap').onclick = () => {
   $('#swap').classList.toggle('spin'); buzz(); updateRoute(false);
 };
 
+// ---------- Opening hours ----------
+// Status is worked out in Cleveland time, wherever the phone is
+const CLE_TZ = 'America/New_York';
+function cleNow(t = Date.now()) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: CLE_TZ, weekday: 'short', hour: 'numeric', minute: 'numeric', hourCycle: 'h23' })
+    .formatToParts(new Date(t)).map(p => [p.type, p.value]));
+  return { dow: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(parts.weekday), min: (+parts.hour % 24) * 60 + +parts.minute };
+}
+const toMin = s => { const [h, m] = s.split(':').map(Number); return h * 60 + m; };
+const fmt12 = s => { const [h, m] = s.split(':').map(Number); return `${(h + 11) % 12 + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`; };
+const LATE = 21 * 60;   // after 9 PM, places with no published closing time may be closing
+function hoursStatus(it, t) {
+  const h = it.hours; if (!h) return null;
+  if (h.h24) return { state: 'open', text: 'Open 24 hours' };
+  if (h.vary) return { state: 'unknown', text: 'Hours vary' };
+  const at = cleNow(t);
+  if (h.days && !h.days.includes(at.dow)) return { state: 'closed', text: 'Closed today' };
+  if (at.min < toMin(h.open)) return { state: 'closed', text: 'Opens ' + fmt12(h.open) };
+  if (h.close) return at.min < toMin(h.close) ? { state: 'open', text: 'Open until ' + fmt12(h.close) } : { state: 'closed', text: 'Closed for the day' };
+  if (at.min >= LATE) return { state: 'late', text: `Opened ${fmt12(h.open)} · may be closing` };
+  return { state: 'open', text: 'Open since ' + fmt12(h.open) };
+}
+function hoursLine(it) {
+  const h = it.hours; if (!h) return null;
+  if (h.h24) return 'Open 24 hours, every day';
+  if (h.vary) return 'Hours vary';
+  const days = !h.days ? 'Daily' : h.days.length === 5 ? 'Monday–Friday' : h.days.length === 6 && !h.days.includes(0) ? 'Monday–Saturday (closed Sunday)' : 'Some days';
+  return `${days} from ${fmt12(h.open)}` + (h.close ? ` to ${fmt12(h.close)}` : '');
+}
+// grey out places that are closed right now; refreshed every minute
+function markClosed() {
+  for (const it of Object.values(ITEMS)) if (it.kind === 'amen' && it.el) {
+    const s = hoursStatus(it); it.el.classList.toggle('closed', !!s && s.state === 'closed');
+  }
+}
+markClosed(); setInterval(markClosed, 60000);
+
 // ---------- Go to the nearest… ----------
 const QUICK = [
   ['rest', 'Restroom', 'rest', i => i.cat === 'rest' && (!stepFree || /Accessible/.test(i.name))],
@@ -1967,7 +2032,11 @@ function goNearest(key) {
   if (key === 'gate') best = ITEMS[$('#ktGate').value];
   else {
     const { D } = fromSrc(nodeOf(from));
-    for (const it of Object.values(ITEMS)) if (it.kind === 'amen' && q[3](it) && D[it.id] != null && (!best || D[it.id] < D[best.id])) best = it;
+    const pick = skipClosed => { let b = null; for (const it of Object.values(ITEMS)) {
+      if (it.kind !== 'amen' || !q[3](it) || D[it.id] == null) continue;
+      if (skipClosed && (hoursStatus(it) || {}).state === 'closed') continue;
+      if (!b || D[it.id] < D[b.id]) b = it; } return b; };
+    best = pick(true) || pick(false);
   }
   if (!best) return;
   buzz();
@@ -2056,8 +2125,11 @@ function updateIdeas() {
   const list = Object.values(ITEMS)
     .filter(i => i.kind === 'amen' && i.zone !== 'L' && i.zone !== 'LIFT' && i.cat !== 'rest' && !/^Water fountain/.test(i.name) && (ktCat === 'all' || i.cat === ktCat))
     .map(i => {
-      const walk = minutes(D[i.id]), spare = mins - 10 - walk * 2 - i.dwell;
-      return { i, walk, spare, status: spare >= 5 ? 'ok' : spare >= 0 ? 'warn' : 'no' };
+      const walk = minutes(D[i.id]), spare = mins - 10 - walk * 2 - i.dwell, hs = hoursStatus(i);
+      let status = spare >= 5 ? 'ok' : spare >= 0 ? 'warn' : 'no', why = null;
+      if (hs && hs.state === 'closed') { status = 'no'; why = hs.text.replace('Closed for the day', 'Closed'); }
+      else if (hs && hs.state === 'late' && status === 'ok') { status = 'warn'; why = 'May close'; }
+      return { i, walk, spare, status, why };
     })
     .sort((p, q) => order[p.status] - order[q.status] || p.walk - q.walk)
     .filter(r => !seen.has(r.i.name) && seen.add(r.i.name));
@@ -2068,7 +2140,7 @@ function updateIdeas() {
     <button class="row" data-id="${r.i.id}">
       <span class="tile ${r.i.cat}">${icon(r.i.cat)}</span>
       <span class="grow"><span class="t">${esc(r.i.name)}</span><span class="s">${r.walk} min each way · ~${r.i.dwell} min there · ${esc(r.i.gate || 'Main terminal')}</span></span>
-      <span class="status ${r.status}">${label[r.status]}</span>
+      <span class="status ${r.status}">${esc(r.why || label[r.status])}</span>
     </button>`).join('') || '<div class="row"><span class="s">Nothing like that past security.</span></div>';
   $('#ideas').querySelectorAll('[data-id]').forEach(b => b.onclick = () => showIdea(ITEMS[b.dataset.id]));
 }
@@ -2111,7 +2183,7 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem('cle.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem('cle.' + k, JSON.stringify(v)); } catch (e) {} },
 };
-const kindOf = it => it.kind === 'gate' ? `Concourse ${it.con}` : it.kind === 'amen' ? (it.near || '') : 'Arrive & depart';
+const kindOf = it => it.kind === 'gate' ? `Concourse ${it.con}` : it.kind === 'amen' ? (it.near || '') + ((s => s ? ' · ' + s.text : '')(hoursStatus(it))) : 'Arrive & depart';
 const itemHit = it => ({ label: it.name, kind: kindOf(it), lead: tileFor(it), id: it.id, go: () => showPlace(it, false) });
 function mark(label, needle) {
   const i = needle ? label.toLowerCase().indexOf(needle) : -1;
