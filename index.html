@@ -332,6 +332,17 @@ body.navigating .controls { top: auto; bottom: calc(var(--sab, 0px) + 104px); }
 .summary .marks { display: inline-flex; gap: 4px; }
 .summary .marks::before { display: none; }
 
+/* ---------- Pass the time ---------- */
+#ideas { display: flex; flex-direction: column; gap: 22px; }
+.free { flex: 1; min-width: 0; padding-left: 4px; font-size: 15px; line-height: 1.3; color: var(--label); }
+.free b { display: block; white-space: nowrap; font: 850 24px/1.1 var(--font-display); font-variation-settings: "wdth" 110; color: var(--primary); }
+.free small { display: block; margin-top: 2px; font-size: 13px; color: var(--label-2); }
+.idea .status { min-width: 58px; text-align: center; font-variant-numeric: tabular-nums; }
+.dim .row { opacity: .6; }
+.more { display: flex; align-items: center; justify-content: center; gap: 6px; height: 44px; border: 0; border-radius: 22px; background: var(--fill); color: var(--label-2); font-weight: 650; }
+.more .ico { width: 14px; height: 14px; transform: rotate(90deg); transition: transform .35s var(--spring); }
+.more[aria-expanded="true"] .ico { transform: rotate(-90deg); }
+
 /* ---------- Airlines tab ---------- */
 .gt-walk { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; text-transform: none; letter-spacing: 0; font-weight: 600; }
 .gt-walk .ico { width: 14px; height: 14px; }
@@ -566,6 +577,7 @@ input.xs::-moz-range-thumb { width: 4px; height: 44px; border: 0; border-radius:
 .quick .chip { background: var(--card); box-shadow: none; color: var(--label); }
 .leave { margin: -2px 0 8px; font-size: 15px; font-weight: 650; color: var(--label); }
 .leave b { color: var(--primary); }
+.leave small { display: block; font-size: 13px; font-weight: 500; color: var(--label-2); margin-top: 2px; }
 .tonal-btn {
   align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 18px 0 14px; border: 0;
   border-radius: 22px; background: var(--primary-c); color: var(--on-primary-c);
@@ -815,10 +827,11 @@ h1.long { font-size: 24px; }
       <div class="chips filter" id="ktCats" role="group" aria-label="Kind of place"></div>
       <button class="tonal-btn" id="remind" hidden><svg class="ico"><use href="#i-bell"/></svg><span>Remind me when to leave</span></button>
       <div class="surprise-row">
-        <p class="toast" id="ktToast">Keeps a 10-minute buffer before boarding.</p>
+        <div class="free" id="ktFree"></div>
         <button class="fab" id="surprise"><svg class="ico"><use href="#i-dice"/></svg>Surprise me</button>
       </div>
-      <div class="group" id="ideas"></div>
+      <p class="toast" id="ktToast" hidden></p>
+      <div id="ideas"></div>
     </div>
 
     <div class="pane" id="pane-air" role="tabpanel" aria-labelledby="tab-air" hidden>
@@ -2558,9 +2571,8 @@ function updateClock() {
   $('#ktClock').textContent = 'Boarding at about ' + clock(boardAt);
   const p = leavePlan();
   const where = p.from && p.from.id === 'v:me' ? 'from where you are' : p.from ? 'from ' + p.from.name : '';
-  $('#ktLeave').innerHTML = p.at <= Date.now()
-    ? `Head to ${esc(p.gate.name)} <b>now</b> · ${p.walk} min walk ${esc(where)}`
-    : `Head to ${esc(p.gate.name)} by <b>${clock(p.at)}</b> · ${p.walk} min walk ${esc(where)}`;
+  $('#ktLeave').innerHTML = (p.at <= Date.now() ? `Head to ${esc(p.gate.name)} <b>now</b>` : `Head to ${esc(p.gate.name)} by <b>${clock(p.at)}</b>`)
+    + `<small>${p.walk} min walk ${esc(where)}</small>`;
   const rb = $('#remind');
   rb.hidden = !(window.CLEApp && CLEApp.scheduleReminder);
   const on = reminderAt > Date.now();
@@ -2583,6 +2595,8 @@ $('#remind').onclick = () => {
   }
   saveTrip(); updateClock();
 };
+let ideasOpen = false, okOpen = false;
+const minor = it => /vending|FuelRod|Lottery|charging/i.test(it.name) ? 1 : 0;
 function updateIdeas() {
   const gate = ITEMS[$('#ktGate').value], range = $('#ktMin'), mins = minsLeft();
   range.value = Math.min(+range.max, Math.max(+range.min, mins));
@@ -2601,17 +2615,32 @@ function updateIdeas() {
       else if (hs && hs.state === 'late' && status === 'ok') { status = 'warn'; why = 'May close'; }
       return { i, walk, spare, status, why };
     })
-    .sort((p, q) => order[p.status] - order[q.status] || p.walk - q.walk)
+    // real places before vending machines, lottery and charging spots, then the closest
+    .sort((p, q) => order[p.status] - order[q.status] || minor(p.i) - minor(q.i) || p.walk - q.walk)
     .filter(r => !seen.has(r.i.name) && seen.add(r.i.name));
   lastIdeas = list;
-  const label = { ok: 'Fits', warn: 'Tight', no: 'Skip' };
-  $('#ideas').style.setProperty('--inset', '58px');
-  $('#ideas').innerHTML = list.slice(0, 20).map(r => `
-    <button class="row" data-id="${r.i.id}">
-      <span class="tile ${r.i.cat}">${icon(r.i.cat)}</span>
-      <span class="grow"><span class="t">${esc(r.i.name)}</span><span class="s">${r.walk} min each way · ~${r.i.dwell} min there · ${esc(r.i.gate || 'Main terminal')}</span></span>
-      <span class="status ${r.status}">${esc(r.why || label[r.status])}</span>
-    </button>`).join('') || '<div class="row"><span class="s">Nothing like that past security.</span></div>';
+  // how much time there really is: boarding less the buffer
+  const free = Math.max(0, mins - 10), fits = list.filter(r => r.status === 'ok').length;
+  const row = r => `
+    <button class="row idea ${r.status}" data-id="${r.i.id}">
+      <span class="tile ${r.i.cat}">${icon(r.i.icon || r.i.cat)}</span>
+      <span class="grow"><span class="t">${esc(r.i.name)}</span><span class="s">${esc(r.i.gate || 'Main terminal')} · ${r.walk ? r.walk + ' min away' : 'right here'}</span></span>
+      <span class="status ${r.status}">${esc(r.why || `${r.walk * 2 + r.i.dwell} min`)}</span>
+    </button>`;
+  const counts = { 'Time for these': list.filter(r => r.status === 'ok').length };
+  const group = (title, rows, cls = '') => rows.length ? `<div class="group-title">${title}<span class="gt-walk">${counts[title] || rows.length}</span></div><div class="group ${cls}" style="--inset:58px">${rows.map(row).join('')}</div>` : '';
+  const ok = list.filter(r => r.status === 'ok'), warn = list.filter(r => r.status === 'warn'), no = list.filter(r => r.status === 'no');
+  $('#ktFree').innerHTML = `<b>${free >= 60 ? `${Math.floor(free / 60)} h ${free % 60} min` : `${free} min`} free</b>${fits ? `Time for ${fits} ${fits === 1 ? 'place' : 'places'}` : 'Stay near your gate'}<small>Keeps 10 minutes before boarding</small>`;
+  const SHOW = 12;
+  let html = group('Time for these', okOpen ? ok : ok.slice(0, SHOW));
+  if (ok.length > SHOW) html += `<button class="more" id="okMore" aria-expanded="${okOpen}">${okOpen ? 'Show fewer' : `Show all ${ok.length}`}${icon('chev')}</button>`;
+  html += group('Cutting it close', warn);
+  html += `<p class="foot" style="margin:-8px 16px 0">Times are there and back from your gate, plus a typical visit.</p>`;
+  if (no.length) html += `<button class="more" id="ideasMore" aria-expanded="${ideasOpen}">${ideasOpen ? 'Hide' : 'Show'} ${no.length} without enough time or closed${icon('chev')}</button>` + (ideasOpen ? group('Not this time', no, 'dim') : '');
+  if (!list.length) html = '<div class="group"><div class="row"><span class="s">Nothing like that past security.</span></div></div>';
+  $('#ideas').innerHTML = html;
+  const okm = $('#okMore'); if (okm) okm.onclick = () => { okOpen = !okOpen; buzz(5); updateIdeas(); };
+  const more = $('#ideasMore'); if (more) more.onclick = () => { ideasOpen = !ideasOpen; buzz(5); updateIdeas(); };
   $('#ideas').querySelectorAll('[data-id]').forEach(b => b.onclick = () => showIdea(ITEMS[b.dataset.id]));
 }
 function showIdea(it) {
@@ -2623,8 +2652,8 @@ $('#ktMin').oninput = () => { boardAt = Date.now() + +$('#ktMin').value * 60000;
 $('#surprise').onclick = () => {
   const ok = lastIdeas.filter(r => r.status === 'ok');
   const pool = ok.length ? ok : lastIdeas.filter(r => r.status === 'warn');
-  if (!pool.length) { $('#ktToast').textContent = 'Not enough time to wander. Stay near your gate.'; buzz(30); return; }
-  $('#ktToast').textContent = 'Keeps a 10-minute buffer before boarding.';
+  if (!pool.length) { $('#ktToast').textContent = 'Not enough time to wander. Stay near your gate.'; $('#ktToast').hidden = false; buzz(30); return; }
+  $('#ktToast').hidden = true;
   buzz(12);
   showIdea(pool[Math.floor(Math.random() * pool.length)].i);
 };
