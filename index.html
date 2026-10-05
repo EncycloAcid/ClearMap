@@ -1431,24 +1431,24 @@ AIRPORTS.CLE = (() => {
   // Amenities from the airport's directory: [name, category, nearest gate or [x,y,zone], dwell?, note?]
   const AMEN = [
     ['800 Degrees Wood Fired Kitchen','food','A1'], ["Sammy's Beach Bar & Grill",'bar',[88,-242,'A','A1']], ['Starbucks','coffee',[87,-235,'A','A1']],
-    ['Hudson','shop','A1'], ['Ohio Lottery','play','A1',5], ['Restrooms','rest','A1'], ['FuelRod phone charging','service','A1',5],
+    ['Hudson','shop',[86,-218,'A','A1']], ['Ohio Lottery','play','A1',5], ['Restrooms','rest',[62,-206,'A','A1']], ['Restrooms','rest',[91,-256,'A','A2']], ['FuelRod phone charging','service','A1',5],
     ['First Class Seats massage chairs','play','A2',15], ['Illy Coffee vending','coffee','A5',4], ['Hudson','shop','A5'],
     ['Shop All Pharmacy vending','service','A5',4], ["Panini's Bar & Grill",'bar','A6'], ['Ohio Lottery','play','A6',5],
-    ['Restrooms','rest','A6'], ["Farmer's Fridge vending",'food','A8',4],
+    ['Restrooms','rest',[116,-341,'A','A6']], ["Farmer's Fridge vending",'food','A8',4],
     ["Mother's Room",'service','B1',20], ["Farmer's Fridge vending",'food','B1',4], ['The Club CLE lounge','play','B1',45,'Day passes sold at the door'],
-    ['Vino Volo','bar','B2'], ['Restrooms','rest','B2'], ['FuelRod phone charging','service','B2',5], ['Ohio Lottery','play','B3',5],
-    ['Hudson News Euro Café','coffee','B4'], ['Inca Tea Café','coffee','B4'], ['Hudson','shop','B4'], ['Cleveland Shines shoe shine','service','B4',15],
+    ['Vino Volo','bar','B2'], ['Restrooms','rest',[-48,-151,'B','B2']], ['FuelRod phone charging','service','B2',5], ['Ohio Lottery','play','B3',5],
+    ['Hudson News Euro Café','coffee','B4'], ['Inca Tea Café','coffee','B4'], ['Hudson','shop',[-71,-155,'B','B4']], ['Cleveland Shines shoe shine','service','B4',15],
     ['Quaker Steak & Lube','bar',[-121,-146,'B','B5']], ["Auntie Anne's",'coffee',[-125,-163,'B','B6'],6], ['Cinnabon','coffee','B6',6], ["Menchie's Frozen Yogurt",'coffee','B6'],
     ['Subway','food','B6',12], ['FuelRod phone charging','service','B7',5], ['Restrooms','rest','B8'],
-    ['InMotion electronics','shop','C2'], ['TUMI','shop','C2'], ['La Boutique','shop','C2'], ['Jamba','coffee','C2',6],
-    ['Aircuts & Day Spa','service','C2',30], ['Cleveland Shines shoe shine','service','C2',15], ['Hudson','shop','C2'], ['Restrooms','rest','C2'],
+    ['InMotion electronics','shop',[34,27,'C','C2']], ['TUMI','shop','C2'], ['La Boutique','shop','C2'], ['Jamba','coffee','C2',6],
+    ['Aircuts & Day Spa','service','C2',30], ['Cleveland Shines shoe shine','service','C2',15], ['Hudson','shop',[24,24,'C','C2']], ['Restrooms','rest',[16,36,'C','C3']],
     ['LEGO vending','play','C3',5], ["Farmer's Fridge vending",'food','C3',4], ['FuelRod phone charging','service','C3',5],
     ['First Class Seats massage chairs','play','C4',15], ['Bar Symon','bar','C6'], ['Ohio Lottery','play','C6',5],
-    ['Petit Gourmet','food','C7',15], ['Restrooms','rest','C7'], ['Hudson','shop','C8'], ['Destination Cleveland vending','play','C9',5,'Local souvenirs'],
+    ['Petit Gourmet','food','C7',15], ['Restrooms','rest',[-87,163,'C','C10']], ['Hudson','shop','C8'], ['Destination Cleveland vending','play','C9',5,'Local souvenirs'],
     ['Inca Tea Café','coffee','C10'], ['First Class Seats massage chairs','play','C10',15], ['Caramel & Licorice & Taffy vending','coffee','C11',4],
     ['Great Lakes Brewing Co.','bar',[-122,197,'C','C11'],30,"Cleveland's craft brewery"], ['Shop All Pharmacy vending','service','C14',4], ['FuelRod phone charging','service','C14',5],
-    ["Farmer's Fridge vending",'food','C17',4], ['First Class Seats massage chairs','play','C17',15], ['Restrooms','rest','C18'],
-    ['Starbucks','coffee',[-205,279,'R','C20']], ['Cantina Taqueria & Tequila Bar','bar','C24'], ['Hudson','shop','C26'], ['Ohio Lottery','play','C27',5],
+    ["Farmer's Fridge vending",'food','C17',4], ['First Class Seats massage chairs','play','C17',15], ['Restrooms','rest',[-196,265,'R','C20']],
+    ['Starbucks','coffee',[-205,279,'R','C20']], ['Cantina Taqueria & Tequila Bar','bar','C24'], ['Hudson','shop',[-169,276,'R','C26']], ['Ohio Lottery','play','C27',5],
     ['Potbelly Sandwich Shop','food',[-163,252,'R','C29'],15],
     ["Bruegger's Bagels",'food',[55,-47,'M'],12], ['Shake Shack','food',[66,-58,'M']], ['Chick-fil-A','food',[59,-67,'M'],15],
     ['Currito Burritos','food',[62,-78,'M'],15], ["Dunkin' (open 24 hrs)",'coffee',[44,-80,'M']], ['The Pub','bar',[66,-94,'M']],
@@ -1456,8 +1456,8 @@ AIRPORTS.CLE = (() => {
     ['Sunglass Hut','shop',[38,-113,'M']], ['Johnston & Murphy','shop',[44,-124,'M']], ['Hudson Booksellers','shop',[50,-139,'M'],15],
     ['Rock & Roll Hall of Fame store','play',[53,-108,'M'],15,'Cleveland music souvenirs'], ['Ohio Game Day Sports','shop',[80,-128,'M']],
     ['Kids Works','play',[84,-140,'M'],15,'Toys and games'], ['Service animal relief area','service',[92,-152,'M'],10], ['Restrooms','rest',[76,-138,'M']],
-    ['Accessible restroom','rest',[-160,-173,'B','B6'],5,'Wheelchair accessible'], ['Accessible restroom','rest',[37,-48,'M'],5,'Wheelchair accessible'],
-    ['Accessible restroom','rest',[-196,265,'R','C20'],5,'Wheelchair accessible'],
+    ['Restrooms','rest',[-160,-173,'B','B6']], ['Accessible restroom','rest',[-156,-169,'B','B6'],5,'Wheelchair accessible'], ['Restrooms','rest',[37,-48,'M']], ['Accessible restroom','rest',[41,-44,'M'],5,'Wheelchair accessible'],
+    ['Accessible restroom','rest',[-192,269,'R','C20'],5,'Wheelchair accessible'],
     ['Water fountain','service',[25,12,'C','C2'],3], ['Water fountain','service',[12,41,'C','C3'],3], ['Water fountain','service',[-15,68,'C','C5'],3],
     ['Water fountain','service',[-129,186,'C','C11'],3],
     ['Elevator','service',[191,-202,'LIFT','lift_t'],2,'Ticketing ↔ baggage claim'], ['Elevator','service',[108,-130,'LIFT','lift_c'],2,'Checkpoint ↔ baggage claim'],
@@ -2673,7 +2673,10 @@ function glideTo(target, acc, walking) {
 // While following, the camera moves with you: it keeps the dot in the middle of the visible map at
 // whatever zoom you chose, and in compass mode also turns the map so the way you face is up.
 // One loop eases it there and stops once it's caught up; the dot's glide and the compass wake it.
-let camRAF = null, camMoving = false, headingUp = false;
+// Standing still, GPS jitter would slide the whole map about under you, so the camera holds still
+// until the dot strays well off centre; walking, it stays centred on you.
+let camRAF = null, camMoving = false, headingUp = false, walkingNow = false, camChasing = false;
+let walkRun = 0;
 function camStep() {
   camRAF = null;
   const stop = () => { if (camMoving) { camMoving = false; moving = false; apply(); } };
@@ -2681,7 +2684,10 @@ function camStep() {
   const R = visibleRect(), cx = (R.l + R.r) / 2, cy = (R.t + R.b) / 2;
   const tr = headingUp && heading != null ? wrapAngle(-heading * Math.PI / 180) : view.r, dr = wrapAngle(tr - view.r);
   const r = Math.abs(dr) < .003 ? tr : view.r + dr * .14;
-  const t = viewAt(view.k, r, shown, cx, cy), dx = t.x - view.x, dy = t.y - view.y;
+  let t = viewAt(view.k, r, shown, cx, cy), dx = t.x - view.x, dy = t.y - view.y;
+  const off = Math.hypot(dx, dy), hold = Math.min(R.r - R.l, R.b - R.t) * .18;
+  if (!walkingNow && !camChasing && off < hold && r === view.r) return stop();
+  camChasing = off > 2 || r !== tr;
   if (Math.abs(dx) < .3 && Math.abs(dy) < .3 && r === tr) { if (dx || dy || view.r !== r) { Object.assign(view, t); moving = true; apply(); } return stop(); }
   // a spring, not a snap: a far-off camera (after you panned, or a step overview) eases back to you
   const f = Math.hypot(dx, dy) > 24 ? .2 : 1;
@@ -2703,10 +2709,16 @@ function onFix(pos) {
   if (!kalman(raw, accuracy, pos.timestamp || Date.now())) return;
   if (gpsHeading != null && !isNaN(gpsHeading) && (speed || 0) > 0.8) { heading = gpsHeading; headingAt = gpsHeadingAt = Date.now(); if (headingUp) kickCam(); }
   // the ring shows how sure we really are: the filter's spread, never much tighter than the fix itself
-  const acc = Math.max(kfSigma(), accuracy * .5), est = kfPos(), snap = q => acc < 60 ? snapToWalkway(q, Math.max(12, Math.min(acc * 1.5, 40))) : q;
+  // keep the dot on a walkway only when one is close: never pull it across a hall or out of a gate area
+  const acc = Math.max(kfSigma(), accuracy * .5), est = kfPos(), snap = q => acc < 40 ? snapToWalkway(q, Math.min(20, Math.max(8, acc))) : q;
   const p = snap(est);
   // while walking, aim the dot where you'll be when the next fix comes, so it isn't a step behind
-  const vx = kf.ax.v, vy = kf.ay.v, walking = Math.hypot(vx, vy) > .45;
+  // walking? the phone's own speed when it gives one, else the filter's speed on two fixes running
+  // (one noisy fix can make standing still look like a step)
+  const vx = kf.ax.v, vy = kf.ay.v, sp = Math.hypot(vx, vy);
+  walkRun = sp > .7 ? walkRun + 1 : 0;
+  const walking = acc < 40 && (speed != null && !isNaN(speed) ? speed > .5 && sp > .4 : walkRun >= 2);
+  walkingNow = walking;
   const aim = walking ? snap({ x: est.x + vx, y: est.y + vy }) : p;
   const appearing = !me || meG.getAttribute('opacity') === '0';
   me = { ...p, acc }; lastFixAt = Date.now(); meG.classList.remove('stale');

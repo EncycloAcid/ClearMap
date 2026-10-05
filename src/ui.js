@@ -931,7 +931,10 @@ function glideTo(target, acc, walking) {
 // While following, the camera moves with you: it keeps the dot in the middle of the visible map at
 // whatever zoom you chose, and in compass mode also turns the map so the way you face is up.
 // One loop eases it there and stops once it's caught up; the dot's glide and the compass wake it.
-let camRAF = null, camMoving = false, headingUp = false;
+// Standing still, GPS jitter would slide the whole map about under you, so the camera holds still
+// until the dot strays well off centre; walking, it stays centred on you.
+let camRAF = null, camMoving = false, headingUp = false, walkingNow = false, camChasing = false;
+let walkRun = 0;
 function camStep() {
   camRAF = null;
   const stop = () => { if (camMoving) { camMoving = false; moving = false; apply(); } };
@@ -939,7 +942,10 @@ function camStep() {
   const R = visibleRect(), cx = (R.l + R.r) / 2, cy = (R.t + R.b) / 2;
   const tr = headingUp && heading != null ? wrapAngle(-heading * Math.PI / 180) : view.r, dr = wrapAngle(tr - view.r);
   const r = Math.abs(dr) < .003 ? tr : view.r + dr * .14;
-  const t = viewAt(view.k, r, shown, cx, cy), dx = t.x - view.x, dy = t.y - view.y;
+  let t = viewAt(view.k, r, shown, cx, cy), dx = t.x - view.x, dy = t.y - view.y;
+  const off = Math.hypot(dx, dy), hold = Math.min(R.r - R.l, R.b - R.t) * .18;
+  if (!walkingNow && !camChasing && off < hold && r === view.r) return stop();
+  camChasing = off > 2 || r !== tr;
   if (Math.abs(dx) < .3 && Math.abs(dy) < .3 && r === tr) { if (dx || dy || view.r !== r) { Object.assign(view, t); moving = true; apply(); } return stop(); }
   // a spring, not a snap: a far-off camera (after you panned, or a step overview) eases back to you
   const f = Math.hypot(dx, dy) > 24 ? .2 : 1;
@@ -961,10 +967,16 @@ function onFix(pos) {
   if (!kalman(raw, accuracy, pos.timestamp || Date.now())) return;
   if (gpsHeading != null && !isNaN(gpsHeading) && (speed || 0) > 0.8) { heading = gpsHeading; headingAt = gpsHeadingAt = Date.now(); if (headingUp) kickCam(); }
   // the ring shows how sure we really are: the filter's spread, never much tighter than the fix itself
-  const acc = Math.max(kfSigma(), accuracy * .5), est = kfPos(), snap = q => acc < 60 ? snapToWalkway(q, Math.max(12, Math.min(acc * 1.5, 40))) : q;
+  // keep the dot on a walkway only when one is close: never pull it across a hall or out of a gate area
+  const acc = Math.max(kfSigma(), accuracy * .5), est = kfPos(), snap = q => acc < 40 ? snapToWalkway(q, Math.min(20, Math.max(8, acc))) : q;
   const p = snap(est);
   // while walking, aim the dot where you'll be when the next fix comes, so it isn't a step behind
-  const vx = kf.ax.v, vy = kf.ay.v, walking = Math.hypot(vx, vy) > .45;
+  // walking? the phone's own speed when it gives one, else the filter's speed on two fixes running
+  // (one noisy fix can make standing still look like a step)
+  const vx = kf.ax.v, vy = kf.ay.v, sp = Math.hypot(vx, vy);
+  walkRun = sp > .7 ? walkRun + 1 : 0;
+  const walking = acc < 40 && (speed != null && !isNaN(speed) ? speed > .5 && sp > .4 : walkRun >= 2);
+  walkingNow = walking;
   const aim = walking ? snap({ x: est.x + vx, y: est.y + vy }) : p;
   const appearing = !me || meG.getAttribute('opacity') === '0';
   me = { ...p, acc }; lastFixAt = Date.now(); meG.classList.remove('stale');
