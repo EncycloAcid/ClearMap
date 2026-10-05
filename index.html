@@ -239,10 +239,29 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 .chip[aria-pressed="false"] { color: var(--label-2); }
 .chip[aria-pressed="false"] .tile { background: var(--fill-2) !important; color: var(--label-2); }
 
+/* ---------- Layers menu ---------- */
+.layers { position: fixed; z-index: 6; right: calc(var(--safe-right) + 72px); top: calc(var(--safe-top) + 70px); width: min(270px, calc(100% - 104px)); border-radius: 20px; padding: 6px 0; background: var(--solid); }
+.layers .lh { padding: 8px 16px 4px; font-size: 13px; font-weight: 600; color: var(--label-2); }
+.layers button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 16px; border: 0; background: none; text-align: left; font-weight: 600; }
+.layers button:hover { background: var(--fill); }
+.layers .tick { margin-left: auto; color: var(--primary); }
+.layers button[aria-pressed="false"] .tick { visibility: hidden; }
+.layers button[aria-pressed="false"] .tile { background: var(--fill-2) !important; color: var(--label-2); }
+#layersBtn[aria-expanded="true"] { color: var(--primary); }
+@media (pointer: coarse) { .fine-only { display: none !important; } }
+.surprise-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.surprise-row .toast { margin: 0; flex: 1; min-width: 0; }
+.surprise-row .fab { flex: none; height: 48px; }
+
 /* ---------- Airport picker ---------- */
 .ap-btn { border: 0; background: none; padding: 0; text-align: left; cursor: pointer; max-width: 100%; display: block; }
-.ap-btn.can::after { content: " ⌄"; font-weight: 800; }
-.ap-menu { position: absolute; z-index: 3; left: 16px; right: 16px; top: 74px; border-radius: 20px; padding: 6px 0; background: var(--solid); }
+.ap-btn.can { display: inline-flex; max-width: 100%; height: 34px; align-items: center; gap: 8px; padding: 0 12px 0 4px; border-radius: 18px; background: var(--fill); color: var(--label); font-size: 14px; font-weight: 650; }
+.ap-btn.can .ap-code { padding: 3px 8px; border-radius: 13px; background: var(--primary); color: var(--on-primary); font: 800 13px var(--font-display); font-variation-settings: "wdth" 110; }
+.ap-btn.can .ap-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ap-btn.can .ap-code { flex: none; }
+.ap-btn.can::after { flex: none;  content: "⌄"; font-weight: 800; color: var(--label-2); margin-top: -6px; }
+.ap-btn.can:active { background: var(--fill-2); }
+.ap-menu { position: absolute; z-index: 3; left: 16px; right: 16px; top: 64px; border-radius: 20px; padding: 6px 0; background: var(--solid); }
 .ap-menu button { display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center; width: 100%; padding: 10px 16px; border: 0; background: none; text-align: left; }
 .ap-menu button:hover, .ap-menu button:focus-visible { background: var(--fill); }
 .ap-menu .code { font: 800 17px var(--font-display); font-variation-settings: "wdth" 110; color: var(--primary); }
@@ -271,7 +290,7 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 .me-cone { fill: var(--route); opacity: .35; }
 @keyframes me-pulse { from { transform: scale(.6); opacity: .45; } to { transform: scale(2.2); opacity: 0; } }
 .toast-bar {
-  position: fixed; z-index: 7; left: 50%; top: calc(var(--safe-top) + 116px); translate: -50% 0;
+  position: fixed; z-index: 7; left: 50%; top: calc(var(--safe-top) + 70px); translate: -50% 0;
   max-width: min(440px, calc(100% - 32px)); display: flex; align-items: center; gap: 12px;
   padding: 10px 12px 10px 16px; border-radius: 18px; font-size: 14px; font-weight: 600;
   animation: toast-in .45s var(--spring) both;
@@ -283,7 +302,7 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 
 /* ---------- Scale bar (shows while zooming) ---------- */
 .scalebar {
-  position: fixed; z-index: 4; left: calc(var(--safe-left) + 18px); top: calc(var(--safe-top) + 112px);
+  position: fixed; z-index: 4; left: calc(var(--safe-left) + 18px); top: calc(var(--safe-top) + 70px);
   display: flex; flex-direction: column; gap: 2px; pointer-events: none;
   font: 700 11px var(--font-text); color: var(--label); opacity: 0; transition: opacity .35s ease;
   text-shadow: 0 0 3px var(--map), 0 0 3px var(--map);
@@ -292,7 +311,7 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 .scalebar .bar { height: 5px; border: 2px solid var(--label); border-top: 0; border-radius: 0 0 2px 2px; box-shadow: 0 1px 0 var(--map); transition: width .15s; }
 
 /* ---------- Map controls (right capsules) ---------- */
-.controls { position: fixed; z-index: 4; right: calc(var(--safe-right) + 16px); top: calc(var(--safe-top) + 114px); display: flex; flex-direction: column; gap: 10px; }
+.controls { position: fixed; z-index: 4; right: calc(var(--safe-right) + 16px); top: calc(var(--safe-top) + 70px); display: flex; flex-direction: column; gap: 10px; }
 .cap { display: flex; flex-direction: column; border-radius: 22px; overflow: hidden; }
 .cap button { width: 44px; height: 44px; border: 0; background: none; display: grid; place-items: center; color: var(--label); transition: transform .35s var(--spring); }
 .cap button:active { transform: scale(.86); }
@@ -312,6 +331,7 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 .sheet-head { padding: 6px 16px 10px; touch-action: none; cursor: grab; flex: none; }
 .grabber { width: 38px; height: 5px; border-radius: 3px; background: var(--label-3); margin: 0 auto 10px; }
 .titlebar { display: flex; align-items: flex-start; gap: 12px; min-height: 44px; }
+.titlebar:has(.ap-btn.can) { align-items: center; }
 .titlebar > div { flex: 1; min-width: 0; }
 .eyebrow { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; font-weight: 600; color: var(--label-2); letter-spacing: 0; }
 h1 {
@@ -523,6 +543,7 @@ input.switch:checked::after { transform: translateX(20px); }
   <symbol id="i-water" viewBox="0 0 24 24"><path d="M12 3.5s6 6.6 6 10.5a6 6 0 0 1-12 0c0-3.9 6-10.5 6-10.5z"/></symbol>
   <symbol id="i-access" viewBox="0 0 24 24"><circle cx="11" cy="4.5" r="1.8"/><path d="M11 7.5v6h5l2.5 5.5M11 10.5h5M8 10.2a5.5 5.5 0 1 0 7.6 7.9"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3.5l8.5 4.5L12 12.5 3.5 8z"/><path d="M3.5 12L12 16.5 20.5 12M3.5 16L12 20.5 20.5 16"/></symbol>
   <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
   <symbol id="i-walk" viewBox="0 0 24 24"><circle cx="13" cy="4.5" r="1.8"/><path d="M10 21l2.5-6.5L15 17v4M12.5 14.5L11 9l-3 2v4M11 9l3.5-.5 2 3.5 2.5 1"/></symbol>
   <symbol id="i-dice" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="9" cy="9" r=".6" fill="currentColor"/><circle cx="15" cy="15" r=".6" fill="currentColor"/><circle cx="15" cy="9" r=".6" fill="currentColor"/><circle cx="9" cy="15" r=".6" fill="currentColor"/><circle cx="12" cy="12" r=".6" fill="currentColor"/></symbol>
@@ -554,7 +575,6 @@ input.switch:checked::after { transform: translateX(20px); }
     <button class="clear" id="qClear" aria-label="Clear search" hidden><svg class="ico"><use href="#i-x"/></svg></button>
     <div class="results" id="results" hidden></div>
   </div>
-  <div class="chips" id="chips" aria-label="Show on map"></div>
 </div>
 
 <div class="toast-bar glass" id="toast" role="status" aria-live="polite" hidden><span id="toastMsg"></span><button id="toastAct" hidden></button></div>
@@ -567,12 +587,14 @@ input.switch:checked::after { transform: translateX(20px); }
   </div>
   <div class="cap glass">
     <button id="locate" aria-label="Show my location" aria-pressed="false"><svg class="ico"><use href="#i-locate"/></svg></button>
-    <button id="zin" aria-label="Zoom in"><svg class="ico"><use href="#i-plus"/></svg></button>
-    <button id="zout" aria-label="Zoom out"><svg class="ico"><use href="#i-minus"/></svg></button>
+    <button id="layersBtn" aria-label="Show on map" aria-haspopup="menu" aria-expanded="false"><svg class="ico"><use href="#i-layers"/></svg></button>
+    <button id="zin" class="fine-only" aria-label="Zoom in"><svg class="ico"><use href="#i-plus"/></svg></button>
+    <button id="zout" class="fine-only" aria-label="Zoom out"><svg class="ico"><use href="#i-minus"/></svg></button>
     <button id="zfit" aria-label="Show whole airport"><svg class="ico"><use href="#i-fit"/></svg></button>
   </div>
   <div class="cap glass" id="conCap"></div>
 </div>
+<div class="layers glass" id="layers" role="menu" aria-label="Show on map" hidden></div>
 
 <section class="sheet glass" id="sheet" aria-label="Trip tools">
   <div class="sheet-head" id="sheetHead">
@@ -631,8 +653,10 @@ input.switch:checked::after { transform: translateX(20px); }
       </div>
       <div class="chips filter" id="ktCats" role="group" aria-label="Kind of place"></div>
       <button class="tonal-btn" id="remind" hidden><svg class="ico"><use href="#i-bell"/></svg><span>Remind me when to leave</span></button>
-      <button class="fab" id="surprise"><svg class="ico"><use href="#i-dice"/></svg>Surprise me</button>
-      <p class="toast" id="ktToast">Keeps a 10-minute buffer before boarding.</p>
+      <div class="surprise-row">
+        <p class="toast" id="ktToast">Keeps a 10-minute buffer before boarding.</p>
+        <button class="fab" id="surprise"><svg class="ico"><use href="#i-dice"/></svg>Surprise me</button>
+      </div>
       <div class="group" id="ideas"></div>
     </div>
 
@@ -1749,17 +1773,18 @@ addEventListener('pointercancel', endDrag);
 sheetBody.addEventListener('focusin', () => { if (!wide() && detent === 'peek') setDetent('half'); });
 
 // ---------- Category chips (map layers) ----------
-const chips = $('#chips');
-for (const [cat, c] of Object.entries(CATS)) {
-  const b = document.createElement('button');
-  b.className = 'chip'; b.setAttribute('aria-pressed', 'true');
-  b.innerHTML = `<span class="tile ${cat}">${icon(cat)}</span>${c.label}`;
-  b.onclick = () => {
-    const on = b.getAttribute('aria-pressed') === 'true';
-    b.setAttribute('aria-pressed', String(!on)); svg.classList.toggle('hide-' + cat, on); buzz(5); cullLabels();
-  };
-  chips.appendChild(b);
-}
+// ---------- Layers: which kinds of place show on the map ----------
+const layersEl = $('#layers'), layersBtn = $('#layersBtn');
+layersEl.innerHTML = '<div class="lh">Show on map</div>' + Object.entries(CATS).map(([cat, c]) =>
+  `<button role="menuitemcheckbox" aria-pressed="true" data-cat="${cat}"><span class="tile ${cat}">${icon(cat)}</span>${c.label}<span class="tick">${icon('check')}</span></button>`).join('');
+layersEl.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => {
+  const on = b.getAttribute('aria-pressed') === 'true';
+  b.setAttribute('aria-pressed', String(!on)); svg.classList.toggle('hide-' + b.dataset.cat, on); buzz(5); cullLabels();
+});
+function openLayers(open) { layersEl.hidden = !open; layersBtn.setAttribute('aria-expanded', String(open)); }
+layersBtn.onclick = () => { buzz(5); openLayers(layersEl.hidden); };
+document.addEventListener('pointerdown', e => { if (!layersEl.hidden && !e.target.closest('#layers, #layersBtn')) openLayers(false); }, true);
+$('#q').placeholder = `Search ${AP.short}`;
 
 // ---------- Tabs ----------
 function replay(node) { if (reduced) return; node.classList.remove('enter'); void node.offsetWidth; node.classList.add('enter'); }
@@ -1775,7 +1800,8 @@ function setTab(name, quiet) {
   });
   replay($('#pane-' + name)); replay($('#title'));
   $('#title').textContent = name === 'dir' && mode === 'arr' ? 'Arrivals' : TAB_TITLES[name];
-  $('#eyebrow').textContent = `${AP.short} · ${AP.code}`; $('#eyebrow').classList.add('can');
+  $('#eyebrow').innerHTML = `<span class="ap-code">${esc(AP.code)}</span><span class="ap-name">${esc(AP.short)}</span>`; $('#eyebrow').classList.add('can');
+  $('#title').hidden = true;
   if (selected) { selected.el.classList.remove('sel'); selected = null; }
   setPin(null);
   if (name === 'dir') updateRoute(false);
@@ -1805,7 +1831,7 @@ function showPlace(it, fromMap) {
   if (it.lvl && it.lvl !== floor) setFloor(it.lvl); else cullLabels();
   placeMode = true;
   $('#seg').hidden = true; $('#closePlace').hidden = false; $('#modeSw').hidden = true;
-  $('#eyebrow').classList.remove('can'); openAirports(false);
+  $('#eyebrow').classList.remove('can'); openAirports(false); $('#title').hidden = false;
   ['dir', 'kill', 'air'].forEach(t => $('#pane-' + t).hidden = true);
   const pane = $('#pane-place'); pane.hidden = false; replay(pane); replay($('#title'));
   $('#title').textContent = it.name;
@@ -2330,6 +2356,7 @@ document.addEventListener('pointerdown', e => { if (!apMenu.hidden && !e.target.
 
 // Android back button: close overlays before leaving the app
 window.cleBack = () => {
+  if (!layersEl.hidden) { openLayers(false); return true; }
   if (!apMenu.hidden) { openAirports(false); return true; }
   if (!toastEl.hidden) { toastEl.hidden = true; return true; }
   if (!results.hidden) { results.hidden = true; return true; }

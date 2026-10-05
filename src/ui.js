@@ -752,17 +752,18 @@ addEventListener('pointercancel', endDrag);
 sheetBody.addEventListener('focusin', () => { if (!wide() && detent === 'peek') setDetent('half'); });
 
 // ---------- Category chips (map layers) ----------
-const chips = $('#chips');
-for (const [cat, c] of Object.entries(CATS)) {
-  const b = document.createElement('button');
-  b.className = 'chip'; b.setAttribute('aria-pressed', 'true');
-  b.innerHTML = `<span class="tile ${cat}">${icon(cat)}</span>${c.label}`;
-  b.onclick = () => {
-    const on = b.getAttribute('aria-pressed') === 'true';
-    b.setAttribute('aria-pressed', String(!on)); svg.classList.toggle('hide-' + cat, on); buzz(5); cullLabels();
-  };
-  chips.appendChild(b);
-}
+// ---------- Layers: which kinds of place show on the map ----------
+const layersEl = $('#layers'), layersBtn = $('#layersBtn');
+layersEl.innerHTML = '<div class="lh">Show on map</div>' + Object.entries(CATS).map(([cat, c]) =>
+  `<button role="menuitemcheckbox" aria-pressed="true" data-cat="${cat}"><span class="tile ${cat}">${icon(cat)}</span>${c.label}<span class="tick">${icon('check')}</span></button>`).join('');
+layersEl.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => {
+  const on = b.getAttribute('aria-pressed') === 'true';
+  b.setAttribute('aria-pressed', String(!on)); svg.classList.toggle('hide-' + b.dataset.cat, on); buzz(5); cullLabels();
+});
+function openLayers(open) { layersEl.hidden = !open; layersBtn.setAttribute('aria-expanded', String(open)); }
+layersBtn.onclick = () => { buzz(5); openLayers(layersEl.hidden); };
+document.addEventListener('pointerdown', e => { if (!layersEl.hidden && !e.target.closest('#layers, #layersBtn')) openLayers(false); }, true);
+$('#q').placeholder = `Search ${AP.short}`;
 
 // ---------- Tabs ----------
 function replay(node) { if (reduced) return; node.classList.remove('enter'); void node.offsetWidth; node.classList.add('enter'); }
@@ -778,7 +779,8 @@ function setTab(name, quiet) {
   });
   replay($('#pane-' + name)); replay($('#title'));
   $('#title').textContent = name === 'dir' && mode === 'arr' ? 'Arrivals' : TAB_TITLES[name];
-  $('#eyebrow').textContent = `${AP.short} · ${AP.code}`; $('#eyebrow').classList.add('can');
+  $('#eyebrow').innerHTML = `<span class="ap-code">${esc(AP.code)}</span><span class="ap-name">${esc(AP.short)}</span>`; $('#eyebrow').classList.add('can');
+  $('#title').hidden = true;
   if (selected) { selected.el.classList.remove('sel'); selected = null; }
   setPin(null);
   if (name === 'dir') updateRoute(false);
@@ -808,7 +810,7 @@ function showPlace(it, fromMap) {
   if (it.lvl && it.lvl !== floor) setFloor(it.lvl); else cullLabels();
   placeMode = true;
   $('#seg').hidden = true; $('#closePlace').hidden = false; $('#modeSw').hidden = true;
-  $('#eyebrow').classList.remove('can'); openAirports(false);
+  $('#eyebrow').classList.remove('can'); openAirports(false); $('#title').hidden = false;
   ['dir', 'kill', 'air'].forEach(t => $('#pane-' + t).hidden = true);
   const pane = $('#pane-place'); pane.hidden = false; replay(pane); replay($('#title'));
   $('#title').textContent = it.name;
@@ -1333,6 +1335,7 @@ document.addEventListener('pointerdown', e => { if (!apMenu.hidden && !e.target.
 
 // Android back button: close overlays before leaving the app
 window.cleBack = () => {
+  if (!layersEl.hidden) { openLayers(false); return true; }
   if (!apMenu.hidden) { openAirports(false); return true; }
   if (!toastEl.hidden) { toastEl.hidden = true; return true; }
   if (!results.hidden) { results.hidden = true; return true; }
