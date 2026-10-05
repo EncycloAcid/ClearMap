@@ -156,6 +156,8 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 @media (hover: hover) { #map .mk:hover .pop { transform: scale(1.3); } }
 .walk { stroke: var(--walk); fill: none; stroke-dasharray: 2 3; }
 .area-lbl[data-off] { display: none; }
+/* labels scale with the map: without this Chrome re-lays out every label on each frame of a pinch */
+#map text { text-rendering: geometricPrecision; }
 .map-lbl { font: 650 8.5px var(--font-display); fill: var(--label-2); letter-spacing: .08em; text-transform: uppercase; }
 .con-letter { font: 800 14px var(--font-display); font-variation-settings: "wdth" 110; fill: #fff; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
 .con-shape.A, .gate.A .pill { fill: var(--conA); }

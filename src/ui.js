@@ -1,3 +1,7 @@
+// Window size, read once and on resize: reading innerWidth while the overlay is dirty forces a
+// full layout of the SVG (every label) mid-gesture, which was most of a pinch's frame time.
+let vw = innerWidth, vh = innerHeight;
+addEventListener('resize', () => { vw = innerWidth; vh = innerHeight; });
 // ---------- Shapes & icons ----------
 // Material 3 Expressive-style shapes: A = circle, B = 4-lobe clover, C = 9-scallop cookie.
 function blob(n, amp, R = 10) {
@@ -59,12 +63,47 @@ function readPalette() {
 const repaint = () => { pal = null; if (committed) render(true); };
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', repaint);
 new MutationObserver(repaint).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+// Sharp redraw of the base map on screen (when the map settles). It also drops the gesture cache.
 function drawBase() {
+  paintBase(bctx, baseCanvas.width, baseCanvas.height, view.x + ox, view.y + oy, view.k);
+  cacheView = null; scheduleCache();
+}
+// While a finger or the camera is moving, redrawing every vector each frame is the slow part
+// (most of the frame on a phone). Instead the base map is drawn once into a larger cache around
+// the screen, and frames just slide and scale that image; it's redrawn sharp when things settle.
+const cache = document.createElement('canvas'), cctx = cache.getContext('2d', { alpha: false });
+const OVER = 0.35;           // margin around the screen, in screen sizes, on each side
+let cacheView = null, cacheIdle = null;
+function buildCache(over = OVER) {
+  const W = vw, H = vh, mx = Math.round(W * over), my = Math.round(H * over);
+  const cw = Math.round((W + 2 * mx) * dpr), ch = Math.round((H + 2 * my) * dpr);
+  if (cache.width !== cw || cache.height !== ch) { cache.width = cw; cache.height = ch; }
+  paintBase(cctx, cw, ch, view.x + ox + mx, view.y + oy + my, view.k);
+  cacheView = { ...view, mx, my };
+}
+function scheduleCache() {
+  if (cacheIdle) return;
+  const run = () => { cacheIdle = null; if (!cacheView && !ptrs.size && !moving) buildCache(); };
+  cacheIdle = window.requestIdleCallback ? requestIdleCallback(run, { timeout: 400 }) : setTimeout(run, 80);
+}
+function blitBase() {
+  const W = vw, H = vh;
+  let C = cacheView, r = C ? view.k / C.k : 0;
+  // where the cached area lands on screen now; rebuild if the view has left it or zoomed too far
+  const place = () => ({ x: view.x - r * C.x - r * C.mx, y: view.y - r * C.y - r * C.my });
+  let o = C && place();
+  if (!C || r > 1.6 || r < .62 || o.x > 0 || o.y > 0 || o.x + r * (W + 2 * C.mx) < W || o.y + r * (H + 2 * C.my) < H) {
+    buildCache(.12); C = cacheView; r = 1; o = place();   // mid-gesture: a slimmer margin keeps this frame quick
+  }
+  bctx.setTransform(1, 0, 0, 1, 0, 0);
+  bctx.imageSmoothingEnabled = true;
+  bctx.drawImage(cache, dpr * o.x, dpr * o.y, cache.width * r, cache.height * r);
+}
+function paintBase(c, cw, ch, tx, ty, k) {
   pal = pal || readPalette();
-  const c = bctx, k = view.k;
   c.setTransform(1, 0, 0, 1, 0, 0);
-  c.fillStyle = pal.map; c.fillRect(0, 0, baseCanvas.width, baseCanvas.height);
-  c.setTransform(dpr * k, 0, 0, dpr * k, dpr * (view.x + ox), dpr * (view.y + oy));
+  c.fillStyle = pal.map; c.fillRect(0, 0, cw, ch);
+  c.setTransform(dpr * k, 0, 0, dpr * k, dpr * tx, dpr * ty);
   c.lineCap = c.lineJoin = 'round';
   const fill = (key, color) => { if (P2[key]) { c.fillStyle = color; c.fill(P2[key], 'evenodd'); } };
   const stroke = (key, color, w, dash) => { if (P2[key]) { c.strokeStyle = color; c.lineWidth = w; c.setLineDash(dash || []); c.stroke(P2[key]); } };
@@ -215,7 +254,7 @@ const view = { k: 1, x: 0, y: 0 };
 let markerScale = 1;
 function clampView() {
   // keep at least part of the airport on screen
-  const W = innerWidth, H = innerHeight, m = 90;
+  const W = vw, H = vh, m = 90;
   const M = MAP_BOUNDS, l = view.x + view.k * M.x0, r = view.x + view.k * M.x1, t = view.y + view.k * M.y0, b = view.y + view.k * M.y1;
   if (r < m) view.x += m - r; if (l > W - m) view.x -= l - (W - m);
   if (b < m + 60) view.y += m + 60 - b; if (t > H - m) view.y -= t - (H - m);
@@ -245,7 +284,7 @@ let dpr = 1;
 function sizeSvg() {
   // cap the backing store: 2x is sharp on phones and keeps repaints and memory in check
   dpr = Math.min(devicePixelRatio || 1, 2);
-  baseCanvas.width = Math.round(innerWidth * dpr); baseCanvas.height = Math.round(innerHeight * dpr);
+  baseCanvas.width = Math.round(vw * dpr); baseCanvas.height = Math.round(vh * dpr);
 }
 sizeSvg();
 function apply() {
@@ -262,14 +301,14 @@ function frame() {
   const r = view.k / committed.k;
   // zoomed far enough that sliding markers would look wrong: re-lay-out now
   if (r > 1.9 || r < .55) return render();
-  drawBase();
+  blitBase();
   svg.style.transform = `translate(${view.x - r * committed.x}px, ${view.y - r * committed.y}px) scale(${r})`;
 }
 function render() {
   clearTimeout(commitTimer);
   clampView();
   committed = { ...view };
-  drawBase();
+  if (ptrs.size || moving) blitBase(); else drawBase();
   svg.style.transform = '';
   world.setAttribute('transform', `translate(${view.x} ${view.y}) scale(${view.k})`);
   // marker sizes only depend on zoom, so a plain pan skips rewriting ~200 transforms
@@ -354,7 +393,7 @@ function cullLabels() {
     const m = scr(pointAt(routeTotal * 0.5)), w = +etaRect.getAttribute('width') / 2;
     taken.push({ l: m.x - w * u, r: m.x + w * u, t: m.y - 30 * u, b: m.y - 7 * u });
   }
-  const offscreen = r => r.r < 0 || r.l > innerWidth || r.b < 0 || r.t > innerHeight;
+  const offscreen = r => r.r < 0 || r.l > vw || r.b < 0 || r.t > vh;
   const shown = new Set(), side = new Map();
   for (const it of list) {
     const p = scr(it), w = (it.lw - 5) * u, mine = it.el.classList.contains('sel'), important = rank(it) < 2;
@@ -396,7 +435,7 @@ function animateTo(target) {
   // Fly the centre of the screen in a straight line while zoom changes
   // geometrically, so places don't drift sideways; long hops ease out a
   // little and back in, like Apple Maps.
-  const W = innerWidth / 2, H = innerHeight / 2, from = { ...view };
+  const W = vw / 2, H = vh / 2, from = { ...view };
   const c0 = { x: (W - from.x) / from.k, y: (H - from.y) / from.k }, c1 = { x: (W - target.x) / target.k, y: (H - target.y) / target.k };
   const hop = Math.hypot(c1.x - c0.x, c1.y - c0.y) * Math.min(from.k, target.k) / Math.max(W, H);
   const lift = Math.min(0.45, Math.max(0, hop - 0.6) * 0.25);
@@ -412,7 +451,7 @@ function animateTo(target) {
   anim = requestAnimationFrame(step);
 }
 function visibleRect() {
-  const W = innerWidth, H = innerHeight;
+  const W = vw, H = vh;
   if (nav) {
     const b = $('#navBanner').getBoundingClientRect(), f = $('#navBar').getBoundingClientRect();
     return wide() ? { l: 448, t: 16, r: W - 72, b: H - 16 } : { l: 12, t: b.bottom + 8, r: W - 66, b: f.top - 8 };
@@ -727,7 +766,7 @@ function visibleFor(d) {
   if (wide()) return 0;
   const H = sheet.offsetHeight;
   if (d === 'full') return H;
-  if (d === 'half') return Math.min(H, Math.round(innerHeight * 0.52));
+  if (d === 'half') return Math.min(H, Math.round(vh * 0.52));
   const first = sheetBody.querySelector('.pane:not([hidden]) > *');
   let extra = first ? Math.min(first.offsetHeight, 200) + 20 : 90;
   // keep the "nearest" buttons in the collapsed sheet too
