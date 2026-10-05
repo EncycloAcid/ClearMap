@@ -332,6 +332,20 @@ body.navigating .controls { top: auto; bottom: calc(var(--sab, 0px) + 104px); }
 .summary .marks { display: inline-flex; gap: 4px; }
 .summary .marks::before { display: none; }
 
+/* ---------- Airlines tab ---------- */
+.gt-walk { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; text-transform: none; letter-spacing: 0; font-weight: 600; }
+.gt-walk .ico { width: 14px; height: 14px; }
+.air-row { gap: 14px; }
+.air-row .air-mark { transition: transform .35s var(--spring), border-radius .4s var(--spring); }
+.air-row:active .air-mark { transform: scale(.9); border-radius: 50%; }
+.gate-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.gate-chip { min-width: 52px; height: 36px; padding: 0 12px; border: 0; border-radius: 18px; color: #fff; font: 800 15px var(--font-display); font-variation-settings: "wdth" 105;
+  background: var(--label-2); transition: transform .3s var(--spring), border-radius .35s var(--spring); }
+.gate-chip.A { background: var(--conA); } .gate-chip.B { background: var(--conB); } .gate-chip.C { background: var(--conC); }
+.gate-chip:active { transform: scale(.92); border-radius: 10px; }
+button.tag { border: 0; color: inherit; font: inherit; font-size: 14px; font-weight: 600; }
+.bgroup button .badge { width: 22px; height: 22px; }
+
 /* ---------- Layers menu ---------- */
 .layers { position: fixed; z-index: 6; right: calc(var(--safe-right) + 72px); top: calc(var(--safe-top) + 70px); width: min(270px, calc(100% - 104px)); border-radius: 20px; padding: 6px 0; background: var(--solid); }
 .layers .lh { padding: 8px 16px 4px; font-size: 13px; font-weight: 600; color: var(--label-2); }
@@ -671,6 +685,7 @@ h1.long { font-size: 24px; }
   <symbol id="i-right" viewBox="0 0 24 24"><path d="M7 20v-7a4 4 0 0 1 4-4h8M15 5l4 4-4 4"/></symbol>
   <symbol id="i-slight" viewBox="0 0 24 24"><path d="M9 20v-6l8-8M11 6h6v6"/></symbol>
   <symbol id="i-uturn" viewBox="0 0 24 24"><path d="M8 20V9a4 4 0 0 1 8 0v7M12 12l4 4 4-4"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6h.01"/></symbol>
   <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
   <symbol id="i-walk" viewBox="0 0 24 24"><circle cx="13" cy="4.5" r="1.8"/><path d="M10 21l2.5-6.5L15 17v4M12.5 14.5L11 9l-3 2v4M11 9l3.5-.5 2 3.5 2.5 1"/></symbol>
   <symbol id="i-dice" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="9" cy="9" r=".6" fill="currentColor"/><circle cx="15" cy="15" r=".6" fill="currentColor"/><circle cx="15" cy="9" r=".6" fill="currentColor"/><circle cx="9" cy="15" r=".6" fill="currentColor"/><circle cx="12" cy="12" r=".6" fill="currentColor"/></symbol>
@@ -807,9 +822,9 @@ h1.long { font-size: 24px; }
     </div>
 
     <div class="pane" id="pane-air" role="tabpanel" aria-labelledby="tab-air" hidden>
-      <p class="foot" style="margin-top:0">Tap an airline to light up its gates. All three concourses connect past security.</p>
+      <p class="foot" style="margin-top:0">All three concourses connect past security, so you can walk between them.</p>
       <div class="pane" id="airlines"></div>
-      <p class="foot">International arrivals clear U.S. Customs near gate A5. Concourse D has been closed since 2014. Gate assignments change, so check your boarding pass and the departure screens.</p>
+      <div class="group tip"><span class="tile place terminal"><svg class="ico"><use href="#i-info"/></svg></span><span>International arrivals clear U.S. Customs near gate A5. Concourse D has been closed since 2014. Gates change, so check your boarding pass and the departure screens.</span></div>
     </div>
 
     <div class="pane" id="pane-place" hidden></div>

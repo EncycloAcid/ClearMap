@@ -1444,10 +1444,18 @@ $('#surprise').onclick = () => {
 // ---------- Airlines ----------
 // an airline's mark: its two-letter code on a tile in its brand colour
 const airMark = (a, size = 30) => `<span class="air-mark" style="--ac:${esc(a.color || 'var(--label-2)')};--ai:${esc(a.ink || '#fff')};--as:${size}px" aria-hidden="true">${esc(a.code || a.name.slice(0, 2).toUpperCase())}</span>`;
+// walk from security to each concourse: nearest and farthest gate
+const CON_WALK = {};
+for (const con of 'ABC') {
+  const gates = Object.values(ITEMS).filter(it => it.kind === 'gate' && it.con === con);
+  const legs = gates.map(g => ({ g, m: minutes(route(ITEMS[CHK], g).units) })).sort((x, y) => x.m - y.m);
+  if (legs.length) CON_WALK[con] = { min: legs[0].m, max: legs[legs.length - 1].m, near: legs[0].g, gates: gates.sort((x, y) => parseInt(x.code.slice(1)) - parseInt(y.code.slice(1))) };
+}
+const walkRange = con => { const w = CON_WALK[con]; return !w ? '' : w.min === w.max ? `${w.min} min` : `${w.min}–${w.max} min`; };
 $('#airlines').innerHTML = 'ABC'.split('').map(con => `
-  <div class="group-title">${badgeSvg(con, 22)}Concourse ${con} · ${CON_RANGE[con]}</div>
+  <div class="group-title">${badgeSvg(con, 22)}Concourse ${con} · ${CON_RANGE[con]}<span class="gt-walk">${icon('walk')}${walkRange(con)}</span></div>
   <div class="group" style="--inset:16px">${AIRLINES.map((a, i) => a.con !== con ? '' : `
-    <button class="row" data-i="${i}">${airMark(a, 34)}
+    <button class="row air-row" data-i="${i}">${airMark(a, 38)}
       <span class="grow"><span class="t">${esc(a.name)}</span>${a.note ? `<span class="s">${esc(a.note)}</span>` : ''}</span>
       <svg class="ico chev"><use href="#i-chev"/></svg>
     </button>`).join('')}</div>`).join('');
@@ -1458,7 +1466,46 @@ function highlightAirline(a) {
   if (!wide() && detent !== 'peek') setDetent('peek');
   fitCon(a.con);
 }
-$('#airlines').querySelectorAll('[data-i]').forEach(b => b.onclick = () => highlightAirline(AIRLINES[+b.dataset.i]));
+// An airline's card: where it flies from, how far that is, and its gates
+function showAirline(a) {
+  buzz();
+  if (selected) { selected.el.classList.remove('sel'); selected = null; }
+  setPin(null); setRoute([]); setFloor('up', true);
+  highlight(Object.values(ITEMS).filter(it => it.kind === 'gate' && it.con === a.con).map(it => it.id));
+  placeMode = true;
+  $('#seg').hidden = true; $('#closePlace').hidden = false; $('#modeSw').hidden = true;
+  $('#eyebrow').classList.remove('can'); openAirports(false); $('#title').hidden = false;
+  ['dir', 'kill', 'air'].forEach(t => $('#pane-' + t).hidden = true);
+  const pane = $('#pane-place'); pane.hidden = false; replay(pane); replay($('#title'));
+  $('#title').textContent = a.name; $('#title').classList.remove('long');
+  $('#eyebrow').textContent = a.code ? `Airline · ${a.code}` : 'Airline';
+  const tile = $('#placeTile'); tile.innerHTML = airMark(a, 44); tile.hidden = false; replay(tile.firstChild);
+  const w = CON_WALK[a.con], others = AIRLINES.filter(o => o.con === a.con && o !== a);
+  let html = `<p class="summary"><span>Concourse ${a.con}</span><span>Gates ${esc(CON_RANGE[a.con])}</span></p>`;
+  html += `<div class="bgroup">
+    <button class="primary" data-act="walk">${icon('walk')}Directions${w ? `<span class="sub">${w.min} min</span>` : ''}</button>
+    <button data-act="show">${badgeSvg(a.con, 22)}Show gates</button></div>`;
+  const rows = [
+    ['Check in', `${esc(ITEMS['v:' + ROLE.ticketing] ? ITEMS['v:' + ROLE.ticketing].name.replace(/\s*\(.*\)$/, '') : 'Ticketing')}, upper level`],
+    ['From security', `${walkRange(a.con)} walk`],
+  ];
+  if (a.note) rows.unshift(['Flies', esc(a.note)]);
+  html += `<div class="group">${rows.map(([k, v]) => `<div class="row"><span class="rl" style="flex:none">${k}</span><span style="flex:1;min-width:0;color:var(--label-2);text-align:right">${v}</span></div>`).join('')}</div>`;
+  if (w) html += `<div class="group-title">Gates</div><div class="gate-chips">${w.gates.map(g => `<button data-gate="${g.id}" class="gate-chip ${g.con}">${esc(g.code)}</button>`).join('')}</div>`;
+  if (others.length) html += `<div class="group-title">Also in Concourse ${a.con}</div><div class="group tags">${others.map(o => `<button class="tag air-tag" data-air="${AIRLINES.indexOf(o)}">${airMark(o, 22)}${esc(o.name)}</button>`).join('')}</div>`;
+  html += `<p class="foot" style="margin:-6px 16px 0">Gates change, so check your boarding pass and the departure screens.</p>`;
+  pane.innerHTML = html;
+  pane.querySelector('[data-act="walk"]').onclick = () => {
+    if (!w) return; buzz(); $('#from').value = CHK; $('#to').value = w.near.id; setTab('dir', true); if (!wide()) setDetent('peek'); updateRoute(true);
+  };
+  pane.querySelector('[data-act="show"]').onclick = () => { buzz(5); if (!wide()) setDetent('peek'); fitCon(a.con); };
+  pane.querySelectorAll('[data-gate]').forEach(b => b.onclick = () => { buzz(5); showPlace(ITEMS[b.dataset.gate], false); });
+  pane.querySelectorAll('[data-air]').forEach(b => b.onclick = () => showAirline(AIRLINES[+b.dataset.air]));
+  sheetBody.scrollTop = 0;
+  if (!wide()) setDetent('half');
+  fitCon(a.con);
+}
+$('#airlines').querySelectorAll('[data-i]').forEach(b => b.onclick = () => showAirline(AIRLINES[+b.dataset.i]));
 
 // ---------- Search ----------
 const q = $('#q'), results = $('#results');
@@ -1500,7 +1547,7 @@ function runSearch() {
   // airline codes match too, unless a gate has that number (JetBlue is B6)
   const isGateCode = Object.values(ITEMS).some(it => it.kind === 'gate' && it.code.toLowerCase() === code);
   const air = AIRLINES.filter(a => a.name.toLowerCase().includes(s) || (!isGateCode && a.code && a.code.toLowerCase() === s))
-    .map(a => ({ label: a.name, kind: `Airline · Concourse ${a.con} · ${CON_RANGE[a.con]}`, lead: airMark(a, 30), go: () => highlightAirline(a) }));
+    .map(a => ({ label: a.name, kind: `Airline · Concourse ${a.con} · ${CON_RANGE[a.con]}`, lead: airMark(a, 30), go: () => showAirline(a) }));
   const gates = [], places = [], seen = new Set();
   for (const it of Object.values(ITEMS)) {
     if (it.id === 'v:me') continue;
@@ -1521,7 +1568,7 @@ function runSearch() {
 }
 function wireResults() {
   results.querySelectorAll('[data-i]').forEach(b => b.onclick = () => pick(+b.dataset.i));
-  results.querySelectorAll('[data-air]').forEach(b => b.onclick = () => { results.hidden = true; q.blur(); highlightAirline(AIRLINES[+b.dataset.air]); });
+  results.querySelectorAll('[data-air]').forEach(b => b.onclick = () => { results.hidden = true; q.blur(); showAirline(AIRLINES[+b.dataset.air]); });
 }
 function pick(i) {
   const h = hits[i]; if (!h) return;
