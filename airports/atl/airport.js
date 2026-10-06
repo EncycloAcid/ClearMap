@@ -21,6 +21,10 @@ AIRPORTS.ATL = (() => {
     dN: [-150, -302],  dC: [-150, -10, 'Concourse D'],  dS: [-150, 338],
     eN: [182, -342],   eC: [182, -10, 'Concourse E'],   eS: [182, 380], eW: [420, 3], eBr: [262, -372],
     fN: [728, -45],    fC: [728, 44, 'Concourse F'],    fS: [728, 345],
+    // each concourse's centre widens into a cross-shaped food court either side of the corridor
+    // (from the building outlines); its restaurants and shops join these
+    tWe: [-1317, -12], aWw: [-1110, -18], aWe: [-1018, -18], bWw: [-807, 0], bWe: [-715, 0],
+    cWw: [-512, -22], cWe: [-393, -22], dWw: [-193, -14], dWe: [-109, -14],
     // International Terminal (Concourse F's landside): check-in and its own checkpoint
     chkI:  [800, 40, 'International Terminal security'],
     tixI:  [885, 40, 'International Terminal check-in'],
@@ -49,6 +53,8 @@ AIRPORTS.ATL = (() => {
     // spines (zone = concourse, so gates and places attach to their own concourse)
     ...Object.entries(CONC).flatMap(([z, p]) => [[p + 'N', p + 'C', z], [p + 'C', p + 'S', z]]),
     ['eC', 'eW', 'E'], ['eN', 'eBr', 'E'],
+    ['tC', 'tWe', 'T'], ['aC', 'aWw', 'A'], ['aC', 'aWe', 'A'], ['bC', 'bWw', 'B'], ['bC', 'bWe', 'B'],
+    ['cC', 'cWw', 'C'], ['cC', 'cWe', 'C'], ['dC', 'dWw', 'D'], ['dC', 'dWe', 'D'],
     ['fC', 'chkI', 'I'], ['chkI', 'tixI', 'IL'],
     // the Transportation Mall, the Plane Train, and getting on and off it
     ...MALL.slice(1).map((m, i) => [MALL[i], m, 'M']),
