@@ -61,7 +61,9 @@ const P2 = {};
 for (const k in B) if (typeof B[k] === 'string' && B[k]) P2[k] = new Path2D(B[k]);
 const PLANE_D = 'M0 -8C1 -8 1.3 -6.5 1.3 -5L1.3 -1.5L8 2L8 3.4L1.3 1.6L1.1 5.2L3 6.6L3 7.6L0 7L-3 7.6L-3 6.6L-1.1 5.2L-1.3 1.6L-8 3.4L-8 2L-1.3 -1.5L-1.3 -5C-1.3 -6.5 -1 -8 0 -8Z';
 const planePath = new Path2D(PLANE_D);
-const HALLS = AP.ui.halls, HALL_PATH = {};
+const HALLS = AP.ui.halls, HALL_PATH = {}, HALL_CURB = {};
+let hallPicked = null;   // 'up' or 'lo' while the Ticketing or Baggage claim card is open
+function pickHall(f) { if (f === hallPicked) return; hallPicked = f; if (committed) { cacheView = null; render(); } }
 if (HALLS) for (const [f, key] of [['up', 'tix'], ['lo', 'bag']]) {
   const p = new Path2D(); HALLS[key].forEach(([x, y], i) => i ? p.lineTo(x, y) : p.moveTo(x, y)); p.closePath(); HALL_PATH[f] = p;
 }
@@ -77,7 +79,7 @@ function readPalette() {
   const p = {};
   for (const k of ['map', 'grass', 'wood', 'water', 'apron-pave', 'lot', 'taxi', 'runway', 'taxi-line', 'road-case', 'road-fill',
     'mway-case', 'mway-fill', 'rail', 'other-bldg', 'garage', 'bldg', 'bldg-edge', 'bldg-shadow', 'plane', 'bridge', 'term-closed',
-    'walk', 'route', 'corridor', 'stairs', 'runway-mark', 'hall', 'hall-edge', 'hall-text', 'counter', 'carousel', 'carousel-belt', 'door', ...CONS.map(c => 'con' + c)]) p[k] = g(k);
+    'walk', 'route', 'corridor', 'stairs', 'runway-mark', 'hall-up', 'hall-up-edge', 'hall-up-text', 'hall-lo', 'hall-lo-edge', 'hall-lo-text', 'curb', 'zebra', 'glass', 'counter', 'carousel', 'carousel-belt', 'door', ...CONS.map(c => 'con' + c)]) p[k] = g(k);
   const tint = parseFloat(g('con-tint')) || .1;
   for (const c of CONS) p['term' + c] = /^#[0-9a-f]{6}$/i.test(p['con' + c]) && /^#[0-9a-f]{6}$/i.test(p.bldg) ? hexMix(p['con' + c], p.bldg, tint) : p.bldg;
   return p;
@@ -131,6 +133,55 @@ function blitBase() {
   bctx.imageSmoothingEnabled = true;
   bctx.drawImage(cache, 0, 0);
 }
+// The halls' fittings, drawn like a floor plan: check-in desks with the bag belt behind them,
+// baggage carousels (a belt loop round an island), the curbside doors, and the names on the floor.
+function drawHallDetails(c, k, lower) {
+  const f = lower ? 'lo' : 'up', ink = pal['hall-' + f + '-edge'];
+  c.setLineDash([]);
+  if (!lower) {
+    for (const run of HALLS.counters) for (let i = 0; i + 1 < run.length; i++) {
+      const [x0, y0] = run[i], [x1, y1] = run[i + 1], a = Math.atan2(y1 - y0, x1 - x0), L = Math.hypot(x1 - x0, y1 - y0);
+      c.save(); c.translate(x0, y0); c.rotate(a);
+      c.fillStyle = ink; c.fillRect(-.2, 1.5, L + .4, .7);                      // the bag belt behind the desks
+      c.fillStyle = pal.counter; c.beginPath(); c.roundRect(.3, -.8, L - .6, 1.9, .5); c.fill();
+      c.restore();
+    }
+  } else {
+    for (const [x, y, a] of HALLS.carousels) {
+      c.save(); c.translate(x, y); c.rotate(a * Math.PI / 180);
+      c.beginPath(); c.roundRect(-6.4, -2.6, 12.8, 5.2, 2.6); c.fillStyle = pal.carousel; c.fill();
+      c.strokeStyle = pal['carousel-belt']; c.lineWidth = .5; c.stroke();
+      c.beginPath(); c.roundRect(-5, -1.3, 10, 2.6, 1.3); c.lineWidth = 1; c.stroke();   // the belt
+      c.beginPath(); c.roundRect(-3.6, -.35, 7.2, .7, .35); c.fillStyle = pal['carousel-belt']; c.fill();   // the island
+      c.restore();
+    }
+  }
+  // the curb wall is glass: a pale double line, broken by the doors
+  c.strokeStyle = pal.glass; c.lineWidth = 1.3; c.beginPath(); HALLS.facade[f].forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.stroke();
+  c.strokeStyle = pal['hall-' + f]; c.lineWidth = .4; c.stroke();
+  // curbside doors: a bar across the wall with a notch, like the entrance marks on a floor plan
+  for (const [x, y] of HALLS.doors[f]) {
+    c.save(); c.translate(x, y); c.rotate((y < -135 ? -44.6 : -78.4) * Math.PI / 180);
+    c.fillStyle = pal.door; c.beginPath(); c.roundRect(-2.6, -.9, 5.2, 1.8, .9); c.fill();
+    c.fillStyle = pal['hall-' + f]; c.fillRect(-1.6, -.3, 3.2, .6);
+    c.restore();
+  }
+  // names painted along the floor and the curb: they grow with the map, up to a comfortable size
+  const fs = Math.min(5.2, 15 / k);
+  c.font = `700 ${fs}px ` + (getComputedStyle(document.documentElement).getPropertyValue('--font-display') || 'sans-serif');
+  try { c.letterSpacing = (fs * .24) + 'px'; } catch (e) {}
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  for (const [x, y, ang, t, lv] of HALLS.names || []) {
+    const road = /DRIVE/.test(t);
+    if ((lv === 'lo') !== lower || k < (road ? 1.3 : .9)) continue;
+    c.save(); c.translate(x, y); c.rotate(ang * Math.PI / 180);
+    c.fillStyle = road ? pal.door : pal['hall-' + f + '-text']; c.globalAlpha = road ? .7 : .6; c.fillText(t, 0, 0);
+    c.restore();
+  }
+  try { c.letterSpacing = '0px'; } catch (e) {}
+  // the open hall's outline, on top of everything
+  if (hallPicked === f) { c.save(); c.globalAlpha = .9; c.strokeStyle = pal.route; c.lineWidth = 2.4 / Math.max(k, .5); c.stroke(HALL_PATH[f]); c.restore(); }
+}
 function paintBase(c, cw, ch, tx, ty, k, rot = 0) {
   pal = pal || readPalette();
   c.setTransform(1, 0, 0, 1, 0, 0);
@@ -175,42 +226,32 @@ function paintBase(c, cw, ch, tx, ty, k, rot = 0) {
   if (!lower) stroke('bridges', pal.bridge, 3.6);
   // the landside halls: ticketing upstairs (with its check-in counter rows), baggage claim downstairs
   // (with its carousels), each tinted so they read as places of their own, and the curbside doors
-  if (HALLS) {
-    const hp = HALL_PATH[lower ? 'lo' : 'up'];
-    c.fillStyle = pal.hall; c.fill(hp); c.strokeStyle = pal['hall-edge']; c.lineWidth = 1 / Math.max(k, .5); c.stroke(hp);
-    if (!lower) {
-      c.strokeStyle = pal.counter; c.lineWidth = 2.2; c.lineCap = 'butt'; c.setLineDash([3, .9]);
-      for (const run of HALLS.counters) { c.beginPath(); run.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.stroke(); }
-      c.setLineDash([]); c.lineCap = 'round';
-    } else {
-      for (const [x, y, a] of HALLS.carousels) {
-        c.save(); c.translate(x, y); c.rotate(a * Math.PI / 180);
-        c.beginPath(); c.roundRect(-6, -2.1, 12, 4.2, 2.1); c.fillStyle = pal.carousel; c.fill();
-        c.strokeStyle = pal['carousel-belt']; c.lineWidth = .9; c.stroke();
-        c.beginPath(); c.moveTo(-3.6, 0); c.lineTo(3.6, 0); c.lineWidth = .7; c.stroke();
-        c.restore();
-      }
+  // the landside halls' floors: ticketing upstairs, baggage claim downstairs (their details go on top
+  // of the walkways, below)
+  const hp = HALLS && HALL_PATH[lower ? 'lo' : 'up'];
+  if (hp) {
+    const f = lower ? 'lo' : 'up', P = poly => { const p = new Path2D(); poly.forEach(([x, y], i) => i ? p.lineTo(x, y) : p.moveTo(x, y)); p.closePath(); return p; };
+    // outside: the curbside sidewalk, and crosswalks over the drive from each door
+    c.fillStyle = pal.curb; c.fill(HALL_CURB[f] || (HALL_CURB[f] = P(HALLS.curb[f])));
+    c.strokeStyle = pal.zebra; c.lineWidth = 3; c.lineCap = 'butt'; c.setLineDash([.6, .6]);
+    for (const [x0, y0, x1, y1] of HALLS.zebra[f]) {
+      // stripes run along the crossing: draw a wide dashed line across it
+      const a = Math.atan2(y1 - y0, x1 - x0), L = Math.hypot(x1 - x0, y1 - y0);
+      c.save(); c.translate(x0, y0); c.rotate(a); c.beginPath(); c.moveTo(L / 2, -1.6); c.lineTo(L / 2, 1.6); c.lineWidth = L; c.stroke(); c.restore();
     }
-    c.fillStyle = pal.door;
-    for (const [x, y] of HALLS.doors[lower ? 'lo' : 'up']) { c.beginPath(); c.arc(x, y, 1.6, 0, Math.PI * 2); c.fill(); }
-    // the hall's name painted along its floor, so it reads at any zoom and never gets crowded out
-    for (const [x, y, ang, t, lv] of HALLS.names || []) {
-      if ((lv === 'lo') !== lower || k < .9) continue;
-      c.save(); c.translate(x, y); c.rotate(ang * Math.PI / 180);
-      c.font = '700 5.2px ' + (getComputedStyle(document.documentElement).getPropertyValue('--font-display') || 'sans-serif');
-      try { c.letterSpacing = '1.2px'; } catch (e) {}
-      c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = pal['hall-text']; c.globalAlpha = .55; c.fillText(t, 0, 0); c.globalAlpha = 1;
-      try { c.letterSpacing = '0px'; } catch (e) {}
-      c.restore();
-    }
+    c.setLineDash([]); c.lineCap = 'round';
+    c.fillStyle = pal['hall-' + f]; c.fill(hp); c.strokeStyle = pal['hall-' + f + '-edge']; c.lineWidth = 1.2 / Math.max(k, .5); c.stroke(hp);
+    // the hall whose card is open is outlined, so you can see all of it at a glance
+    if (hallPicked === (lower ? 'lo' : 'up')) { c.save(); c.globalAlpha = .1; c.fillStyle = pal.route; c.fill(hp); c.restore(); }
   }
   // this floor's walkways (OpenStreetMap indoor ways) and the escalators between floors
   stroke(lower ? 'walk0' : 'walk1', pal.corridor, 5);
   if (lower) stroke('walkm1', pal.corridor, 5, [5, 4]);
   // an airport train runs on the lower floor: a track with ties
   if (lower && P2.train) { stroke('train', pal.route, 7 / Math.max(k, .6)); stroke('train', pal.corridor, 3 / Math.max(k, .6), [4, 5]); }
-  // stairs and escalators: crisp treads (round dashes blur into blobs when you zoom in)
-  c.lineCap = 'butt'; stroke('stairs', pal.stairs, 2.4, [.45, .45]); c.lineCap = 'round';
+  // stairs and escalators: light, crisp treads (round dashes blur into blobs when you zoom in)
+  c.lineCap = 'butt'; c.globalAlpha = .6; stroke('stairs', pal.stairs, 2, [.4, .5]); c.globalAlpha = 1; c.lineCap = 'round';
+  if (hp) drawHallDetails(c, k, lower);
   if (!lower) {
     // the checkpoint line across the corridor from ticketing
     c.strokeStyle = pal.route; c.globalAlpha = .75; c.lineWidth = 1.8; c.setLineDash([3, 2.4]);
@@ -1274,6 +1315,7 @@ function setTab(name, quiet) {
   $('#eyebrow').innerHTML = `<span class="ap-code">${esc(AP.code)}</span><span class="ap-name">${esc(AP.short)}</span>`; $('#eyebrow').classList.add('can');
   $('#title').hidden = true;
   if (selected) { selected.el.classList.remove('sel'); selected = null; }
+  pickHall(null);
   setPin(null);
   if (name === 'dir') updateRoute(false);
   if (name === 'kill') updateIdeas();
@@ -1301,6 +1343,7 @@ function showPlace(it, fromMap) {
   if (!it) return;
   if (selected) selected.el.classList.remove('sel');
   selected = it; it.el.classList.add('sel'); setPin(it);
+  pickHall(it.kind === 'place' && it.node === ROLE.ticketing ? 'up' : it.kind === 'place' && it.node === ROLE.baggage ? 'lo' : null);
   if (it.lvl && it.lvl !== floor) setFloor(it.lvl); else cullLabels();
   placeMode = true;
   $('#seg').hidden = true; $('#closePlace').hidden = false; $('#modeSw').hidden = true;
@@ -1991,6 +2034,7 @@ function highlightAirline(a) {
 function showAirline(a) {
   buzz();
   if (selected) { selected.el.classList.remove('sel'); selected = null; }
+  pickHall(null);
   setPin(null); setRoute([]); setFloor('up', true);
   highlight(airGates(a).map(it => it.id));
   placeMode = true;

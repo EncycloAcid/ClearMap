@@ -12,7 +12,7 @@
 :root {
   /* iOS system surfaces */
   --map: #eef1ec; --corridor: #e2e8f2; --stairs: #95a1b2; --grass: #d4e9cb; --wood: #c2ddb7; --water: #b3d3f3; --apron-pave: #e5e7eb; --taxi: #dadde3; --taxi-line: #e6c14a; --runway: #c6cad2; --runway-mark: #ffffff; --road-case: #d3d8de; --road-fill: #ffffff; --mway-case: #e8c574; --mway-fill: #fdeab4; --rail: #aeb6c0; --lot: #e8eaee; --other-bldg: #dfe2e7; --term-closed: #ebecef; --map-grid: #e2e6eb; --bldg: #ffffff; --bldg-edge: #bfc8d4; --road: #d6dce3; --walk: #d3d9e0; --bldg-shadow: rgba(30, 45, 80, .2); --plane: #c9d0d9; --bridge: #c3ccd6; --garage: #dde1e7; --con-tint: .13;
-  --hall: #dfe7fb; --hall-edge: #a3b4dc; --hall-text: #6a7ea9; --counter: #5d6b85; --carousel: #d5dbe6; --carousel-belt: #7d8799; --door: #2f50d0;
+  --hall-up: #dcf1eb; --hall-up-edge: #86c6b4; --hall-up-text: #2f8a74; --hall-lo: #fbefd8; --hall-lo-edge: #e2ba6c; --hall-lo-text: #a8761c; --curb: #eceef2; --zebra: #ffffff; --glass: #8fb6e6; --counter: #5d6b85; --carousel: #d5dbe6; --carousel-belt: #7d8799; --door: #2f50d0;
   --glass: rgba(250, 250, 252, .96); --sheet-bg: #f7f7fa; --glass-hi: rgba(255, 255, 255, .55); --hairline: rgba(60, 60, 67, .16);
   --card: rgba(255, 255, 255, .92); --solid: #fbfbfd; --fill: rgba(118, 118, 128, .12); --fill-2: rgba(118, 118, 128, .2);
   --label: #101318; --label-2: rgba(60, 60, 67, .64); --label-3: rgba(60, 60, 67, .34);
@@ -46,7 +46,7 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --map: #111513; --corridor: #3d4656; --stairs: #7a8696; --grass: #172519; --wood: #1a2b1d; --water: #12263b; --apron-pave: #181b20; --taxi: #20242a; --taxi-line: #8a7323; --runway: #2a2f37; --runway-mark: #575e69; --road-case: #22272e; --road-fill: #2d333b; --mway-case: #4d4024; --mway-fill: #5e5030; --rail: #3f4650; --lot: #1b1f24; --other-bldg: #22262d; --term-closed: #1e2228; --map-grid: #1a1e24; --bldg: #2f3540; --bldg-edge: #4a5262; --road: #2a3038; --walk: #3a424d; --bldg-shadow: rgba(0, 0, 0, .55); --plane: #2c333d; --bridge: #434c59; --garage: #1c2026; --con-tint: .2; --hall: #26304a; --hall-edge: #46557a; --hall-text: #8796bd; --counter: #9aa7c0; --carousel: #3a4458; --carousel-belt: #8d97ab; --door: #7d97ff;
+    --map: #111513; --corridor: #3d4656; --stairs: #7a8696; --grass: #172519; --wood: #1a2b1d; --water: #12263b; --apron-pave: #181b20; --taxi: #20242a; --taxi-line: #8a7323; --runway: #2a2f37; --runway-mark: #575e69; --road-case: #22272e; --road-fill: #2d333b; --mway-case: #4d4024; --mway-fill: #5e5030; --rail: #3f4650; --lot: #1b1f24; --other-bldg: #22262d; --term-closed: #1e2228; --map-grid: #1a1e24; --bldg: #2f3540; --bldg-edge: #4a5262; --road: #2a3038; --walk: #3a424d; --bldg-shadow: rgba(0, 0, 0, .55); --plane: #2c333d; --bridge: #434c59; --garage: #1c2026; --con-tint: .2; --hall-up: #1d3833; --hall-up-edge: #3b7768; --hall-up-text: #79c2ae; --hall-lo: #3a3021; --hall-lo-edge: #7d6535; --hall-lo-text: #d4a656; --curb: #2a2f37; --zebra: #8e97a5; --glass: #4f74a8; --counter: #9aa7c0; --carousel: #3a4458; --carousel-belt: #8d97ab; --door: #7d97ff;
     --glass: rgba(34, 34, 38, .95); --sheet-bg: #1d1d21; --glass-hi: rgba(255, 255, 255, .07); --hairline: rgba(84, 84, 88, .55);
     --card: rgba(44, 44, 48, .88); --solid: #242428; --fill: rgba(118, 118, 128, .24); --fill-2: rgba(118, 118, 128, .34);
     --label: #f3f4f8; --label-2: rgba(235, 235, 245, .62); --label-3: rgba(235, 235, 245, .3);
@@ -64,7 +64,7 @@
   }
 }
 :root[data-theme="dark"] {
-  --map: #111513; --corridor: #3d4656; --stairs: #7a8696; --grass: #172519; --wood: #1a2b1d; --water: #12263b; --apron-pave: #181b20; --taxi: #20242a; --taxi-line: #8a7323; --runway: #2a2f37; --runway-mark: #575e69; --road-case: #22272e; --road-fill: #2d333b; --mway-case: #4d4024; --mway-fill: #5e5030; --rail: #3f4650; --lot: #1b1f24; --other-bldg: #22262d; --term-closed: #1e2228; --map-grid: #1a1e24; --bldg: #2f3540; --bldg-edge: #4a5262; --road: #2a3038; --walk: #3a424d; --bldg-shadow: rgba(0, 0, 0, .55); --plane: #2c333d; --bridge: #434c59; --garage: #1c2026; --con-tint: .2; --hall: #26304a; --hall-edge: #46557a; --hall-text: #8796bd; --counter: #9aa7c0; --carousel: #3a4458; --carousel-belt: #8d97ab; --door: #7d97ff;
+  --map: #111513; --corridor: #3d4656; --stairs: #7a8696; --grass: #172519; --wood: #1a2b1d; --water: #12263b; --apron-pave: #181b20; --taxi: #20242a; --taxi-line: #8a7323; --runway: #2a2f37; --runway-mark: #575e69; --road-case: #22272e; --road-fill: #2d333b; --mway-case: #4d4024; --mway-fill: #5e5030; --rail: #3f4650; --lot: #1b1f24; --other-bldg: #22262d; --term-closed: #1e2228; --map-grid: #1a1e24; --bldg: #2f3540; --bldg-edge: #4a5262; --road: #2a3038; --walk: #3a424d; --bldg-shadow: rgba(0, 0, 0, .55); --plane: #2c333d; --bridge: #434c59; --garage: #1c2026; --con-tint: .2; --hall-up: #1d3833; --hall-up-edge: #3b7768; --hall-up-text: #79c2ae; --hall-lo: #3a3021; --hall-lo-edge: #7d6535; --hall-lo-text: #d4a656; --curb: #2a2f37; --zebra: #8e97a5; --glass: #4f74a8; --counter: #9aa7c0; --carousel: #3a4458; --carousel-belt: #8d97ab; --door: #7d97ff;
   --glass: rgba(34, 34, 38, .95); --sheet-bg: #1d1d21; --glass-hi: rgba(255, 255, 255, .07); --hairline: rgba(84, 84, 88, .55);
   --card: rgba(44, 44, 48, .88); --solid: #242428; --fill: rgba(118, 118, 128, .24); --fill-2: rgba(118, 118, 128, .34);
   --label: #f3f4f8; --label-2: rgba(235, 235, 245, .62); --label-3: rgba(235, 235, 245, .3);
@@ -307,7 +307,7 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 .layers button, .results.fresh > button, .ap-menu button { animation: row-in .38s var(--spring-slow) both; animation-delay: calc(var(--n, 0) * 22ms); }
 @keyframes row-in { from { opacity: 0; transform: translateY(-5px); } }
 /* map markers ease in when a layer is switched back on */
-#map .amen { animation: mk-in .35s var(--spring) both; transform-box: fill-box; transform-origin: center; }
+#map .amen { animation: mk-in .35s var(--spring) both; }   /* (opacity only: a transform-origin here would pull every icon sideways by its label) */
 @keyframes mk-in { from { opacity: 0; } }
 /* numbers that change give a small nudge */
 .bump { animation: bump .45s var(--spring); }
