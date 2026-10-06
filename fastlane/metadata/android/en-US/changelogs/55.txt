@@ -1,0 +1,3 @@
+Clearway 10.0
+• New: Connect mode for connecting flights. Pick the gate you land at and your next gate and times: Clearway routes you there (Plane Train and Skylink included), says how many minutes you'll have to spare, and suggests food, coffee and restrooms near your next gate
+• Scan a boarding pass with both flights and it fills everything in, and follows delays on both

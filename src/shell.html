@@ -682,6 +682,8 @@ button.row:active, label.row:active { background: var(--fill); }
 .line li[data-node] > span:last-child { transition: transform .35s var(--spring); }
 .line li[data-node]:active > span:last-child { transform: translateX(4px); }
 .line li.passing { grid-template-columns: 1fr; padding-top: 4px; font-size: 14px; color: var(--label-2); border-top: .5px solid var(--hairline); padding-top: 12px; }
+.line li.con-head { border-top: 0; padding: 0 0 14px; gap: 6px; justify-items: start; }
+.line li.con-head .n { font-size: 15px; color: var(--label); }
 .foot { margin: -4px 16px 0; font-size: 13px; color: var(--label-2); }
 
 /* Expressive slider */
@@ -711,11 +713,11 @@ input.xs::-moz-range-thumb { width: 4px; height: 44px; border: 0; border-radius:
 }
 .tonal-btn:active { border-radius: 12px; transform: scale(.97); }
 .titlebar > .mode { flex: none; }
-.mode { position: relative; display: grid; grid-template-columns: 1fr 1fr; padding: 2px; border-radius: 12px; background: var(--fill); flex: none; align-self: center; }
-.mode::before { content: ""; position: absolute; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 2px); border-radius: 10px; background: var(--brand);
+.mode { position: relative; display: grid; grid-template-columns: repeat(var(--n, 2), 1fr); padding: 2px; border-radius: 12px; background: var(--fill); flex: none; align-self: center; }
+.mode::before { content: ""; position: absolute; top: 2px; bottom: 2px; left: 2px; width: calc((100% - 4px) / var(--n, 2)); border-radius: 10px; background: var(--brand);
   transform: translateX(calc(var(--i, 0) * 100%)); transition: transform .45s var(--spring), border-radius .3s; }
 .mode:active::before { border-radius: 8px; }
-.mode button { position: relative; height: 30px; padding: 0 10px; border: 0; background: none; font-size: 13px; font-weight: 700; color: var(--label-2);
+.mode button { position: relative; height: 30px; padding: 0 8px; border: 0; background: none; font-size: 12.5px; font-weight: 700; color: var(--label-2);
   transition: color .25s, transform .35s var(--spring); }
 .mode button:active { transform: scale(.94); }
 .mode button[aria-pressed="true"] { color: var(--on-brand); }
@@ -724,6 +726,9 @@ input.switch { -webkit-appearance: none; appearance: none; width: 51px; height: 
 input.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.2); transition: transform .4s var(--spring); }
 input.switch:checked { background: var(--ok); }
 input.switch:checked::after { transform: translateX(20px); }
+.time-in { height: 34px; border: 0; border-radius: 10px; background: var(--fill); color: var(--label); padding: 0 8px; font: 700 16px var(--font-text); font-variant-numeric: tabular-nums; outline: none; }
+.con-verdict { display: flex; align-items: center; gap: 10px; margin: 12px 4px 0; font-size: 14px; color: var(--label-2); }
+.con-verdict b { color: var(--label); }
 .car-in { width: 64px; height: 34px; border: 0; border-radius: 10px; background: var(--fill); text-align: center; font-weight: 700; font-size: 17px; outline: none; }
 .tonal-btn[aria-pressed="true"] { background: var(--brand); color: var(--on-brand); }
 .filter .chip { background: var(--card); box-shadow: none; }
@@ -831,6 +836,8 @@ h1.long { font-size: 24px; }
   <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
   <symbol id="i-walk" viewBox="0 0 24 24"><circle cx="13" cy="4.5" r="1.8"/><path d="M10 21l2.5-6.5L15 17v4M12.5 14.5L11 9l-3 2v4M11 9l3.5-.5 2 3.5 2.5 1"/></symbol>
   <symbol id="i-dice" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="9" cy="9" r=".6" fill="currentColor"/><circle cx="15" cy="15" r=".6" fill="currentColor"/><circle cx="15" cy="9" r=".6" fill="currentColor"/><circle cx="9" cy="15" r=".6" fill="currentColor"/><circle cx="12" cy="12" r=".6" fill="currentColor"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.6 3.6 5.4 3.6 8.5s-1 5.9-3.6 8.5c-2.6-2.6-3.6-5.4-3.6-8.5s1-5.9 3.6-8.5"/></symbol>
   <symbol id="i-flag" viewBox="0 0 24 24"><path d="M6 21V4M6 4h11l-2.5 4L17 12H6"/></symbol>
   <symbol id="i-food" viewBox="0 0 24 24"><path d="M7 3v18M4.5 3v5a2.5 2.5 0 0 0 5 0V3M17 21V3c-2.5 1.5-3 5-3 8h3"/></symbol>
   <symbol id="i-coffee" viewBox="0 0 24 24"><path d="M4 9h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM16 10.5h1.5a2.5 2.5 0 0 1 0 5H16M8 3.5v2.5M12 3.5v2.5"/></symbol>
@@ -907,8 +914,8 @@ h1.long { font-size: 24px; }
     <div class="titlebar">
       <span id="placeTile" hidden></span>
       <div><button class="eyebrow ap-btn" id="eyebrow" aria-haspopup="menu" aria-expanded="false">Airport</button><h1 id="title">Directions</h1></div>
-      <div class="mode" id="modeSw" role="group" aria-label="Trip direction">
-        <button data-mode="dep" aria-pressed="true">Depart</button><button data-mode="arr" aria-pressed="false">Arrive</button>
+      <div class="mode" id="modeSw" role="group" aria-label="Trip direction" style="--n:3">
+        <button data-mode="dep" aria-pressed="true">Depart</button><button data-mode="arr" aria-pressed="false">Arrive</button><button data-mode="con" aria-pressed="false">Connect</button>
       </div>
       <button class="iconbtn" id="closePlace" aria-label="Close" hidden><svg class="ico"><use href="#i-x"/></svg></button>
     </div>
@@ -931,6 +938,16 @@ h1.long { font-size: 24px; }
         <label class="row"><span class="tile place"><svg class="ico"><use href="#i-place"/></svg></span><span class="rl">Going to</span><select id="arrDest" aria-label="Going to"></select></label>
         <label class="row"><span class="tile rest" style="background:var(--c-shop)"><svg class="ico"><use href="#i-shop"/></svg></span><span class="rl grow">Checked bags</span><input type="checkbox" class="switch" id="arrBags" checked></label>
         <label class="row" id="carRow"><span class="tile" style="background:var(--label-2)"><svg class="ico"><use href="#i-fit"/></svg></span><span class="rl grow">Carousel <span class="s" style="display:inline">(if you know it)</span></span><input type="number" inputmode="numeric" min="1" max="20" id="arrCarousel" class="car-in" placeholder="—" aria-label="Carousel number"></label>
+      </div>
+      <div class="flight-slot" id="flightCon" hidden></div>
+      <div class="group" id="conForm" hidden>
+        <label class="row"><span class="tile gate"><svg class="ico"><use href="#i-gate"/></svg></span><span class="rl">Landing at</span><select id="conArr" aria-label="Gate you land at"></select></label>
+        <label class="row"><span class="tile" style="background:var(--brand)"><svg class="ico"><use href="#i-plane"/></svg></span><span class="rl">Next flight from</span><select id="conDep" aria-label="Gate your next flight leaves from"></select></label>
+        <label class="row"><span class="tile" style="background:var(--label-2)"><svg class="ico"><use href="#i-clock"/></svg></span><span class="rl grow">You land</span><input type="time" id="conLand" class="time-in" aria-label="Time you land"></label>
+        <label class="row"><span class="tile" style="background:var(--label-2)"><svg class="ico"><use href="#i-clock"/></svg></span><span class="rl grow">Next flight departs</span><input type="time" id="conTime" class="time-in" aria-label="Time your next flight departs"></label>
+        <label class="row"><span class="tile" style="background:var(--conB)"><svg class="ico"><use href="#i-globe"/></svg></span>
+          <span class="grow"><span class="t">Arriving from another country</span><span class="s">Passport control, customs and security again</span></span>
+          <input type="checkbox" class="switch" id="conIntl" aria-label="Arriving from another country"></label>
       </div>
       <div class="group fromto">
         <label class="row"><span class="pt a"></span><span class="rl">From</span><select id="from" aria-label="From"></select></label>

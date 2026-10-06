@@ -1332,7 +1332,7 @@ function setTab(name, quiet) {
     if (t === name) $('#seg').style.setProperty('--i', i);
   });
   replay($('#pane-' + name)); replay($('#title'));
-  $('#title').textContent = name === 'dir' && mode === 'arr' ? 'Arrivals' : TAB_TITLES[name];
+  $('#title').textContent = name === 'dir' && mode === 'arr' ? 'Arrivals' : name === 'dir' && mode === 'con' ? 'Connecting' : TAB_TITLES[name];
   $('#eyebrow').innerHTML = `<span class="ap-code">${esc(AP.code)}</span><span class="ap-name">${esc(AP.short)}</span>`; $('#eyebrow').classList.add('can');
   $('#title').hidden = true;
   if (selected) { selected.el.classList.remove('sel'); selected = null; }
@@ -1666,6 +1666,7 @@ function highlight(ids) {
 }
 function updateRoute(fit) {
   if (mode === 'arr') return updateArrival(fit);
+  if (mode === 'con') return updateConnection(fit);
   for (const sel of [$('#from'), $('#to')]) if (sel.value === 'v:me' && !ITEMS['v:me']) {
     // no fix yet: ask for location and route once it arrives
     if (watchId == null) startLocating();
@@ -1770,15 +1771,86 @@ function updateArrival(fit) {
   highlight(ids);
   if (fit) { setFloor(levelOf(path[0]), true); fitItems(path.map(n => NODE[n]), 24, 3.5); }
 }
+// ---------- Connecting: the gate you land at → the gate your next flight leaves from ----------
+// How much time you'll have: from landing, allow a few minutes to get off the plane (and an hour for
+// passport control, customs and screening again after an international flight), then the walk and any
+// train ride; what's left before boarding starts is time to spare.
+const DEPLANE = 10, CUSTOMS = 60, DOORS_CLOSE = 15;   // minutes; doors usually close 15 min before departure
+buildOptions($('#conArr'), false, true); buildOptions($('#conDep'), false, true);
+$('#conArr').value = AP.ui.defaults.arrGate; $('#conDep').value = AP.ui.defaults.gate;
+const hhmm = m => String(Math.floor(((m % 1440) + 1440) % 1440 / 60)).padStart(2, '0') + ':' + String(((m % 60) + 60) % 60).padStart(2, '0');
+const minOf = v => /^\d{1,2}:\d{2}/.test(v || '') ? toMin(v) : null;
+// an airport-local time of day → the moment it most likely means (from 3 hours ago to 21 hours ahead)
+const atLocal = m => Date.now() + ((((m - cleNow().min) % 1440) + 1440 + 180) % 1440 - 180) * 60000;
+function conTimes() {
+  // until you set them: landing in the next few minutes, departing 75 minutes later
+  if (!$('#conLand').value && !$('#conTime').value) { const n = Math.ceil(cleNow().min / 5) * 5; $('#conLand').value = hhmm(n); $('#conTime').value = hhmm(n + 75); }
+  const land = minOf($('#conLand').value), dep = minOf($('#conTime').value);
+  if (land == null || dep == null) return null;
+  const layover = ((dep - land) % 1440 + 1440) % 1440, landAt = atLocal(land);
+  return { layover, landAt, depAt: landAt + layover * 60000 };
+}
+function updateConnection(fit) {
+  const a = ITEMS[$('#conArr').value], b = ITEMS[$('#conDep').value], intl = $('#conIntl').checked, t = conTimes();
+  if (!a || !b || !t) return;
+  const same = a === b, r = same ? { path: [nodeOf(a)], units: 0, len: 0, lift: false, train: false } : route(a, b);
+  setRoute(same ? [] : r.path, minutes(r.units));
+  const walk = same ? 0 : minutes(r.units), need = DEPLANE + (intl ? CUSTOMS : 0) + walk;
+  const toBoard = t.layover - BOARD_BEFORE, spare = toBoard - need, toDoors = t.layover - DOORS_CLOSE;
+  const [cls, verdict, advice] =
+      spare >= 30 ? ['ok', 'Plenty of time', 'Time to eat or sit down before boarding.']
+    : spare >= 10 ? ['ok', 'Good connection', 'Time to grab something on the way.']
+    : spare >= 0 ? ['warn', 'Tight', 'Head straight to your gate.']
+    : need <= toDoors ? ['warn', 'Very tight', 'You’ll get there after boarding starts, before the doors close. Go straight there.']
+    : ['no', 'At risk', 'You may miss it. As soon as you land, check your airline’s app or ask at the gate; they can rebook you.'];
+  // the Pass Time tab follows your next flight
+  $('#ktGate').value = b.id; boardAt = t.depAt - BOARD_BEFORE * 60000; updateClock();
+  let steps = [], passed = [];
+  if (!same) ({ steps, passed } = describe(r.path, a, b));
+  else steps = [{ t: b.name, n: 'Your next flight leaves from the same gate.', end: true, node: nodeOf(b) }];
+  steps[0].n = intl
+    ? 'Off the plane (about 10 min), then passport control, customs and re-checking your bags, then security again (about an hour). Follow the signs for connecting flights.'
+    : 'Allow about 10 minutes to get off the plane. You stay past security.';
+  $('#hero').className = 'hero';
+  $('#hero').innerHTML = `<span class="num">${Math.abs(spare)}<small>min</small></span>
+    <span class="m1">${spare >= 0 ? 'to spare' : 'short'} · ${esc(verdict)}</span>
+    <span class="m2">${walk} min ${r.train ? 'by train and on foot' : 'walk'}${intl ? ' + customs' : ''} · boarding about ${clock(t.depAt - BOARD_BEFORE * 60000)}</span>
+    ${same ? '' : `<button class="go" data-go>${icon('walk')}Go</button>`}`;
+  renderSteps(steps, passed);
+  // somewhere to eat, a coffee and a restroom near your next gate, when there's time for them
+  let near = [];
+  if (spare >= 15) {
+    const { D } = fromSrc(nodeOf(b));
+    for (const cat of ['food', 'coffee', 'rest']) {
+      let best = null;
+      for (const it of Object.values(ITEMS)) {
+        if (it.kind !== 'amen' || it.cat !== cat || /vending/i.test(it.name) || D[it.id] == null || D[it.id] > 300) continue;
+        if ((hoursStatus(it) || {}).state === 'closed') continue;
+        if (!best || D[it.id] < D[best.id]) best = it;
+      }
+      if (best) near.push(best);
+    }
+  }
+  $('#steps').insertAdjacentHTML('afterbegin', `<li class="passing con-head"><span class="status ${cls}">${esc(verdict)}</span><span class="n">${esc(advice)}</span></li>`);
+  if (near.length) $('#steps').insertAdjacentHTML('beforeend', `<li class="passing"><span class="pl">Near ${esc(b.name.replace(/^Gate /, 'gate '))}</span><span class="pass-chips">${near.map(p => `<button class="tag pass" data-pass="${p.id}"><span class="tile ${p.cat}">${icon(p.icon || p.cat)}</span>${esc(p.name)}</button>`).join('')}</span></li>`);
+  $('#steps').querySelectorAll('.con-head ~ li [data-pass], .con-head ~ li[data-pass]').forEach(x => x.onclick = e => { e.stopPropagation(); buzz(5); showPlace(ITEMS[x.dataset.pass], false); });
+  const ids = [a.id, b.id, ...near.map(x => x.id)];
+  for (const n of r.path) { if (ITEMS[n]) ids.push(n); if (n.startsWith('p:') && ITEMS[n.slice(2)]) ids.push(n.slice(2)); }
+  highlight(ids);
+  if (fit) { setFloor(levelOf(r.path[0]), true); if (same) fitBox(NODE[nodeOf(b)].x - 60, NODE[nodeOf(b)].y - 60, NODE[nodeOf(b)].x + 60, NODE[nodeOf(b)].y + 60, 10, 3.4); else fitItems(r.path.map(n => NODE[n]), 24, 3.5); }
+}
+for (const id of ['conArr', 'conDep', 'conLand', 'conTime', 'conIntl']) $('#' + id).addEventListener('change', () => { buzz(5); updateConnection(id === 'conArr' || id === 'conDep'); saveTrip(); });
+
 function setMode(m, quiet) {
   mode = m;
   document.querySelectorAll('#modeSw [data-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === m)));
-  $('#modeSw').style.setProperty('--i', m === 'arr' ? 1 : 0);
-  const arr = m === 'arr';
+  $('#modeSw').style.setProperty('--i', { dep: 0, arr: 1, con: 2 }[m]);
+  const arr = m === 'arr', con = m === 'con';
   $('#arrForm').hidden = !arr; $('#flightArr').hidden = !arr;
-  document.querySelector('#pane-dir .fromto').hidden = arr;
-  $('#quick').hidden = arr;
-  if (tab === 'dir' && !placeMode) $('#title').textContent = arr ? 'Arrivals' : TAB_TITLES.dir;
+  $('#conForm').hidden = !con; $('#flightCon').hidden = !con;
+  document.querySelector('#pane-dir .fromto').hidden = arr || con;
+  $('#quick').hidden = arr || con;
+  if (tab === 'dir' && !placeMode) $('#title').textContent = arr ? 'Arrivals' : con ? 'Connecting' : TAB_TITLES.dir;
   if (!quiet) { buzz(5); replay($('#pane-dir')); if (!wide()) setDetent('peek'); }
   updateRoute(!quiet);
   if (!quiet) saveTrip();
@@ -1854,7 +1926,7 @@ function goNearest(key) {
   }
   if (!best) return;
   buzz();
-  if (mode === 'arr') setMode('dep', true);
+  if (mode !== 'dep') setMode('dep', true);
   if (tab !== 'dir' || placeMode) setTab('dir', true);
   $('#to').value = best.id;
   if (!wide()) setDetent('peek');
@@ -2317,11 +2389,15 @@ function applyFlight(f, prev) {
     }
     const dep = e.estimated || e.scheduled;
     if (dep) boardAt = new Date(dep).getTime() - BOARD_BEFORE * 60000;
+    if (g) $('#conDep').value = g.id;
+    if (dep) $('#conTime').value = hhmm(cleNow(new Date(dep).getTime()).min);
+    if (mode === 'con') updateConnection(!prev);
     updateClock(); if (!$('#pane-kill').hidden) updateIdeas();
   } else {
     if (g) $('#arrGate').value = g.id;
     if (/^\d{1,2}$/.test(e.baggage || '')) $('#arrCarousel').value = e.baggage;
     if (mode === 'arr') updateArrival(!prev);
+    conArrival(f);
   }
   saveTrip();
 }
@@ -2356,12 +2432,12 @@ function flightHtml() {
     <div class="fc-foot"><span>${live.busy ? 'Updating…' : live.err ? esc(live.err) : 'Updated ' + ago(live.fetched ? new Date(live.fetched).toISOString() : f.updated)}</span><button data-fstop>Stop tracking</button></div></div>`;
 }
 function renderFlight() {
-  for (const id of ['flightKill', 'flightArr']) {
+  for (const id of ['flightKill', 'flightArr', 'flightCon']) {
     const box = $('#' + id); box.innerHTML = flightHtml();
     const form = box.querySelector('[data-fform]');
     if (form) form.onsubmit = ev => { ev.preventDefault(); buzz(); trackFlight(form.elements.no.value); };
     const stop = box.querySelector('[data-fstop]');
-    if (stop) stop.onclick = () => { buzz(5); live.flight = null; live.track = null; live.err = ''; store.set(FLIGHT_KEY, null); renderFlight(); };
+    if (stop) stop.onclick = () => { buzz(5); live.flight = null; live.track = null; live.err = ''; live.inbound = null; store.set('inbound.' + AP.code, null); store.set(FLIGHT_KEY, null); renderFlight(); };
     const scan = box.querySelector('[data-fscan]');
     if (scan) scan.onclick = () => { buzz(); scanPass(); };
     const cd = box.querySelector('[data-fcd]');
@@ -2425,11 +2501,39 @@ function passDate(day) {
   const best = cands.filter(d => d - now > -31 * 86400000).sort((a, b) => Math.abs(a - now) - Math.abs(b - now))[0] || cands[1];
   return best.toISOString().slice(0, 10);
 }
+// a flight landing here fills in where and when the connection starts
+function conArrival(f) {
+  const e = f && f.arrival; if (!e || e.airport !== AP.code) return;
+  const g = gateItem(e), at = e.actual || e.estimated || e.scheduled;
+  if (g) $('#conArr').value = g.id;
+  if (at) $('#conLand').value = hhmm(cleNow(new Date(at).getTime()).min);
+  if (mode === 'con') updateConnection(false);
+}
+// the flight you're connecting from: looked up with the tracked one, so a late arrival shows up
+function refreshInbound() {
+  const t = live.inbound; if (!t || !LIVE_API) return;
+  if (t.date < localDate(Date.now() - 86400000)) { live.inbound = null; store.set('inbound.' + AP.code, null); return; }
+  liveGet(`/flight?number=${t.number}&date=${t.date}&airport=${AP.code}`).then(conArrival).catch(() => {});
+}
+// a pass with two flights that meet here: track the next one (gate, time, changes) and look up the
+// one you're landing on once, for its gate and landing time
+function useConnection(p, i) {
+  const inb = p.legs[i], out = p.legs[i + 1];
+  if (mode !== 'con') setMode('con', true);
+  setTab('dir', true);
+  toast(`Connecting here: ${inb.carrier} ${inb.flight} from ${inb.from}, then ${out.carrier} ${out.flight} to ${out.to}.` + (LIVE_API ? '' : ' Pick the gates and times; live flight status isn’t connected in this version.'));
+  if (!LIVE_API) return saveTrip();
+  trackFlight(out.carrier + out.flight, false, passDate(out.day), { seat: out.seat, precheck: p.precheck, group: p.group, from: out.from, to: out.to });
+  live.inbound = { number: normFlightNo(inb.carrier + inb.flight), date: passDate(inb.day) };
+  store.set('inbound.' + AP.code, live.inbound);
+  refreshInbound();
+  saveTrip();
+}
 function usePass(p, legIx) {
   const leg = p.legs[legIx];
   const pass = { seat: leg.seat, precheck: p.precheck, group: p.group, from: leg.from, to: leg.to };
   const arr = leg.to === AP.code && leg.from !== AP.code;
-  if (arr !== (mode === 'arr')) setMode(arr ? 'arr' : 'dep', true);
+  if ((arr ? 'arr' : 'dep') !== mode) setMode(arr ? 'arr' : 'dep', true);
   if (!arr) setTab('kill', true);
   toast(`${leg.carrier} ${leg.flight} · ${leg.from} → ${leg.to}${leg.seat ? ' · seat ' + leg.seat : ''}`);
   trackFlight(leg.carrier + leg.flight, false, passDate(leg.day), pass);
@@ -2439,12 +2543,16 @@ function onPassScanned(raw) {
   if (!p) { buzz(30); toast('That doesn’t look like a boarding pass barcode. Try the one on your pass or in your airline’s app.'); return; }
   // the leg that leaves from here, else lands here, else one at another airport Clearway has
   const at = code => p.legs.findIndex(l => l.from === code), to = code => p.legs.findIndex(l => l.to === code);
+  // two flights that meet here (or at another airport Clearway has): a connection
+  const conn = code => p.legs.findIndex((l, k) => l.to === code && p.legs[k + 1] && p.legs[k + 1].from === code);
+  if (conn(AP.code) >= 0) { buzz(); return useConnection(p, conn(AP.code)); }
   let i = at(AP.code); if (i < 0) i = to(AP.code);
   if (i >= 0) { buzz(); return usePass(p, i); }
   for (const code of Object.keys(AIRPORTS)) {
-    let j = at(code); if (j < 0) j = to(code);
+    const c = conn(code);
+    let j = c >= 0 ? c : at(code); if (j < 0) j = to(code);
     if (j >= 0) {
-      store.set('pass.pending', { ap: code, pass: p, leg: j, at: Date.now() });
+      store.set('pass.pending', { ap: code, pass: p, leg: j, conn: c >= 0, at: Date.now() });
       try { localStorage.setItem('cw.airport', code); } catch (e) {}
       toast(`Opening ${AIRPORTS[code].short || code} for ${p.legs[j].carrier} ${p.legs[j].flight}…`);
       return setTimeout(() => location.reload(), 900);
@@ -2488,6 +2596,7 @@ setInterval(() => {
   if (!live.track || document.hidden || live.busy) return;
   if (f && f.status === 'arrived' && f.arrival && Date.now() - new Date(f.arrival.actual || f.arrival.estimated || f.arrival.scheduled) > 3600000) return;
   trackFlight(live.track.number, true);
+  if (mode === 'con') refreshInbound();
 }, 120000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden && live.track && Date.now() - live.fetched > 90000) trackFlight(live.track.number, true); });
 
@@ -2507,7 +2616,8 @@ const TRIP_KEY = AP.code === 'CLE' ? 'trip' : 'trip.' + AP.code;
 function saveTrip() {
   const keep = v => v === 'v:me' ? null : v;
   store.set(TRIP_KEY, { from: keep($('#from').value), to: keep($('#to').value), gate: $('#ktGate').value, boardAt, reminderAt, cat: ktCat, tab,
-    mode, stepFree, arr: { gate: $('#arrGate').value, dest: $('#arrDest').value, bags: $('#arrBags').checked, car: $('#arrCarousel').value } });
+    mode, stepFree, arr: { gate: $('#arrGate').value, dest: $('#arrDest').value, bags: $('#arrBags').checked, car: $('#arrCarousel').value },
+    con: { a: $('#conArr').value, d: $('#conDep').value, land: $('#conLand').value, dep: $('#conTime').value, intl: $('#conIntl').checked } });
 }
 (() => {
   const t = store.get(TRIP_KEY, null);
@@ -2525,7 +2635,13 @@ function saveTrip() {
     $('#arrBags').checked = t.arr.bags !== false;
     if (/^\d{1,2}$/.test(t.arr.car || '')) $('#arrCarousel').value = t.arr.car;
   }
-  if (t.mode === 'arr') mode = 'arr';
+  if (t.con) {
+    if (ITEMS[t.con.a]) $('#conArr').value = t.con.a;
+    if (ITEMS[t.con.d]) $('#conDep').value = t.con.d;
+    if (minOf(t.con.land) != null && minOf(t.con.dep) != null) { $('#conLand').value = t.con.land; $('#conTime').value = t.con.dep; }
+    $('#conIntl').checked = !!t.con.intl;
+  }
+  if (t.mode === 'arr' || t.mode === 'con') mode = t.mode;
   if (t.stepFree) setStepFree(true, true);
 })();
 for (const id of ['from', 'to', 'ktGate', 'ktMin']) $('#' + id).addEventListener('change', saveTrip);
@@ -2543,10 +2659,11 @@ addEventListener('resize', () => {
 });
 renderFlight();
 { const t = store.get(FLIGHT_KEY, null); if (t && t.date >= localDate() && LIVE_API) { live.track = t; trackFlight(t.number, true); } }
+live.inbound = store.get('inbound.' + AP.code, null); if (mode === 'con') refreshInbound();
 // a boarding pass scanned at the other airport's map: it switched here and picks it up
-{ const p = store.get('pass.pending', null); store.set('pass.pending', null); if (p && p.ap === AP.code && Date.now() - p.at < 60000) usePass(p.pass, p.leg); }
+{ const p = store.get('pass.pending', null); store.set('pass.pending', null); if (p && p.ap === AP.code && Date.now() - p.at < 60000) (p.conn ? useConnection : usePass)(p.pass, p.leg); }
 loadWait();
-if (mode === 'arr') setMode('arr', true);
+if (mode !== 'dep') setMode(mode, true);
 updateRoute(false);
 setTab(tab, true);
 const launchAction = (location.hash || '').slice(1);
