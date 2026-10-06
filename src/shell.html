@@ -12,6 +12,7 @@
 :root {
   /* iOS system surfaces */
   --map: #eef1ec; --corridor: #e2e8f2; --stairs: #95a1b2; --grass: #d4e9cb; --wood: #c2ddb7; --water: #b3d3f3; --apron-pave: #e5e7eb; --taxi: #dadde3; --taxi-line: #e6c14a; --runway: #c6cad2; --runway-mark: #ffffff; --road-case: #d3d8de; --road-fill: #ffffff; --mway-case: #e8c574; --mway-fill: #fdeab4; --rail: #aeb6c0; --lot: #e8eaee; --other-bldg: #dfe2e7; --term-closed: #ebecef; --map-grid: #e2e6eb; --bldg: #ffffff; --bldg-edge: #bfc8d4; --road: #d6dce3; --walk: #d3d9e0; --bldg-shadow: rgba(30, 45, 80, .2); --plane: #c9d0d9; --bridge: #c3ccd6; --garage: #dde1e7; --con-tint: .13;
+  --hall: #dfe7fb; --hall-edge: #a3b4dc; --hall-text: #6a7ea9; --counter: #5d6b85; --carousel: #d5dbe6; --carousel-belt: #7d8799; --door: #2f50d0;
   --glass: rgba(250, 250, 252, .96); --sheet-bg: #f7f7fa; --glass-hi: rgba(255, 255, 255, .55); --hairline: rgba(60, 60, 67, .16);
   --card: rgba(255, 255, 255, .92); --solid: #fbfbfd; --fill: rgba(118, 118, 128, .12); --fill-2: rgba(118, 118, 128, .2);
   --label: #101318; --label-2: rgba(60, 60, 67, .64); --label-3: rgba(60, 60, 67, .34);
@@ -45,7 +46,7 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --map: #111513; --corridor: #3d4656; --stairs: #7a8696; --grass: #172519; --wood: #1a2b1d; --water: #12263b; --apron-pave: #181b20; --taxi: #20242a; --taxi-line: #8a7323; --runway: #2a2f37; --runway-mark: #575e69; --road-case: #22272e; --road-fill: #2d333b; --mway-case: #4d4024; --mway-fill: #5e5030; --rail: #3f4650; --lot: #1b1f24; --other-bldg: #22262d; --term-closed: #1e2228; --map-grid: #1a1e24; --bldg: #2f3540; --bldg-edge: #4a5262; --road: #2a3038; --walk: #3a424d; --bldg-shadow: rgba(0, 0, 0, .55); --plane: #2c333d; --bridge: #434c59; --garage: #1c2026; --con-tint: .2;
+    --map: #111513; --corridor: #3d4656; --stairs: #7a8696; --grass: #172519; --wood: #1a2b1d; --water: #12263b; --apron-pave: #181b20; --taxi: #20242a; --taxi-line: #8a7323; --runway: #2a2f37; --runway-mark: #575e69; --road-case: #22272e; --road-fill: #2d333b; --mway-case: #4d4024; --mway-fill: #5e5030; --rail: #3f4650; --lot: #1b1f24; --other-bldg: #22262d; --term-closed: #1e2228; --map-grid: #1a1e24; --bldg: #2f3540; --bldg-edge: #4a5262; --road: #2a3038; --walk: #3a424d; --bldg-shadow: rgba(0, 0, 0, .55); --plane: #2c333d; --bridge: #434c59; --garage: #1c2026; --con-tint: .2; --hall: #26304a; --hall-edge: #46557a; --hall-text: #8796bd; --counter: #9aa7c0; --carousel: #3a4458; --carousel-belt: #8d97ab; --door: #7d97ff;
     --glass: rgba(34, 34, 38, .95); --sheet-bg: #1d1d21; --glass-hi: rgba(255, 255, 255, .07); --hairline: rgba(84, 84, 88, .55);
     --card: rgba(44, 44, 48, .88); --solid: #242428; --fill: rgba(118, 118, 128, .24); --fill-2: rgba(118, 118, 128, .34);
     --label: #f3f4f8; --label-2: rgba(235, 235, 245, .62); --label-3: rgba(235, 235, 245, .3);
@@ -63,7 +64,7 @@
   }
 }
 :root[data-theme="dark"] {
-  --map: #111513; --corridor: #3d4656; --stairs: #7a8696; --grass: #172519; --wood: #1a2b1d; --water: #12263b; --apron-pave: #181b20; --taxi: #20242a; --taxi-line: #8a7323; --runway: #2a2f37; --runway-mark: #575e69; --road-case: #22272e; --road-fill: #2d333b; --mway-case: #4d4024; --mway-fill: #5e5030; --rail: #3f4650; --lot: #1b1f24; --other-bldg: #22262d; --term-closed: #1e2228; --map-grid: #1a1e24; --bldg: #2f3540; --bldg-edge: #4a5262; --road: #2a3038; --walk: #3a424d; --bldg-shadow: rgba(0, 0, 0, .55); --plane: #2c333d; --bridge: #434c59; --garage: #1c2026; --con-tint: .2;
+  --map: #111513; --corridor: #3d4656; --stairs: #7a8696; --grass: #172519; --wood: #1a2b1d; --water: #12263b; --apron-pave: #181b20; --taxi: #20242a; --taxi-line: #8a7323; --runway: #2a2f37; --runway-mark: #575e69; --road-case: #22272e; --road-fill: #2d333b; --mway-case: #4d4024; --mway-fill: #5e5030; --rail: #3f4650; --lot: #1b1f24; --other-bldg: #22262d; --term-closed: #1e2228; --map-grid: #1a1e24; --bldg: #2f3540; --bldg-edge: #4a5262; --road: #2a3038; --walk: #3a424d; --bldg-shadow: rgba(0, 0, 0, .55); --plane: #2c333d; --bridge: #434c59; --garage: #1c2026; --con-tint: .2; --hall: #26304a; --hall-edge: #46557a; --hall-text: #8796bd; --counter: #9aa7c0; --carousel: #3a4458; --carousel-belt: #8d97ab; --door: #7d97ff;
   --glass: rgba(34, 34, 38, .95); --sheet-bg: #1d1d21; --glass-hi: rgba(255, 255, 255, .07); --hairline: rgba(84, 84, 88, .55);
   --card: rgba(44, 44, 48, .88); --solid: #242428; --fill: rgba(118, 118, 128, .24); --fill-2: rgba(118, 118, 128, .34);
   --label: #f3f4f8; --label-2: rgba(235, 235, 245, .62); --label-3: rgba(235, 235, 245, .3);
@@ -173,6 +174,11 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 @media (hover: hover) { #map .mk:hover .pop { transform: scale(1.3); } }
 .walk { stroke: var(--walk); fill: none; stroke-dasharray: 2 3; }
 .area-lbl[data-off] { display: none; }
+/* baggage carousel numbers */
+.car-lbl circle { fill: var(--solid); stroke: var(--carousel-belt); stroke-width: 1.1; }
+.car-lbl text { font: 750 6.4px var(--font-display); fill: var(--label); text-anchor: middle; dominant-baseline: central; }
+.car-lbl.hl circle { fill: var(--route); stroke: var(--route); }
+.car-lbl.hl text { fill: #fff; }
 /* labels scale with the map: without this Chrome re-lays out every label on each frame of a pinch */
 #map text { text-rendering: geometricPrecision; }
 .map-lbl { font: 650 8.5px var(--font-display); fill: var(--label-2); letter-spacing: .08em; text-transform: uppercase; }

@@ -9,11 +9,17 @@ AIRPORTS.CLE = (() => {
   const V = {
     // Three TSA checkpoints on the departures level, all leading to every concourse. Positions follow
     // OpenStreetMap's corridors from the ticketing hall to the gates (the checkpoints aren't mapped there).
-    chk:  [112, -155, 'TSA Central checkpoint'],
+    chk:  [104, -150, 'TSA Central checkpoint'],
     chk_n: [120, -205, 'TSA North checkpoint'],
-    chk_s: [82, -52, 'TSA South checkpoint'],
-    tix_s: [100, -50, 'Ticketing hall, south end'],
+    chk_s: [63, -53, 'TSA South checkpoint'],
     sj:   [46, -50],
+    // The ticketing hall (upper level) and baggage claim (lower level) are one long hall on two floors
+    // along the curb, each with a walkway end to end (OpenStreetMap's indoor footways), escalators and
+    // elevators at the north end, the middle and the south end.
+    th0: [171, -212], th1: [155, -198], th2: [115, -159], th4: [86, -100], tix_s: [76, -54],
+    th3: [94, -133, 'Central escalators (upper level)'], th6: [70, -25, 'South escalators (upper level)'],
+    bg0: [183, -203], bg1: [158, -180], bg2: [122, -145], bg5: [94, -69], bg7: [82, -6],
+    bg3: [106, -121, 'Central escalators (lower level)'], bag_s: [87, -30, 'South escalators (lower level)'],
     hub:  [61, -121, 'Main terminal, past security'],
     fc:   [50, -70, 'Main terminal food court'],
     c0:   [40, -21, 'Concourse C'],
@@ -22,8 +28,8 @@ AIRPORTS.CLE = (() => {
     crot: [-184, 266],
     b0:   [20, -129, 'Concourse B'], b1: [-36, -140], b2: [-186, -169],
     a0:   [78, -212, 'Concourse A'], a1: [98, -319], a2: [114, -410],
-    tix:  [165, -200, 'Ticketing (upper level)'],
-    bag:  [100, -70, 'Baggage claim (lower level)'],
+    tix:  [146, -190, 'Ticketing (upper level)'],
+    bag:  [100, -95, 'Baggage claim (lower level)'],
     rta:  [111, -125, 'RTA Red Line to downtown'],
     gtc:  [172, -60, 'Ground Transportation Center'],
     taxi: [128, -12, 'Taxi stand'],
@@ -34,16 +40,24 @@ AIRPORTS.CLE = (() => {
     lift_t: [191, -202, 'Elevator by ticketing'],
     lift_c: [108, -130, 'Elevator beside the checkpoint'],
     lift_r: [110, -119, 'Elevator to the RTA platform'],
+    lift_s: [77, -23, 'Elevator by the south escalators'],
   };
   const EDGES = [
     ['chk','hub','S'], ['hub','fc','M'], ['fc','sj','M'], ['sj','c0','M'],
-    ['tix','chk_n','L'], ['chk_n','a0','S'], ['tix','tix_s','L'], ['tix_s','chk_s','L'], ['chk_s','sj','S'], ['c0','c1','C'], ['c1','c2','C'], ['c2','c3','C'], ['c3','c4','C'], ['c4','crot','R'],
+    // ticketing hall, north to south, and the three checkpoints off it
+    ['th0','th1','L'], ['th1','tix','L'], ['tix','th2','L'], ['th2','th3','L'], ['th3','th4','L'], ['th4','tix_s','L'], ['tix_s','th6','L'],
+    ['th2','chk','L'], ['th1','chk_n','L'], ['chk_n','a0','S'], ['tix_s','chk_s','L'], ['chk_s','sj','S'],
+    // baggage claim, north to south
+    ['bg0','bg1','L'], ['bg1','bg2','L'], ['bg2','bg3','L'], ['bg3','bag','L'], ['bag','bg5','L'], ['bg5','bag_s','L'], ['bag_s','bg7','L'], ['c0','c1','C'], ['c1','c2','C'], ['c2','c3','C'], ['c3','c4','C'], ['c4','crot','R'],
     ['hub','b0','M'], ['b0','b1','B'], ['b1','b2','B'], ['hub','a0','M'], ['a0','a1','A'], ['a1','a2','A'],
-    ['tix','chk','L'], ['tix','bag','X','esc'], ['bag','rta','X','esc'], ['bag','gtc','L'], ['bag','taxi','L'], ['gtc','rent','L'], ['gtc','hotel','L'], ['gtc','ride','L'], ['bag','curb','L'],
-    ['chk','bag','X','esc'],   // escalators beside the checkpoint between the upper and lower levels
-    // elevators (step-free): ticketing ↔ baggage claim, checkpoint ↔ baggage claim, baggage claim ↔ RTA platform
-    ['tix','lift_t','L'], ['lift_t','bag','X','lift'], ['chk','lift_c','L'], ['lift_c','bag','X','lift'],
-    ['bag','lift_r','L'], ['lift_r','rta','X','lift'],
+    // escalators between the floors at the north end, the middle (by the Central checkpoint) and the south end,
+    // and down to the RTA platform
+    ['tix','bg1','X','esc'], ['th3','bg3','X','esc'], ['th6','bag_s','X','esc'], ['bg3','rta','X','esc'],
+    // out to ground transportation, the arrivals curb and the taxi stand (by carousel 11)
+    ['bg5','gtc','L'], ['bag_s','curb','L'], ['bg7','taxi','L'], ['gtc','rent','L'], ['gtc','hotel','L'], ['gtc','ride','L'],
+    // elevators (step-free) beside each set of escalators, and to the RTA platform
+    ['th0','lift_t','L'], ['lift_t','bg0','X','lift'], ['th3','lift_c','L'], ['lift_c','bg3','X','lift'],
+    ['th6','lift_s','L'], ['lift_s','bag_s','X','lift'], ['bg3','lift_r','L'], ['lift_r','rta','X','lift'],
   ];
   const SPINES = { A: ['a0','a1','a2'], B: ['b0','b1','b2'], C: ['c0','c1','c2','c3','c4'] };
   const ROT = { x: -185, y: 268, r: 43 };
@@ -125,8 +139,9 @@ AIRPORTS.CLE = (() => {
     ['Water fountain','service',[-129,186,'C','C11'],3],
     ['Elevator','service',[191,-202,'LIFT','lift_t'],2,'Ticketing ↔ baggage claim'], ['Elevator','service',[108,-130,'LIFT','lift_c'],2,'Checkpoint ↔ baggage claim'],
     ['Elevator','service',[110,-119,'LIFT','lift_r'],2,'Baggage claim ↔ RTA platform'],
+    ['Elevator','service',[77,-23,'LIFT','lift_s'],2,'Ticketing ↔ baggage claim, south end'],
     ['Information desk','service',[152,-190,'L'],5], ["Farmer's Fridge vending",'food',[170,-208,'L'],4], ['Illy Coffee vending','coffee',[160,-210,'L'],4],
-    ['Welcome Center','service',[108,-58,'L'],5], ['Hudson Aero Mart','shop',[104,-84,'L']], ['SIM card vending','service',[110,-96,'L'],5],
+    ['Welcome Center','service',[108,-58,'L',null,'lo'],5], ['Hudson Aero Mart','shop',[104,-84,'L',null,'lo']], ['SIM card vending','service',[110,-96,'L',null,'lo'],5],
   ];
   
   // Opening hours from the airport's official directory (shop-cle.com, Fraport USA), checked Oct 2026.
@@ -156,8 +171,8 @@ AIRPORTS.CLE = (() => {
     GEO, V, EDGES, SPINES, ROT, MAP_BOUNDS, AIRLINES, CON_RANGE, GATE_POS, ROT_GATES, AMEN, HOURS,
     concourses,
     // the lower-level shops and services are in the main terminal south of the checkpoint
-    amenLevel: it => it.zone === 'L' && it.y > -150 ? 'lo' : 'up',
-    LOWER_V: ['bag', 'rta', 'gtc', 'taxi', 'rent', 'hotel', 'ride', 'curb', 'lift_r'],
+    amenLevel: it => it.floor || 'up',
+    LOWER_V: ['bg0', 'bg1', 'bg2', 'bg3', 'bg5', 'bag_s', 'bg7', 'bag', 'rta', 'gtc', 'taxi', 'rent', 'hotel', 'ride', 'curb', 'lift_r'],
     PLACES: ['chk', 'chk_s', 'chk_n', 'tix', 'bag', 'rta', 'gtc', 'taxi', 'rent', 'hotel', 'ride', 'curb'],
     // how each place is drawn: [icon, kind]; kinds set the sign colour (terminal, bags, transit, ground)
     PLACE_STYLE: { chk: ['shield', 'terminal'], chk_s: ['shield', 'terminal'], chk_n: ['shield', 'terminal'], tix: ['ticket', 'terminal'], bag: ['bag', 'bags'], rta: ['train', 'transit'],
@@ -170,9 +185,12 @@ AIRPORTS.CLE = (() => {
     roles: { checkpoint: 'chk', hub: 'hub', baggage: 'bag', ticketing: 'tix', transit: 'rta' },
     ui: {
       // [x, y, text, anchor, floor]; no floor means both
-      labels: [[150, -95, 'Main terminal', , 'up'], [62, -100, 'Baggage claim', , 'lo'], [-185, 271, 'Rotunda'], [255, -40, 'Parking garage'], [125, 385, 'Concourse D · closed'], [140, 60, 'Lower Drive']],
+      labels: [[150, -95, 'Main terminal', , 'up'], [-185, 271, 'Rotunda'], [255, -40, 'Parking garage'], [125, 385, 'Concourse D · closed'], [140, 60, 'Lower Drive']],
       roundels: [['A', 118, -458], ['B', -236, -171], ['C', 72, 28]],
-      securityLine: [[100, -167, 124, -143], [120, -213, 120, -197], [82, -59, 82, -45]],
+      // the halls' outlines, check-in counter rows and baggage carousels [x, y, angle, number], numbered
+      // from the north end (the taxi stand is by carousel 11, at the south end), and the curbside doors
+      halls: { names: [[98, -118, -78.4, 'TICKETING', 'up'], [86, -30, -78.4, 'TICKETING', 'up'], [157, -186, -44.6, 'TICKETING', 'up'], [107, -96, -78.4, 'BAGGAGE CLAIM', 'lo'], [97, -40, -78.4, 'BAGGAGE CLAIM', 'lo'], [166, -183, -44.6, 'BAGGAGE CLAIM', 'lo']], "tix":[[114.2,-109.8],[115.9,-109.7],[120.1,-114.5],[122.1,-122.4],[126.9,-127.8],[127.7,-131.3],[125.2,-133.6],[188.1,-196.0],[167.9,-216.9],[102.0,-151.8],[90.7,-138.5],[80.8,-99.2],[63.0,-10.3],[92.3,-4.6]],"bag":[[114.2,-109.8],[115.9,-109.7],[121.3,-115.9],[126.0,-124.1],[127.7,-131.2],[125.2,-133.6],[188.9,-196.9],[169.8,-218.0],[147.4,-197.7],[108.4,-159.2],[94.4,-143.4],[87.2,-129.2],[83.4,-116.0],[61.9,-7.8],[91.7,-1.9]],"counters":[[[148.0,-194.3],[145.2,-191.5],[142.4,-188.6],[139.6,-185.8],[136.8,-182.9],[134.0,-180.1],[131.2,-177.2],[128.4,-174.4],[125.6,-171.5],[122.7,-168.7],[119.9,-165.8],[117.1,-163.0]],[[103.1,-148.7],[100.3,-145.9],[97.5,-143.0],[94.7,-140.2],[91.9,-135.7],[91.1,-131.8],[90.2,-127.8],[89.4,-123.9],[88.5,-120.0],[87.7,-116.1],[86.8,-112.2],[86.0,-108.3],[85.1,-104.4],[84.3,-100.5],[83.4,-96.6],[82.6,-92.7],[81.7,-88.8],[80.9,-84.9],[80.0,-80.9],[79.2,-77.0],[78.3,-73.1],[77.5,-69.2],[76.6,-65.3]],[[72.1,-44.8],[71.3,-40.9],[70.4,-37.0],[69.6,-33.1],[68.7,-29.2],[67.9,-25.2],[67.0,-21.3]]],"carousels":[[161.2,-197.4,135.8,1],[147.3,-183.9,135.8,2],[133.4,-170.4,135.8,3],[119.5,-156.9,135.8,4],[105.0,-142.7,130.6,5],[94.3,-120.5,101.8,6],[90.3,-101.5,101.8,7],[86.4,-82.5,101.8,8],[82.4,-63.6,101.8,9],[78.5,-44.6,101.8,10],[74.5,-25.6,101.8,11]],"doors":{"up":[[187,-195],[157,-165],[130,-139],[110,-93],[101,-49],[92,-4]],"lo":[[201,-182],[173,-155],[142,-124],[128,-97],[121,-64],[115,-36],[109,0]]}},
+      securityLine: [[96, -162, 112, -138], [120, -213, 120, -197], [63, -60, 63, -46]],
       closedTerms: ['termD'],
       airlinesNote: 'All three concourses connect past security, so you can walk between them.',
       airlinesTip: 'International arrivals clear U.S. Customs near gate A5. Concourse D has been closed since 2014.',

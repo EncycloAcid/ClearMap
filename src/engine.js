@@ -101,7 +101,8 @@ AMEN.forEach(([name, cat, at, dwell, note], i) => {
     Object.assign(it, { x, y, zone, gate, near: gate ? 'Near gate ' + gate : (AP.ui.zoneNames || {})[zone] || 'Main terminal' });
   }
   else if (Array.isArray(at)) {
-    const [x, y, zone, gate] = at;
+    const [x, y, zone, gate, floor] = at;
+    if (floor) it.floor = floor;
     if (zone === 'LIFT') Object.assign(it, { x, y, zone, lift: gate, near: V[gate][2] });
     else Object.assign(it, { x, y, zone, gate, near: gate ? 'Near gate ' + gate : zone === 'L' ? 'Landside, before security' : 'Main terminal' });
   }
@@ -128,6 +129,7 @@ for (const it of Object.values(ITEMS))
   it.lvl = it.zone === 'LIFT' ? null : it.kind === 'place' ? (LOWER_V.has(it.node) ? 'lo' : 'up') : AP.amenLevel ? AP.amenLevel(it) : 'up';
 function levelOf(node) {
   if (node === 'me' || node === 'me@') return meLevel;
+  if (/^car\d/.test(node)) return 'lo';   // baggage carousels (see the app)
   if (V[node]) return LOWER_V.has(node) ? 'lo' : 'up';
   const it = ITEMS[node.startsWith('p:') ? node.slice(2) : node];
   return it && it.lvl ? it.lvl : 'up';
@@ -154,6 +156,7 @@ for (const it of Object.values(ITEMS)) {
   let best = null;
   EDGES.forEach(([a, b, z], ei) => {
     if (z !== it.zone) return;
+    if (it.lvl && it.zone === 'L' && (levelOf(a) !== it.lvl || levelOf(b) !== it.lvl)) return;   // a landside place joins a walkway on its own floor
     const pr = project(it, P(a), P(b)), d = dist(pr, it);
     if (!best || d < best.d) best = { d, ei, pr };
   });

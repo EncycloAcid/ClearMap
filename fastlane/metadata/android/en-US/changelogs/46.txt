@@ -2,4 +2,4 @@
 • Faster, steadier location; routes start from you and the map follows as you walk
 • Turn the map with two fingers or let it turn with you; icons stay steady while zooming
 • Regional airlines: United Express, American Eagle, Delta Connection, and who flies them
-• Cleveland: all three TSA checkpoints, with routes through whichever is open
+• Cleveland: mapped ticketing hall and baggage claim with numbered carousels; three TSA checkpoints

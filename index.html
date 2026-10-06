@@ -12,6 +12,7 @@
 :root {
   /* iOS system surfaces */
   --map: #eef1ec; --corridor: #e2e8f2; --stairs: #95a1b2; --grass: #d4e9cb; --wood: #c2ddb7; --water: #b3d3f3; --apron-pave: #e5e7eb; --taxi: #dadde3; --taxi-line: #e6c14a; --runway: #c6cad2; --runway-mark: #ffffff; --road-case: #d3d8de; --road-fill: #ffffff; --mway-case: #e8c574; --mway-fill: #fdeab4; --rail: #aeb6c0; --lot: #e8eaee; --other-bldg: #dfe2e7; --term-closed: #ebecef; --map-grid: #e2e6eb; --bldg: #ffffff; --bldg-edge: #bfc8d4; --road: #d6dce3; --walk: #d3d9e0; --bldg-shadow: rgba(30, 45, 80, .2); --plane: #c9d0d9; --bridge: #c3ccd6; --garage: #dde1e7; --con-tint: .13;
+  --hall: #dfe7fb; --hall-edge: #a3b4dc; --hall-text: #6a7ea9; --counter: #5d6b85; --carousel: #d5dbe6; --carousel-belt: #7d8799; --door: #2f50d0;
   --glass: rgba(250, 250, 252, .96); --sheet-bg: #f7f7fa; --glass-hi: rgba(255, 255, 255, .55); --hairline: rgba(60, 60, 67, .16);
   --card: rgba(255, 255, 255, .92); --solid: #fbfbfd; --fill: rgba(118, 118, 128, .12); --fill-2: rgba(118, 118, 128, .2);
   --label: #101318; --label-2: rgba(60, 60, 67, .64); --label-3: rgba(60, 60, 67, .34);
@@ -45,7 +46,7 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --map: #111513; --corridor: #3d4656; --stairs: #7a8696; --grass: #172519; --wood: #1a2b1d; --water: #12263b; --apron-pave: #181b20; --taxi: #20242a; --taxi-line: #8a7323; --runway: #2a2f37; --runway-mark: #575e69; --road-case: #22272e; --road-fill: #2d333b; --mway-case: #4d4024; --mway-fill: #5e5030; --rail: #3f4650; --lot: #1b1f24; --other-bldg: #22262d; --term-closed: #1e2228; --map-grid: #1a1e24; --bldg: #2f3540; --bldg-edge: #4a5262; --road: #2a3038; --walk: #3a424d; --bldg-shadow: rgba(0, 0, 0, .55); --plane: #2c333d; --bridge: #434c59; --garage: #1c2026; --con-tint: .2;
+    --map: #111513; --corridor: #3d4656; --stairs: #7a8696; --grass: #172519; --wood: #1a2b1d; --water: #12263b; --apron-pave: #181b20; --taxi: #20242a; --taxi-line: #8a7323; --runway: #2a2f37; --runway-mark: #575e69; --road-case: #22272e; --road-fill: #2d333b; --mway-case: #4d4024; --mway-fill: #5e5030; --rail: #3f4650; --lot: #1b1f24; --other-bldg: #22262d; --term-closed: #1e2228; --map-grid: #1a1e24; --bldg: #2f3540; --bldg-edge: #4a5262; --road: #2a3038; --walk: #3a424d; --bldg-shadow: rgba(0, 0, 0, .55); --plane: #2c333d; --bridge: #434c59; --garage: #1c2026; --con-tint: .2; --hall: #26304a; --hall-edge: #46557a; --hall-text: #8796bd; --counter: #9aa7c0; --carousel: #3a4458; --carousel-belt: #8d97ab; --door: #7d97ff;
     --glass: rgba(34, 34, 38, .95); --sheet-bg: #1d1d21; --glass-hi: rgba(255, 255, 255, .07); --hairline: rgba(84, 84, 88, .55);
     --card: rgba(44, 44, 48, .88); --solid: #242428; --fill: rgba(118, 118, 128, .24); --fill-2: rgba(118, 118, 128, .34);
     --label: #f3f4f8; --label-2: rgba(235, 235, 245, .62); --label-3: rgba(235, 235, 245, .3);
@@ -63,7 +64,7 @@
   }
 }
 :root[data-theme="dark"] {
-  --map: #111513; --corridor: #3d4656; --stairs: #7a8696; --grass: #172519; --wood: #1a2b1d; --water: #12263b; --apron-pave: #181b20; --taxi: #20242a; --taxi-line: #8a7323; --runway: #2a2f37; --runway-mark: #575e69; --road-case: #22272e; --road-fill: #2d333b; --mway-case: #4d4024; --mway-fill: #5e5030; --rail: #3f4650; --lot: #1b1f24; --other-bldg: #22262d; --term-closed: #1e2228; --map-grid: #1a1e24; --bldg: #2f3540; --bldg-edge: #4a5262; --road: #2a3038; --walk: #3a424d; --bldg-shadow: rgba(0, 0, 0, .55); --plane: #2c333d; --bridge: #434c59; --garage: #1c2026; --con-tint: .2;
+  --map: #111513; --corridor: #3d4656; --stairs: #7a8696; --grass: #172519; --wood: #1a2b1d; --water: #12263b; --apron-pave: #181b20; --taxi: #20242a; --taxi-line: #8a7323; --runway: #2a2f37; --runway-mark: #575e69; --road-case: #22272e; --road-fill: #2d333b; --mway-case: #4d4024; --mway-fill: #5e5030; --rail: #3f4650; --lot: #1b1f24; --other-bldg: #22262d; --term-closed: #1e2228; --map-grid: #1a1e24; --bldg: #2f3540; --bldg-edge: #4a5262; --road: #2a3038; --walk: #3a424d; --bldg-shadow: rgba(0, 0, 0, .55); --plane: #2c333d; --bridge: #434c59; --garage: #1c2026; --con-tint: .2; --hall: #26304a; --hall-edge: #46557a; --hall-text: #8796bd; --counter: #9aa7c0; --carousel: #3a4458; --carousel-belt: #8d97ab; --door: #7d97ff;
   --glass: rgba(34, 34, 38, .95); --sheet-bg: #1d1d21; --glass-hi: rgba(255, 255, 255, .07); --hairline: rgba(84, 84, 88, .55);
   --card: rgba(44, 44, 48, .88); --solid: #242428; --fill: rgba(118, 118, 128, .24); --fill-2: rgba(118, 118, 128, .34);
   --label: #f3f4f8; --label-2: rgba(235, 235, 245, .62); --label-3: rgba(235, 235, 245, .3);
@@ -173,6 +174,11 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 @media (hover: hover) { #map .mk:hover .pop { transform: scale(1.3); } }
 .walk { stroke: var(--walk); fill: none; stroke-dasharray: 2 3; }
 .area-lbl[data-off] { display: none; }
+/* baggage carousel numbers */
+.car-lbl circle { fill: var(--solid); stroke: var(--carousel-belt); stroke-width: 1.1; }
+.car-lbl text { font: 750 6.4px var(--font-display); fill: var(--label); text-anchor: middle; dominant-baseline: central; }
+.car-lbl.hl circle { fill: var(--route); stroke: var(--route); }
+.car-lbl.hl text { fill: #fff; }
 /* labels scale with the map: without this Chrome re-lays out every label on each frame of a pinch */
 #map text { text-rendering: geometricPrecision; }
 .map-lbl { font: 650 8.5px var(--font-display); fill: var(--label-2); letter-spacing: .08em; text-transform: uppercase; }
@@ -1369,11 +1375,17 @@ AIRPORTS.CLE = (() => {
   const V = {
     // Three TSA checkpoints on the departures level, all leading to every concourse. Positions follow
     // OpenStreetMap's corridors from the ticketing hall to the gates (the checkpoints aren't mapped there).
-    chk:  [112, -155, 'TSA Central checkpoint'],
+    chk:  [104, -150, 'TSA Central checkpoint'],
     chk_n: [120, -205, 'TSA North checkpoint'],
-    chk_s: [82, -52, 'TSA South checkpoint'],
-    tix_s: [100, -50, 'Ticketing hall, south end'],
+    chk_s: [63, -53, 'TSA South checkpoint'],
     sj:   [46, -50],
+    // The ticketing hall (upper level) and baggage claim (lower level) are one long hall on two floors
+    // along the curb, each with a walkway end to end (OpenStreetMap's indoor footways), escalators and
+    // elevators at the north end, the middle and the south end.
+    th0: [171, -212], th1: [155, -198], th2: [115, -159], th4: [86, -100], tix_s: [76, -54],
+    th3: [94, -133, 'Central escalators (upper level)'], th6: [70, -25, 'South escalators (upper level)'],
+    bg0: [183, -203], bg1: [158, -180], bg2: [122, -145], bg5: [94, -69], bg7: [82, -6],
+    bg3: [106, -121, 'Central escalators (lower level)'], bag_s: [87, -30, 'South escalators (lower level)'],
     hub:  [61, -121, 'Main terminal, past security'],
     fc:   [50, -70, 'Main terminal food court'],
     c0:   [40, -21, 'Concourse C'],
@@ -1382,8 +1394,8 @@ AIRPORTS.CLE = (() => {
     crot: [-184, 266],
     b0:   [20, -129, 'Concourse B'], b1: [-36, -140], b2: [-186, -169],
     a0:   [78, -212, 'Concourse A'], a1: [98, -319], a2: [114, -410],
-    tix:  [165, -200, 'Ticketing (upper level)'],
-    bag:  [100, -70, 'Baggage claim (lower level)'],
+    tix:  [146, -190, 'Ticketing (upper level)'],
+    bag:  [100, -95, 'Baggage claim (lower level)'],
     rta:  [111, -125, 'RTA Red Line to downtown'],
     gtc:  [172, -60, 'Ground Transportation Center'],
     taxi: [128, -12, 'Taxi stand'],
@@ -1394,16 +1406,24 @@ AIRPORTS.CLE = (() => {
     lift_t: [191, -202, 'Elevator by ticketing'],
     lift_c: [108, -130, 'Elevator beside the checkpoint'],
     lift_r: [110, -119, 'Elevator to the RTA platform'],
+    lift_s: [77, -23, 'Elevator by the south escalators'],
   };
   const EDGES = [
     ['chk','hub','S'], ['hub','fc','M'], ['fc','sj','M'], ['sj','c0','M'],
-    ['tix','chk_n','L'], ['chk_n','a0','S'], ['tix','tix_s','L'], ['tix_s','chk_s','L'], ['chk_s','sj','S'], ['c0','c1','C'], ['c1','c2','C'], ['c2','c3','C'], ['c3','c4','C'], ['c4','crot','R'],
+    // ticketing hall, north to south, and the three checkpoints off it
+    ['th0','th1','L'], ['th1','tix','L'], ['tix','th2','L'], ['th2','th3','L'], ['th3','th4','L'], ['th4','tix_s','L'], ['tix_s','th6','L'],
+    ['th2','chk','L'], ['th1','chk_n','L'], ['chk_n','a0','S'], ['tix_s','chk_s','L'], ['chk_s','sj','S'],
+    // baggage claim, north to south
+    ['bg0','bg1','L'], ['bg1','bg2','L'], ['bg2','bg3','L'], ['bg3','bag','L'], ['bag','bg5','L'], ['bg5','bag_s','L'], ['bag_s','bg7','L'], ['c0','c1','C'], ['c1','c2','C'], ['c2','c3','C'], ['c3','c4','C'], ['c4','crot','R'],
     ['hub','b0','M'], ['b0','b1','B'], ['b1','b2','B'], ['hub','a0','M'], ['a0','a1','A'], ['a1','a2','A'],
-    ['tix','chk','L'], ['tix','bag','X','esc'], ['bag','rta','X','esc'], ['bag','gtc','L'], ['bag','taxi','L'], ['gtc','rent','L'], ['gtc','hotel','L'], ['gtc','ride','L'], ['bag','curb','L'],
-    ['chk','bag','X','esc'],   // escalators beside the checkpoint between the upper and lower levels
-    // elevators (step-free): ticketing ↔ baggage claim, checkpoint ↔ baggage claim, baggage claim ↔ RTA platform
-    ['tix','lift_t','L'], ['lift_t','bag','X','lift'], ['chk','lift_c','L'], ['lift_c','bag','X','lift'],
-    ['bag','lift_r','L'], ['lift_r','rta','X','lift'],
+    // escalators between the floors at the north end, the middle (by the Central checkpoint) and the south end,
+    // and down to the RTA platform
+    ['tix','bg1','X','esc'], ['th3','bg3','X','esc'], ['th6','bag_s','X','esc'], ['bg3','rta','X','esc'],
+    // out to ground transportation, the arrivals curb and the taxi stand (by carousel 11)
+    ['bg5','gtc','L'], ['bag_s','curb','L'], ['bg7','taxi','L'], ['gtc','rent','L'], ['gtc','hotel','L'], ['gtc','ride','L'],
+    // elevators (step-free) beside each set of escalators, and to the RTA platform
+    ['th0','lift_t','L'], ['lift_t','bg0','X','lift'], ['th3','lift_c','L'], ['lift_c','bg3','X','lift'],
+    ['th6','lift_s','L'], ['lift_s','bag_s','X','lift'], ['bg3','lift_r','L'], ['lift_r','rta','X','lift'],
   ];
   const SPINES = { A: ['a0','a1','a2'], B: ['b0','b1','b2'], C: ['c0','c1','c2','c3','c4'] };
   const ROT = { x: -185, y: 268, r: 43 };
@@ -1485,8 +1505,9 @@ AIRPORTS.CLE = (() => {
     ['Water fountain','service',[-129,186,'C','C11'],3],
     ['Elevator','service',[191,-202,'LIFT','lift_t'],2,'Ticketing ↔ baggage claim'], ['Elevator','service',[108,-130,'LIFT','lift_c'],2,'Checkpoint ↔ baggage claim'],
     ['Elevator','service',[110,-119,'LIFT','lift_r'],2,'Baggage claim ↔ RTA platform'],
+    ['Elevator','service',[77,-23,'LIFT','lift_s'],2,'Ticketing ↔ baggage claim, south end'],
     ['Information desk','service',[152,-190,'L'],5], ["Farmer's Fridge vending",'food',[170,-208,'L'],4], ['Illy Coffee vending','coffee',[160,-210,'L'],4],
-    ['Welcome Center','service',[108,-58,'L'],5], ['Hudson Aero Mart','shop',[104,-84,'L']], ['SIM card vending','service',[110,-96,'L'],5],
+    ['Welcome Center','service',[108,-58,'L',null,'lo'],5], ['Hudson Aero Mart','shop',[104,-84,'L',null,'lo']], ['SIM card vending','service',[110,-96,'L',null,'lo'],5],
   ];
   
   // Opening hours from the airport's official directory (shop-cle.com, Fraport USA), checked Oct 2026.
@@ -1516,8 +1537,8 @@ AIRPORTS.CLE = (() => {
     GEO, V, EDGES, SPINES, ROT, MAP_BOUNDS, AIRLINES, CON_RANGE, GATE_POS, ROT_GATES, AMEN, HOURS,
     concourses,
     // the lower-level shops and services are in the main terminal south of the checkpoint
-    amenLevel: it => it.zone === 'L' && it.y > -150 ? 'lo' : 'up',
-    LOWER_V: ['bag', 'rta', 'gtc', 'taxi', 'rent', 'hotel', 'ride', 'curb', 'lift_r'],
+    amenLevel: it => it.floor || 'up',
+    LOWER_V: ['bg0', 'bg1', 'bg2', 'bg3', 'bg5', 'bag_s', 'bg7', 'bag', 'rta', 'gtc', 'taxi', 'rent', 'hotel', 'ride', 'curb', 'lift_r'],
     PLACES: ['chk', 'chk_s', 'chk_n', 'tix', 'bag', 'rta', 'gtc', 'taxi', 'rent', 'hotel', 'ride', 'curb'],
     // how each place is drawn: [icon, kind]; kinds set the sign colour (terminal, bags, transit, ground)
     PLACE_STYLE: { chk: ['shield', 'terminal'], chk_s: ['shield', 'terminal'], chk_n: ['shield', 'terminal'], tix: ['ticket', 'terminal'], bag: ['bag', 'bags'], rta: ['train', 'transit'],
@@ -1530,9 +1551,12 @@ AIRPORTS.CLE = (() => {
     roles: { checkpoint: 'chk', hub: 'hub', baggage: 'bag', ticketing: 'tix', transit: 'rta' },
     ui: {
       // [x, y, text, anchor, floor]; no floor means both
-      labels: [[150, -95, 'Main terminal', , 'up'], [62, -100, 'Baggage claim', , 'lo'], [-185, 271, 'Rotunda'], [255, -40, 'Parking garage'], [125, 385, 'Concourse D · closed'], [140, 60, 'Lower Drive']],
+      labels: [[150, -95, 'Main terminal', , 'up'], [-185, 271, 'Rotunda'], [255, -40, 'Parking garage'], [125, 385, 'Concourse D · closed'], [140, 60, 'Lower Drive']],
       roundels: [['A', 118, -458], ['B', -236, -171], ['C', 72, 28]],
-      securityLine: [[100, -167, 124, -143], [120, -213, 120, -197], [82, -59, 82, -45]],
+      // the halls' outlines, check-in counter rows and baggage carousels [x, y, angle, number], numbered
+      // from the north end (the taxi stand is by carousel 11, at the south end), and the curbside doors
+      halls: { names: [[98, -118, -78.4, 'TICKETING', 'up'], [86, -30, -78.4, 'TICKETING', 'up'], [157, -186, -44.6, 'TICKETING', 'up'], [107, -96, -78.4, 'BAGGAGE CLAIM', 'lo'], [97, -40, -78.4, 'BAGGAGE CLAIM', 'lo'], [166, -183, -44.6, 'BAGGAGE CLAIM', 'lo']], "tix":[[114.2,-109.8],[115.9,-109.7],[120.1,-114.5],[122.1,-122.4],[126.9,-127.8],[127.7,-131.3],[125.2,-133.6],[188.1,-196.0],[167.9,-216.9],[102.0,-151.8],[90.7,-138.5],[80.8,-99.2],[63.0,-10.3],[92.3,-4.6]],"bag":[[114.2,-109.8],[115.9,-109.7],[121.3,-115.9],[126.0,-124.1],[127.7,-131.2],[125.2,-133.6],[188.9,-196.9],[169.8,-218.0],[147.4,-197.7],[108.4,-159.2],[94.4,-143.4],[87.2,-129.2],[83.4,-116.0],[61.9,-7.8],[91.7,-1.9]],"counters":[[[148.0,-194.3],[145.2,-191.5],[142.4,-188.6],[139.6,-185.8],[136.8,-182.9],[134.0,-180.1],[131.2,-177.2],[128.4,-174.4],[125.6,-171.5],[122.7,-168.7],[119.9,-165.8],[117.1,-163.0]],[[103.1,-148.7],[100.3,-145.9],[97.5,-143.0],[94.7,-140.2],[91.9,-135.7],[91.1,-131.8],[90.2,-127.8],[89.4,-123.9],[88.5,-120.0],[87.7,-116.1],[86.8,-112.2],[86.0,-108.3],[85.1,-104.4],[84.3,-100.5],[83.4,-96.6],[82.6,-92.7],[81.7,-88.8],[80.9,-84.9],[80.0,-80.9],[79.2,-77.0],[78.3,-73.1],[77.5,-69.2],[76.6,-65.3]],[[72.1,-44.8],[71.3,-40.9],[70.4,-37.0],[69.6,-33.1],[68.7,-29.2],[67.9,-25.2],[67.0,-21.3]]],"carousels":[[161.2,-197.4,135.8,1],[147.3,-183.9,135.8,2],[133.4,-170.4,135.8,3],[119.5,-156.9,135.8,4],[105.0,-142.7,130.6,5],[94.3,-120.5,101.8,6],[90.3,-101.5,101.8,7],[86.4,-82.5,101.8,8],[82.4,-63.6,101.8,9],[78.5,-44.6,101.8,10],[74.5,-25.6,101.8,11]],"doors":{"up":[[187,-195],[157,-165],[130,-139],[110,-93],[101,-49],[92,-4]],"lo":[[201,-182],[173,-155],[142,-124],[128,-97],[121,-64],[115,-36],[109,0]]}},
+      securityLine: [[96, -162, 112, -138], [120, -213, 120, -197], [63, -60, 63, -46]],
       closedTerms: ['termD'],
       airlinesNote: 'All three concourses connect past security, so you can walk between them.',
       airlinesTip: 'International arrivals clear U.S. Customs near gate A5. Concourse D has been closed since 2014.',
@@ -1662,7 +1686,8 @@ AMEN.forEach(([name, cat, at, dwell, note], i) => {
     Object.assign(it, { x, y, zone, gate, near: gate ? 'Near gate ' + gate : (AP.ui.zoneNames || {})[zone] || 'Main terminal' });
   }
   else if (Array.isArray(at)) {
-    const [x, y, zone, gate] = at;
+    const [x, y, zone, gate, floor] = at;
+    if (floor) it.floor = floor;
     if (zone === 'LIFT') Object.assign(it, { x, y, zone, lift: gate, near: V[gate][2] });
     else Object.assign(it, { x, y, zone, gate, near: gate ? 'Near gate ' + gate : zone === 'L' ? 'Landside, before security' : 'Main terminal' });
   }
@@ -1689,6 +1714,7 @@ for (const it of Object.values(ITEMS))
   it.lvl = it.zone === 'LIFT' ? null : it.kind === 'place' ? (LOWER_V.has(it.node) ? 'lo' : 'up') : AP.amenLevel ? AP.amenLevel(it) : 'up';
 function levelOf(node) {
   if (node === 'me' || node === 'me@') return meLevel;
+  if (/^car\d/.test(node)) return 'lo';   // baggage carousels (see the app)
   if (V[node]) return LOWER_V.has(node) ? 'lo' : 'up';
   const it = ITEMS[node.startsWith('p:') ? node.slice(2) : node];
   return it && it.lvl ? it.lvl : 'up';
@@ -1715,6 +1741,7 @@ for (const it of Object.values(ITEMS)) {
   let best = null;
   EDGES.forEach(([a, b, z], ei) => {
     if (z !== it.zone) return;
+    if (it.lvl && it.zone === 'L' && (levelOf(a) !== it.lvl || levelOf(b) !== it.lvl)) return;   // a landside place joins a walkway on its own floor
     const pr = project(it, P(a), P(b)), d = dist(pr, it);
     if (!best || d < best.d) best = { d, ei, pr };
   });
@@ -1811,6 +1838,8 @@ const wide = () => matchMedia('(min-width: 760px)').matches;
 // ---------- Draw the map (map units; #world is scaled to screen pixels) ----------
 const svg = $('#map'), world = $('#world');
 const CHK = 'v:' + ROLE.checkpoint;
+// walkway links that cross security (checkpoint ↔ airside), both ways
+const SEC_EDGE = new Set(EDGES.filter(e => e[2] === 'S').flatMap(([a, b]) => [a + '|' + b, b + '|' + a]));
 // every security checkpoint (some airports have several); CHK is the main one
 const CHKS = new Set(Object.keys(AP.CHECKPOINTS || { [ROLE.checkpoint]: 1 }).map(id => 'v:' + id));
 const isChk = id => CHKS.has(id);
@@ -1830,6 +1859,10 @@ const P2 = {};
 for (const k in B) if (typeof B[k] === 'string' && B[k]) P2[k] = new Path2D(B[k]);
 const PLANE_D = 'M0 -8C1 -8 1.3 -6.5 1.3 -5L1.3 -1.5L8 2L8 3.4L1.3 1.6L1.1 5.2L3 6.6L3 7.6L0 7L-3 7.6L-3 6.6L-1.1 5.2L-1.3 1.6L-8 3.4L-8 2L-1.3 -1.5L-1.3 -5C-1.3 -6.5 -1 -8 0 -8Z';
 const planePath = new Path2D(PLANE_D);
+const HALLS = AP.ui.halls, HALL_PATH = {};
+if (HALLS) for (const [f, key] of [['up', 'tix'], ['lo', 'bag']]) {
+  const p = new Path2D(); HALLS[key].forEach(([x, y], i) => i ? p.lineTo(x, y) : p.moveTo(x, y)); p.closePath(); HALL_PATH[f] = p;
+}
 let pal = null, floor = 'up';
 $('#map').dataset.floor = 'up';
 function hexMix(a, b, t) {   // a over b, t = amount of a
@@ -1842,7 +1875,7 @@ function readPalette() {
   const p = {};
   for (const k of ['map', 'grass', 'wood', 'water', 'apron-pave', 'lot', 'taxi', 'runway', 'taxi-line', 'road-case', 'road-fill',
     'mway-case', 'mway-fill', 'rail', 'other-bldg', 'garage', 'bldg', 'bldg-edge', 'bldg-shadow', 'plane', 'bridge', 'term-closed',
-    'walk', 'route', 'corridor', 'stairs', 'runway-mark', ...CONS.map(c => 'con' + c)]) p[k] = g(k);
+    'walk', 'route', 'corridor', 'stairs', 'runway-mark', 'hall', 'hall-edge', 'hall-text', 'counter', 'carousel', 'carousel-belt', 'door', ...CONS.map(c => 'con' + c)]) p[k] = g(k);
   const tint = parseFloat(g('con-tint')) || .1;
   for (const c of CONS) p['term' + c] = /^#[0-9a-f]{6}$/i.test(p['con' + c]) && /^#[0-9a-f]{6}$/i.test(p.bldg) ? hexMix(p['con' + c], p.bldg, tint) : p.bldg;
   return p;
@@ -1938,12 +1971,44 @@ function paintBase(c, cw, ch, tx, ty, k, rot = 0) {
     c.globalAlpha = .55; fill('term' + t, pal['term-closed']); stroke('term' + t, pal['bldg-edge'], edge * .8); c.globalAlpha = 1;
   }
   if (!lower) stroke('bridges', pal.bridge, 3.6);
+  // the landside halls: ticketing upstairs (with its check-in counter rows), baggage claim downstairs
+  // (with its carousels), each tinted so they read as places of their own, and the curbside doors
+  if (HALLS) {
+    const hp = HALL_PATH[lower ? 'lo' : 'up'];
+    c.fillStyle = pal.hall; c.fill(hp); c.strokeStyle = pal['hall-edge']; c.lineWidth = 1 / Math.max(k, .5); c.stroke(hp);
+    if (!lower) {
+      c.strokeStyle = pal.counter; c.lineWidth = 2.2; c.lineCap = 'butt'; c.setLineDash([3, .9]);
+      for (const run of HALLS.counters) { c.beginPath(); run.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.stroke(); }
+      c.setLineDash([]); c.lineCap = 'round';
+    } else {
+      for (const [x, y, a] of HALLS.carousels) {
+        c.save(); c.translate(x, y); c.rotate(a * Math.PI / 180);
+        c.beginPath(); c.roundRect(-6, -2.1, 12, 4.2, 2.1); c.fillStyle = pal.carousel; c.fill();
+        c.strokeStyle = pal['carousel-belt']; c.lineWidth = .9; c.stroke();
+        c.beginPath(); c.moveTo(-3.6, 0); c.lineTo(3.6, 0); c.lineWidth = .7; c.stroke();
+        c.restore();
+      }
+    }
+    c.fillStyle = pal.door;
+    for (const [x, y] of HALLS.doors[lower ? 'lo' : 'up']) { c.beginPath(); c.arc(x, y, 1.6, 0, Math.PI * 2); c.fill(); }
+    // the hall's name painted along its floor, so it reads at any zoom and never gets crowded out
+    for (const [x, y, ang, t, lv] of HALLS.names || []) {
+      if ((lv === 'lo') !== lower || k < .9) continue;
+      c.save(); c.translate(x, y); c.rotate(ang * Math.PI / 180);
+      c.font = '700 5.2px ' + (getComputedStyle(document.documentElement).getPropertyValue('--font-display') || 'sans-serif');
+      try { c.letterSpacing = '1.2px'; } catch (e) {}
+      c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = pal['hall-text']; c.fillText(t, 0, 0);
+      try { c.letterSpacing = '0px'; } catch (e) {}
+      c.restore();
+    }
+  }
   // this floor's walkways (OpenStreetMap indoor ways) and the escalators between floors
   stroke(lower ? 'walk0' : 'walk1', pal.corridor, 5);
   if (lower) stroke('walkm1', pal.corridor, 5, [5, 4]);
   // an airport train runs on the lower floor: a track with ties
   if (lower && P2.train) { stroke('train', pal.route, 7 / Math.max(k, .6)); stroke('train', pal.corridor, 3 / Math.max(k, .6), [4, 5]); }
-  stroke('stairs', pal.stairs, 2.6, [.9, .9]);
+  // stairs and escalators: crisp treads (round dashes blur into blobs when you zoom in)
+  c.lineCap = 'butt'; stroke('stairs', pal.stairs, 2.4, [.45, .45]); c.lineCap = 'round';
   if (!lower) {
     // the checkpoint line across the corridor from ticketing
     c.strokeStyle = pal.route; c.globalAlpha = .75; c.lineWidth = 1.8; c.setLineDash([3, 2.4]);
@@ -1961,6 +2026,13 @@ const lbl = (x, y, t, anchor = 'middle', lvl) => {
   areaLabels.push(g);
 };
 for (const [x, y, t, anchor, lvl] of AP.ui.labels) lbl(x, y, t, anchor || 'middle', lvl);
+// carousel numbers (lower level); a tracked flight's carousel lights up
+const carLabels = {};
+if (HALLS) for (const [x, y, , n] of HALLS.carousels) {
+  const g = el('g', { class: 'area-lbl car-lbl' }); g.dataset.x = x; g.dataset.y = y; g.dataset.lv = 'lo';
+  el('circle', { r: 4.6 }, g); el('text', {}, g).textContent = n;
+  g._w = 9; g._anchor = 'middle'; areaLabels.push(g); carLabels[n] = g;
+}
 
 const routeGhostCase = el('path', { class: 'route-case ghost', 'stroke-width': 11, 'vector-effect': 'non-scaling-stroke', d: '' });
 const routeGhost = el('path', { class: 'route ghost', 'stroke-width': 7, 'vector-effect': 'non-scaling-stroke', d: '' });
@@ -2649,16 +2721,31 @@ function detachMe() {
     delete G[id]; delete NODE[id];
   }
 }
-function attachMe(p) {
+// the closest point on a walkway of floor `lv` (not escalators, lifts or trains)
+function nearestWalkSeg(p, lv) {
   let best = null;
   for (const a in G) {
-    if (/^(m|g|v):|^me/.test(a) || levelOf(a) !== floor) continue;
+    if (/^(m|g|v):|^me|^car/.test(a) || levelOf(a) !== lv) continue;
     for (const { to: b, kind } of G[a]) {
-      if (kind || a > b || /^(m|g|v):|^me/.test(b) || levelOf(b) !== floor) continue;
+      if (kind || a > b || /^(m|g|v):|^me|^car/.test(b) || levelOf(b) !== lv) continue;
       const q = project(p, NODE[a], NODE[b]), d = dist(q, p);
       if (!best || d < best.d) best = { d, a, b, q };
     }
   }
+  return best;
+}
+// baggage carousels join the lower walkway, so arrivals can route to yours
+if (HALLS) {
+  for (const [x, y, , n] of HALLS.carousels) {
+    const id = 'car' + n, w = nearestWalkSeg({ x, y }, 'lo');
+    if (!w) continue;
+    addNode(id, { x, y }); addNode(id + '@', { x: w.q.x, y: w.q.y });
+    link(id, id + '@'); link(id + '@', w.a); link(id + '@', w.b);
+  }
+  for (const k in dCache) delete dCache[k];
+}
+function attachMe(p) {
+  const best = nearestWalkSeg(p, floor);
   if (!best) return null;
   detachMe();
   addNode('me', { x: p.x, y: p.y }); addNode('me@', { x: best.q.x, y: best.q.y });
@@ -3259,7 +3346,7 @@ function renderSteps(steps, passed) {
 }
 function describe(path, a, b) {
   const steps = [{ t: a.name, n: 'Start', node: nodeOf(a) }];
-  const crossesSecurity = path.some((n, i) => i && ((n === ROLE.checkpoint && path[i - 1] === ROLE.hub) || (n === ROLE.hub && path[i - 1] === ROLE.checkpoint)));
+  const crossesSecurity = path.some((n, i) => i && SEC_EDGE.has(path[i - 1] + '|' + n));
   let lastLabel = a.kind === 'place' ? a.node : null;
   const passed = [], via = [];
   const kindAt = i => EDGE_KIND[path[i] + '|' + path[i + 1]];
@@ -3282,10 +3369,14 @@ function describe(path, a, b) {
       lastLabel = n; continue;
     }
     if (V[n] && V[n][2] && n !== lastLabel) {
+      const ride = k => kindAt(k) === 'esc' || kindAt(k) === 'lift';
+      // escalator landings are steps only where you ride them, and the ride is one step, not two
+      if (/escalators/i.test(V[n][2]) && !ride(i) && !ride(i - 1)) continue;
+      if (ride(i - 1) && steps.length && steps[steps.length - 1].node === path[i - 1]) { lastLabel = n; continue; }
       let note = '';
-      if (n === ROLE.checkpoint && crossesSecurity) note = path.indexOf(ROLE.hub) > i ? (path[i - 1] === ROLE.baggage || lastLabel === ROLE.baggage || lastLabel === ROLE.transit ? 'Take the escalators up, screen through TSA, then continue straight ahead' : 'Screen through TSA, then continue straight ahead') : 'Leave through the exit lane';
-      if (n === ROLE.ticketing && path[i + 1] === ROLE.baggage) note = 'Take the escalator down a level';
-      if (n === ROLE.baggage && path[i - 1] === ROLE.ticketing) note = 'Lower level';
+      if (isChk('v:' + n) && crossesSecurity) note = SEC_EDGE.has(n + '|' + path[i + 1]) ? (lastLabel && levelOf(lastLabel) === 'lo' ? 'Take the escalators up, screen through TSA, then continue straight ahead' : 'Screen through TSA, then continue straight ahead') : 'Leave through the exit lane';
+      if (kindAt(i) === 'esc') note = levelOf(path[i + 1]) === 'lo' ? 'Take the escalator down a level' : 'Take the escalator up a level';
+      else if (kindAt(i - 1) === 'esc') note = levelOf(n) === 'lo' ? 'Lower level' : 'Upper level';
       const extra = AP.ui.stepNote(n, path, i);
       if (extra) note = extra;
       else if (n.startsWith('lift_')) note = levelOf(path[i + 1]) === 'lo' ? 'Take the elevator down to the lower level' : 'Take the elevator up to the upper level';
@@ -3372,14 +3463,25 @@ function updateArrival(fit) {
   const gate = ITEMS[$('#arrGate').value], dest = ITEMS[$('#arrDest').value], bag = ITEMS['v:' + ROLE.baggage];
   const bags = $('#arrBags').checked, car = parseInt($('#arrCarousel').value, 10);
   $('#carRow').hidden = !bags;
-  const p1 = route(gate, bag), p2 = route(bag, dest);
+  // a known carousel: walk to it rather than to the middle of baggage claim
+  const carNode = bags && car > 0 && NODE['car' + car] ? 'car' + car : null;
+  const mid = carNode ? { id: carNode, kind: 'place', node: carNode, name: 'Carousel ' + car } : bag;
+  const toBag = dest.id === bag.id;
+  const p1 = route(gate, mid), p2 = toBag && carNode ? { path: [carNode], units: 0, len: 0 } : route(mid, dest);
   const path = p1.path.concat(p2.path.slice(1)), units = p1.units + p2.units, len = p1.len + p2.len;
   setRoute(path, minutes(units));
+  for (const [n, g] of Object.entries(carLabels)) g.classList.toggle('hl', !!carNode && +n === car);
   const { steps, passed } = describe(path, gate, dest);
+  if (carNode) {
+    const ci = path.indexOf(carNode), carStep = { t: 'Carousel ' + car, n: 'Bags usually arrive 15–25 min after landing.', node: carNode };
+    // your carousel stands in for "Baggage claim" along the way
+    for (let j = steps.length - 2; j > 0; j--) if (steps[j].node === ROLE.baggage) steps.splice(j, 1);
+    if (toBag) Object.assign(steps[steps.length - 1], { t: 'Baggage claim · carousel ' + car, node: carNode });
+    else { let k = steps.findIndex((s, j) => j && path.indexOf(s.node) > ci); if (k < 0) k = steps.length - 1; steps.splice(k, 0, carStep); }
+  }
   for (const s of steps) {
-    if (s.node === ROLE.ticketing) { s.t = 'Escalators down to the lower level'; s.n = ''; }
-    if (s.node === ROLE.checkpoint) { s.t = 'Exit lane by the security checkpoint'; s.n = (stepFree ? '' : 'Then take the escalators down to baggage claim. ') + 'Once you’re through, you can’t go back to the gates.'; }
-    if (s.node === ROLE.baggage && !s.end) {
+    if (isChk('v:' + s.node)) { s.t = 'Exit lane by the ' + V[s.node][2].replace(/^TSA /, ''); s.n = (stepFree ? '' : 'Then take the escalators down to baggage claim. ') + 'Once you’re through, you can’t go back to the gates.'; }
+    if (s.node === ROLE.baggage && !s.end && !carNode) {
       s.n = !bags ? 'No bags? Walk straight through.'
         : car > 0 ? `Carousel ${car}. Bags usually arrive 15–25 min after landing.`
         : 'Your carousel is on the arrival screens by the escalators. Bags usually arrive 15–25 min after landing.';
@@ -3387,7 +3489,7 @@ function updateArrival(fit) {
   }
   const info = ARR_DEST.find(x => x[0] === dest.id);
   if (steps.length && info) steps[steps.length - 1].n = info[2];
-  if (dest.id === 'v:' + ROLE.baggage) { const last = steps[steps.length - 1]; last.n = bags ? (car > 0 ? `Carousel ${car}. ` : '') + info[2] : info[2]; }
+  if (toBag) { const last = steps[steps.length - 1]; last.n = bags ? (car > 0 ? (carNode ? 'Bags usually arrive 15–25 min after landing. ' : `Carousel ${car}. `) : '') + info[2] : info[2]; }
   const walk = minutes(units), total = walk + (bags ? BAG_WAIT : 0);
   $('#hero').className = 'hero';
   $('#hero').innerHTML = `<span class="num">${total}<small>min</small></span>
