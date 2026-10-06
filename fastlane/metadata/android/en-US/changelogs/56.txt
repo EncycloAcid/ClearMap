@@ -1,0 +1,4 @@
+Clearway 10.1
+• Dallas/Fort Worth: smoother routes along the concourses, which now follow the main corridors instead of stepping into the side passages to the gates
+• Check-in walkways keep clear of the concourse at the terminals' corners
+• Connect mode for connecting flights (new in 10.0)
