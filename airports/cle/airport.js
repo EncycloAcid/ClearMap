@@ -7,7 +7,13 @@ AIRPORTS.CLE = (() => {
   // OpenStreetMap's indoor walkways, gates and building outlines. North is up.
   const GEO = { lat0: 41.4100, lon0: -81.8395, kx: Math.cos(41.41 * Math.PI / 180) * 111320, ky: 110574 };
   const V = {
-    chk:  [112, -155, 'TSA security checkpoint'],
+    // Three TSA checkpoints on the departures level, all leading to every concourse. Positions follow
+    // OpenStreetMap's corridors from the ticketing hall to the gates (the checkpoints aren't mapped there).
+    chk:  [112, -155, 'TSA Central checkpoint'],
+    chk_n: [120, -205, 'TSA North checkpoint'],
+    chk_s: [82, -52, 'TSA South checkpoint'],
+    tix_s: [100, -50, 'Ticketing hall, south end'],
+    sj:   [46, -50],
     hub:  [61, -121, 'Main terminal, past security'],
     fc:   [50, -70, 'Main terminal food court'],
     c0:   [40, -21, 'Concourse C'],
@@ -30,7 +36,8 @@ AIRPORTS.CLE = (() => {
     lift_r: [110, -119, 'Elevator to the RTA platform'],
   };
   const EDGES = [
-    ['chk','hub','S'], ['hub','fc','M'], ['fc','c0','M'], ['c0','c1','C'], ['c1','c2','C'], ['c2','c3','C'], ['c3','c4','C'], ['c4','crot','R'],
+    ['chk','hub','S'], ['hub','fc','M'], ['fc','sj','M'], ['sj','c0','M'],
+    ['tix','chk_n','L'], ['chk_n','a0','S'], ['tix','tix_s','L'], ['tix_s','chk_s','L'], ['chk_s','sj','S'], ['c0','c1','C'], ['c1','c2','C'], ['c2','c3','C'], ['c3','c4','C'], ['c4','crot','R'],
     ['hub','b0','M'], ['b0','b1','B'], ['b1','b2','B'], ['hub','a0','M'], ['a0','a1','A'], ['a1','a2','A'],
     ['tix','chk','L'], ['tix','bag','X','esc'], ['bag','rta','X','esc'], ['bag','gtc','L'], ['bag','taxi','L'], ['gtc','rent','L'], ['gtc','hotel','L'], ['gtc','ride','L'], ['bag','curb','L'],
     ['chk','bag','X','esc'],   // escalators beside the checkpoint between the upper and lower levels
@@ -151,18 +158,21 @@ AIRPORTS.CLE = (() => {
     // the lower-level shops and services are in the main terminal south of the checkpoint
     amenLevel: it => it.zone === 'L' && it.y > -150 ? 'lo' : 'up',
     LOWER_V: ['bag', 'rta', 'gtc', 'taxi', 'rent', 'hotel', 'ride', 'curb', 'lift_r'],
-    PLACES: ['chk', 'tix', 'bag', 'rta', 'gtc', 'taxi', 'rent', 'hotel', 'ride', 'curb'],
+    PLACES: ['chk', 'chk_s', 'chk_n', 'tix', 'bag', 'rta', 'gtc', 'taxi', 'rent', 'hotel', 'ride', 'curb'],
     // how each place is drawn: [icon, kind]; kinds set the sign colour (terminal, bags, transit, ground)
-    PLACE_STYLE: { chk: ['shield', 'terminal'], tix: ['ticket', 'terminal'], bag: ['bag', 'bags'], rta: ['train', 'transit'],
+    PLACE_STYLE: { chk: ['shield', 'terminal'], chk_s: ['shield', 'terminal'], chk_n: ['shield', 'terminal'], tix: ['ticket', 'terminal'], bag: ['bag', 'bags'], rta: ['train', 'transit'],
       gtc: ['bus', 'ground'], taxi: ['taxi', 'ground'], rent: ['key', 'ground'], hotel: ['bed', 'ground'], ride: ['phone', 'ground'], curb: ['car', 'ground'] },
     basemap: BASEMAP_CLE,
     // node roles the engine needs: security checkpoint, airside hub, baggage claim, ticketing
+    // posted hours (airport time); routes go through whichever open one is quickest. North opens only
+    // at busy times, so routes avoid it unless you start or end there.
+    CHECKPOINTS: { chk: { open: '4:00', close: '22:00' }, chk_s: { open: '3:30', close: '19:45' }, chk_n: { busy: true } },
     roles: { checkpoint: 'chk', hub: 'hub', baggage: 'bag', ticketing: 'tix', transit: 'rta' },
     ui: {
       // [x, y, text, anchor, floor]; no floor means both
       labels: [[150, -95, 'Main terminal', , 'up'], [62, -100, 'Baggage claim', , 'lo'], [-185, 271, 'Rotunda'], [255, -40, 'Parking garage'], [125, 385, 'Concourse D · closed'], [140, 60, 'Lower Drive']],
       roundels: [['A', 118, -458], ['B', -236, -171], ['C', 72, 28]],
-      securityLine: [100, -167, 124, -143],
+      securityLine: [[100, -167, 124, -143], [120, -213, 120, -197], [82, -59, 82, -45]],
       closedTerms: ['termD'],
       airlinesNote: 'All three concourses connect past security, so you can walk between them.',
       airlinesTip: 'International arrivals clear U.S. Customs near gate A5. Concourse D has been closed since 2014.',

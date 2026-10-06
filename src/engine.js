@@ -179,6 +179,10 @@ const LIFT_WAIT = 75;   // metres-equivalent at 75 m/min
 // ground about seven times faster than walking.
 const BOARD_WAIT = 55, TRAIN_SPEED = 7;
 const cost = (w, kind) => kind === 'lift' ? w + LIFT_WAIT : kind === 'board' ? w + BOARD_WAIT : kind === 'train' ? w / TRAIN_SPEED : w;
+// checkpoints that are closed now (set by the app from their hours): walking *through* one costs a
+// lot, so routes use an open one, but you can still start or end at it
+let closedNodes = new Set();
+const CLOSED_COST = 1e5;
 function dijkstra(src) {
   const D = { [src]: 0 }, prev = {}, done = new Set();
   const ids = Object.keys(G);
@@ -189,14 +193,14 @@ function dijkstra(src) {
     done.add(u);
     for (const { to, w, kind } of G[u]) {
       if (done.has(to) || (stepFree && kind === 'esc')) continue;
-      const nd = D[u] + cost(w, kind);
+      const nd = D[u] + cost(w, kind) + (u !== src && closedNodes.has(u) ? CLOSED_COST : 0);
       if (D[to] === undefined || nd < D[to]) { D[to] = nd; prev[to] = u; }
     }
   }
   return { D, prev };
 }
 const dCache = {};
-const fromSrc = id => { const key = id + (stepFree ? '|sf' : ''); return dCache[key] || (dCache[key] = dijkstra(id)); };
+const fromSrc = id => { const key = id + (stepFree ? '|sf' : '') + (closedNodes.size ? '|' + [...closedNodes].join() : ''); return dCache[key] || (dCache[key] = dijkstra(id)); };
 function route(aItem, bItem) {
   const s = nodeOf(aItem), t = nodeOf(bItem), { D, prev } = fromSrc(s);
   const path = [t]; while (path[0] !== s) path.unshift(prev[path[0]]);

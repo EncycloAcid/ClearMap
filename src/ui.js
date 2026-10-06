@@ -37,6 +37,9 @@ const wide = () => matchMedia('(min-width: 760px)').matches;
 // ---------- Draw the map (map units; #world is scaled to screen pixels) ----------
 const svg = $('#map'), world = $('#world');
 const CHK = 'v:' + ROLE.checkpoint;
+// every security checkpoint (some airports have several); CHK is the main one
+const CHKS = new Set(Object.keys(AP.CHECKPOINTS || { [ROLE.checkpoint]: 1 }).map(id => 'v:' + id));
+const isChk = id => CHKS.has(id);
 const el = (tag, attrs = {}, parent = world) => {
   const n = document.createElementNS(NS, tag);
   for (const k in attrs) n.setAttribute(k, attrs[k]);
@@ -170,7 +173,8 @@ function paintBase(c, cw, ch, tx, ty, k, rot = 0) {
   if (!lower) {
     // the checkpoint line across the corridor from ticketing
     c.strokeStyle = pal.route; c.globalAlpha = .75; c.lineWidth = 1.8; c.setLineDash([3, 2.4]);
-    const sl = AP.ui.securityLine; c.beginPath(); c.moveTo(sl[0], sl[1]); c.lineTo(sl[2], sl[3]); c.stroke();
+    const sls = AP.ui.securityLine, list = Array.isArray(sls[0]) ? sls : [sls];
+    for (const sl of list) { c.beginPath(); c.moveTo(sl[0], sl[1]); c.lineTo(sl[2], sl[3]); c.stroke(); }
     c.globalAlpha = 1;
   }
   c.setLineDash([]);
@@ -1265,7 +1269,7 @@ function showPlace(it, fromMap) {
   const hs = hoursStatus(it);
   const summary = [];
   if (hs) summary.push(`<span class="${hs.state === 'open' ? 'ok' : hs.state === 'closed' ? 'no' : 'warn'}">${esc(hs.text)}</span>`);
-  const wm = it.id === CHK ? waitMin() : null;
+  const wm = isChk(it.id) ? waitMin() : null;
   if (wm != null) summary.push(`<span class="${wm >= 30 ? 'no' : wm >= 15 ? 'warn' : 'ok'}">~${wm} min wait</span>`);
   if (it.kind === 'amen') summary.push(`<span>${esc(it.near)}</span>`);
   if (it.kind === 'gate') summary.push(`<span class="marks">${AIRLINES.filter(a => a.cons.includes(it.con) && !a.partner).slice(0, 5).map(a => airMark(a, 20)).join('')}</span>`);
@@ -1282,8 +1286,8 @@ function showPlace(it, fromMap) {
   if (wm != null) rows.push(['Security wait', `About ${wm} min${live.wait.precheck ? ' · PreCheck open' : ''} · ${ago(live.wait.updated)}`]);
   if (it.hours) rows.push(['Schedule', esc(hoursLine(it))]);
   if (it.kind === 'amen' && it.cat !== 'rest') rows.push(['Typical visit', `About ${it.dwell} min`]);
-  if (walk && walk.path && fromIt.id !== CHK) rows.push([`From ${esc(fromIt.label || fromIt.name)}`, `${minutes(walk.units)} min · ${meters(walk.len)} m`]);
-  if (it.zone !== 'L' && it.id !== CHK) {
+  if (walk && walk.path && !isChk(fromIt.id)) rows.push([`From ${esc(fromIt.label || fromIt.name)}`, `${minutes(walk.units)} min · ${meters(walk.len)} m`]);
+  if (it.zone !== 'L' && !isChk(it.id)) {
     const { units, len } = route(ITEMS[CHK], it);
     rows.push(['From security', `${minutes(units)} min · ${meters(len)} m`]);
   }
@@ -1560,7 +1564,7 @@ function updateRoute(fit) {
   const { steps, passed, via } = describe(path, a, b);
   // going through security: add the live wait, and say it on the checkpoint step
   const ci = path.indexOf(ROLE.checkpoint), sec = ci >= 0 && path.indexOf(ROLE.hub) > ci ? waitMin() : null;
-  if (sec != null) { const s = steps.find(x => x.node === ROLE.checkpoint); if (s) s.n = `Security wait about ${sec} min right now${s.n && s.n !== 'Start' ? '. ' + s.n : ''}`; }
+  if (sec != null) { const s = steps.find(x => isChk('v:' + x.node)); if (s) s.n = `Security wait about ${sec} min right now${s.n && s.n !== 'Start' ? '. ' + s.n : ''}`; }
   const total = minutes(units) + (sec || 0);
   $('#hero').className = 'hero';
   $('#hero').innerHTML = `<button class="hero-x" id="clearRoute" aria-label="Clear route">${icon('x')}</button><span class="num">${total}<small>min</small></span>
@@ -1749,7 +1753,7 @@ function leavePlan() {
   // walk from where you are (or the Directions start) to your gate, plus 5 minutes' slack
   const gate = ITEMS[$('#ktGate').value], from = ITEMS['v:me'] || ITEMS[$('#from').value];
   const walk = from && from !== gate ? minutes(route(from, gate).units) : 0;
-  const sec = from && (from.zone === 'L' || from.id === CHK) && gate.zone !== 'L' && typeof waitMin === 'function' ? waitMin() || 0 : 0;
+  const sec = from && (from.zone === 'L' || isChk(from.id)) && gate.zone !== 'L' && typeof waitMin === 'function' ? waitMin() || 0 : 0;
   return { gate, from, walk, sec, at: boardAt - (walk + sec + 5) * 60000 };
 }
 // Home-screen widget (Android): gate, boarding, leave-by and walk, sent whenever they change
@@ -1763,6 +1767,25 @@ function pushWidget() {
   widgetSent = data;
   try { CLEApp.updateWidget(data); } catch (e) {}
 }
+// which checkpoints are open right now, from their posted hours at the airport's local time
+const hm = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+function chkOpen(id, t = Date.now()) {
+  const c = (AP.CHECKPOINTS || {})[id]; if (!c) return true; if (c.busy) return false;
+  const [H, M] = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: AP.tz }).format(t).split(':').map(Number);
+  const now = H * 60 + M; return now >= hm(c.open) && now < hm(c.close);
+}
+let closedKey = null;
+function updateCheckpoints() {
+  if (!AP.CHECKPOINTS) return;
+  const ids = Object.keys(AP.CHECKPOINTS), closed = ids.filter(id => !chkOpen(id));
+  // all closed overnight: route through the main one anyway (its line forms before it opens)
+  const set = closed.length === ids.length ? closed.filter(id => id !== ROLE.checkpoint) : closed;
+  const key = set.join();
+  if (key === closedKey) return;
+  closedKey = key; closedNodes = new Set(set);
+  if (committed && tab === 'dir' && !placeMode) updateRoute(false);
+}
+updateCheckpoints(); setInterval(updateCheckpoints, 60000);
 function updateClock() {
   $('#ktClock').textContent = 'Boarding at about ' + clock(boardAt);
   const p = leavePlan();
