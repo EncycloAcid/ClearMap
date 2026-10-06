@@ -38,6 +38,9 @@ const wide = () => matchMedia('(min-width: 760px)').matches;
 const svg = $('#map'), world = $('#world');
 const CHK = 'v:' + ROLE.checkpoint;
 // walkway links that cross security (checkpoint ↔ airside), both ways
+// baggage carousels by number
+const CAROUSEL = {};
+for (const it of Object.values(ITEMS)) { const m = it.kind === 'amen' && /^Carousel (\d+)$/.exec(it.name); if (m) CAROUSEL[+m[1]] = it; }
 const SEC_EDGE = new Set(EDGES.filter(e => e[2] === 'S').flatMap(([a, b]) => [a + '|' + b, b + '|' + a]));
 // every security checkpoint (some airports have several); CHK is the main one
 const CHKS = new Set(Object.keys(AP.CHECKPOINTS || { [ROLE.checkpoint]: 1 }).map(id => 'v:' + id));
@@ -196,7 +199,7 @@ function paintBase(c, cw, ch, tx, ty, k, rot = 0) {
       c.save(); c.translate(x, y); c.rotate(ang * Math.PI / 180);
       c.font = '700 5.2px ' + (getComputedStyle(document.documentElement).getPropertyValue('--font-display') || 'sans-serif');
       try { c.letterSpacing = '1.2px'; } catch (e) {}
-      c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = pal['hall-text']; c.fillText(t, 0, 0);
+      c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = pal['hall-text']; c.globalAlpha = .55; c.fillText(t, 0, 0); c.globalAlpha = 1;
       try { c.letterSpacing = '0px'; } catch (e) {}
       c.restore();
     }
@@ -225,14 +228,6 @@ const lbl = (x, y, t, anchor = 'middle', lvl) => {
   areaLabels.push(g);
 };
 for (const [x, y, t, anchor, lvl] of AP.ui.labels) lbl(x, y, t, anchor || 'middle', lvl);
-// carousel numbers (lower level); a tracked flight's carousel lights up
-const carLabels = {};
-if (HALLS) for (const [x, y, , n] of HALLS.carousels) {
-  const g = el('g', { class: 'area-lbl car-lbl' }); g.dataset.x = x; g.dataset.y = y; g.dataset.lv = 'lo';
-  el('circle', { r: 4.6 }, g); el('text', {}, g).textContent = n;
-  g._w = 9; g._anchor = 'middle'; areaLabels.push(g); carLabels[n] = g;
-}
-
 const routeGhostCase = el('path', { class: 'route-case ghost', 'stroke-width': 11, 'vector-effect': 'non-scaling-stroke', d: '' });
 const routeGhost = el('path', { class: 'route ghost', 'stroke-width': 7, 'vector-effect': 'non-scaling-stroke', d: '' });
 const routeCase = el('path', { class: 'route-case', 'stroke-width': 11, 'vector-effect': 'non-scaling-stroke', d: '' });
@@ -255,7 +250,9 @@ for (const it of Object.values(ITEMS)) {
     const sz = el('g', { class: 'sz' }, el('g', { class: 'pop' }, g));
     if (it.cat === 'rest') { el('rect', { class: 'drop', x: -5.4, y: -4.6, width: 10.8, height: 10.8, rx: 3.4 }, sz); el('rect', { class: 'sym', x: -5, y: -5, width: 10, height: 10, rx: 3 }, sz); }
     else { el('circle', { class: 'drop', r: 5.9, cy: .7 }, sz); el('circle', { class: 'sym', r: 5.2 }, sz); }
-    el('use', { class: 'glyph', href: '#i-' + (it.icon || it.cat), x: -3.6, y: -3.6, width: 7.2, height: 7.2 }, sz);
+    const carN = /^Carousel (\d+)$/.exec(it.name);
+    if (carN) { g.classList.add('carousel'); el('text', { class: 'num', y: .3 }, sz).textContent = carN[1]; }   // a carousel shows its number
+    else el('use', { class: 'glyph', href: '#i-' + (it.icon || it.cat), x: -3.6, y: -3.6, width: 7.2, height: 7.2 }, sz);
     el('text', { x: 8, y: 2 }, g).textContent = it.name;
   } else {
     // places are drawn as signs: a rounded square in their kind's colour
@@ -924,24 +921,14 @@ function detachMe() {
 function nearestWalkSeg(p, lv) {
   let best = null;
   for (const a in G) {
-    if (/^(m|g|v):|^me|^car/.test(a) || levelOf(a) !== lv) continue;
+    if (/^(m|g|v):|^me/.test(a) || levelOf(a) !== lv) continue;
     for (const { to: b, kind } of G[a]) {
-      if (kind || a > b || /^(m|g|v):|^me|^car/.test(b) || levelOf(b) !== lv) continue;
+      if (kind || a > b || /^(m|g|v):|^me/.test(b) || levelOf(b) !== lv) continue;
       const q = project(p, NODE[a], NODE[b]), d = dist(q, p);
       if (!best || d < best.d) best = { d, a, b, q };
     }
   }
   return best;
-}
-// baggage carousels join the lower walkway, so arrivals can route to yours
-if (HALLS) {
-  for (const [x, y, , n] of HALLS.carousels) {
-    const id = 'car' + n, w = nearestWalkSeg({ x, y }, 'lo');
-    if (!w) continue;
-    addNode(id, { x, y }); addNode(id + '@', { x: w.q.x, y: w.q.y });
-    link(id, id + '@'); link(id + '@', w.a); link(id + '@', w.b);
-  }
-  for (const k in dCache) delete dCache[k];
 }
 function attachMe(p) {
   const best = nearestWalkSeg(p, floor);
@@ -1321,7 +1308,7 @@ function showPlace(it, fromMap) {
   ['dir', 'kill', 'air'].forEach(t => $('#pane-' + t).hidden = true);
   const pane = $('#pane-place'); pane.hidden = false; replay(pane); replay($('#title'));
   $('#title').textContent = it.name; $('#title').classList.toggle('long', it.name.length > 22);
-  $('#eyebrow').textContent = it.kind === 'gate' ? `Concourse ${it.con}` : it.kind === 'amen' ? CATS[it.cat].label : (it.node === ROLE.checkpoint ? 'Main terminal' : 'Arrive & depart');
+  $('#eyebrow').textContent = it.kind === 'gate' ? `Concourse ${it.con}` : it.kind === 'amen' ? (/^Carousel \d/.test(it.name) ? 'Baggage claim' : /^(Escalators|Elevator)$/.test(it.name) ? 'Between floors' : CATS[it.cat].label) : (it.node === ROLE.checkpoint ? 'Main terminal' : 'Arrive & depart');
   const tile = $('#placeTile'); tile.innerHTML = tileFor(it); tile.hidden = false; replay(tile.firstChild);
   // walk time from wherever directions currently start (security if that's this place)
   const fromIt = ITEMS[$('#from').value] && $('#from').value !== it.id ? ITEMS[$('#from').value] : ITEMS[CHK];
@@ -1345,16 +1332,28 @@ function showPlace(it, fromMap) {
   if (it.note) rows.push(['About', esc(it.note)]);
   if (wm != null) rows.push(['Security wait', `About ${wm} min${live.wait.precheck ? ' · PreCheck open' : ''} · ${ago(live.wait.updated)}`]);
   if (it.hours) rows.push(['Schedule', esc(hoursLine(it))]);
-  if (it.kind === 'amen' && it.cat !== 'rest') rows.push(['Typical visit', `About ${it.dwell} min`]);
+  if (it.kind === 'amen' && it.cat !== 'rest' && !/^(Carousel \d+|Escalators|Elevator)$/.test(it.name)) rows.push(['Typical visit', `About ${it.dwell} min`]);
   if (walk && walk.path && !isChk(fromIt.id)) rows.push([`From ${esc(fromIt.label || fromIt.name)}`, `${minutes(walk.units)} min · ${meters(walk.len)} m`]);
   if (it.zone !== 'L' && !isChk(it.id)) {
     const { units, len } = route(ITEMS[CHK], it);
     rows.push(['From security', `${minutes(units)} min · ${meters(len)} m`]);
   }
   if (it.kind === 'gate') rows.push(['Concourse', `${it.con} · ${CON_RANGE[it.con]}`]);
+  const chkCfg = it.kind === 'place' && (AP.CHECKPOINTS || {})[it.node];
+  if (chkCfg) rows.push(['Hours', chkCfg.busy ? 'Opens when it’s busy' : `${ampm(chkCfg.open)} – ${ampm(chkCfg.close)}${chkOpen(it.node) ? '' : ' · closed now'}`]);
   if (rows.length) html += `<div class="group">${rows.map(([k, v]) => `<div class="row"><span class="rl" style="flex:none">${k}</span><span style="flex:1;min-width:0;color:var(--label-2);text-align:right">${v}</span></div>`).join('')}</div>`;
   if (it.kind === 'gate') {
     html += `<div class="group-title">Airlines in Concourse ${it.con}</div><div class="group tags">${AIRLINES.filter(a => a.cons.includes(it.con)).map(a => `<span class="tag air-tag">${airMark(a, 22)}${esc(a.name)}</span>`).join('')}</div>`;
+  }
+  // ticketing: the checkpoints off the hall, nearest first, and whether each is open
+  if (it.kind === 'place' && it.node === ROLE.ticketing && AP.CHECKPOINTS) {
+    const list = Object.keys(AP.CHECKPOINTS).map(id => ({ id, it: ITEMS['v:' + id], open: chkOpen(id), m: minutes(route(it, ITEMS['v:' + id]).units) })).sort((a, b) => (b.open - a.open) || a.m - b.m);
+    html += `<div class="group-title">Security checkpoints</div><div class="group">${list.map(c => `<button class="row" data-near="${c.it.id}"><span class="rl">${esc(c.it.name.replace(/^TSA /, ''))}</span><span style="flex:1;text-align:right;color:var(--label-2)">${c.open ? c.m + ' min walk' : AP.CHECKPOINTS[c.id].busy ? 'Opens when busy' : 'Closed now'}</span></button>`).join('')}</div>`;
+  }
+  // baggage claim: every carousel, one tap to its spot
+  if (it.kind === 'place' && it.node === ROLE.baggage && Object.keys(CAROUSEL).length) {
+    html += `<div class="group-title">Carousels</div><div class="gate-chips">${Object.keys(CAROUSEL).map(n => `<button data-near="${CAROUSEL[n].id}" class="gate-chip car-chip">${n}</button>`).join('')}</div>`;
+    html += `<p class="foot" style="margin:-6px 16px 0">Your flight's carousel is on the arrival screens by the escalators, and in Clearway once you track the flight.</p>`;
   }
   if (it.hours && !it.hours.h24 && !it.hours.close) html += `<p class="foot" style="margin:-6px 16px 0">Opening times from the airport's directory. Closing times aren't published; they follow the last flights.</p>`;
   const near = it.kind !== 'place' ? nearbyItems(it) : [];
@@ -1663,13 +1662,13 @@ function updateArrival(fit) {
   const bags = $('#arrBags').checked, car = parseInt($('#arrCarousel').value, 10);
   $('#carRow').hidden = !bags;
   // a known carousel: walk to it rather than to the middle of baggage claim
-  const carNode = bags && car > 0 && NODE['car' + car] ? 'car' + car : null;
-  const mid = carNode ? { id: carNode, kind: 'place', node: carNode, name: 'Carousel ' + car } : bag;
+  const carIt = bags && car > 0 ? CAROUSEL[car] : null, carNode = carIt ? carIt.id : null;
+  const mid = carIt || bag;
   const toBag = dest.id === bag.id;
   const p1 = route(gate, mid), p2 = toBag && carNode ? { path: [carNode], units: 0, len: 0 } : route(mid, dest);
   const path = p1.path.concat(p2.path.slice(1)), units = p1.units + p2.units, len = p1.len + p2.len;
   setRoute(path, minutes(units));
-  for (const [n, g] of Object.entries(carLabels)) g.classList.toggle('hl', !!carNode && +n === car);
+  for (const [n, c] of Object.entries(CAROUSEL)) c.el.classList.toggle('mine', !!carNode && +n === car);
   const { steps, passed } = describe(path, gate, dest);
   if (carNode) {
     const ci = path.indexOf(carNode), carStep = { t: 'Carousel ' + car, n: 'Bags usually arrive 15–25 min after landing.', node: carNode };
@@ -1844,6 +1843,7 @@ function pushWidget() {
 }
 // which checkpoints are open right now, from their posted hours at the airport's local time
 const hm = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+const ampm = t => { const [h, m] = t.split(':').map(Number); return `${(h + 11) % 12 + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`; };
 function chkOpen(id, t = Date.now()) {
   const c = (AP.CHECKPOINTS || {})[id]; if (!c) return true; if (c.busy) return false;
   const [H, M] = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: AP.tz }).format(t).split(':').map(Number);

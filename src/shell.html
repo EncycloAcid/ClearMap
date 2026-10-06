@@ -174,11 +174,12 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 @media (hover: hover) { #map .mk:hover .pop { transform: scale(1.3); } }
 .walk { stroke: var(--walk); fill: none; stroke-dasharray: 2 3; }
 .area-lbl[data-off] { display: none; }
-/* baggage carousel numbers */
-.car-lbl circle { fill: var(--solid); stroke: var(--carousel-belt); stroke-width: 1.1; }
-.car-lbl text { font: 750 6.4px var(--font-display); fill: var(--label); text-anchor: middle; dominant-baseline: central; }
-.car-lbl.hl circle { fill: var(--route); stroke: var(--route); }
-.car-lbl.hl text { fill: #fff; }
+/* baggage carousels: a disc with the carousel's number; yours (from flight tracking or arrivals) lights up */
+.gate-chip.car-chip { background: var(--fill-2); color: var(--label); }
+#map .mk.carousel .sym { fill: var(--solid); stroke: var(--carousel-belt); stroke-width: 1.1; }
+#map .mk.carousel .num { font: 750 6px var(--font-display); fill: var(--label); text-anchor: middle; dominant-baseline: central; }
+#map .mk.carousel.mine .sym { fill: var(--route); stroke: var(--route); }
+#map .mk.carousel.mine .num { fill: #fff; }
 /* labels scale with the map: without this Chrome re-lays out every label on each frame of a pinch */
 #map text { text-rendering: geometricPrecision; }
 .map-lbl { font: 650 8.5px var(--font-display); fill: var(--label-2); letter-spacing: .08em; text-transform: uppercase; }

@@ -104,7 +104,7 @@ AMEN.forEach(([name, cat, at, dwell, note], i) => {
     const [x, y, zone, gate, floor] = at;
     if (floor) it.floor = floor;
     if (zone === 'LIFT') Object.assign(it, { x, y, zone, lift: gate, near: V[gate][2] });
-    else Object.assign(it, { x, y, zone, gate, near: gate ? 'Near gate ' + gate : zone === 'L' ? 'Landside, before security' : 'Main terminal' });
+    else Object.assign(it, { x, y, zone, gate, near: gate ? 'Near gate ' + gate : zone === 'L' ? (floor === 'lo' ? 'Baggage claim' : 'Ticketing hall') : 'Main terminal' });
   }
   else {
     const gi = gateInfo[at], k = perGate[at] = (perGate[at] ?? -1) + 1;
@@ -118,7 +118,7 @@ AMEN.forEach(([name, cat, at, dwell, note], i) => {
   }
   const hs = HOURS[name]; it.hours = typeof hs === 'function' ? hs(it) : hs;
   // icons that differ from their category's
-  it.icon = /lounge|club/i.test(name) && cat === 'play' ? 'play' : /^Elevator$/.test(name) ? 'lift' : /^Water fountain/.test(name) ? 'water' : /^Accessible restroom/.test(name) ? 'access' : cat;
+  it.icon = /lounge|club/i.test(name) && cat === 'play' ? 'play' : /^Elevator$/.test(name) ? 'lift' : /^Escalators$/.test(name) ? 'swap' : /^Carousel \d+$/.test(name) ? 'bag' : /^Water fountain/.test(name) ? 'water' : /^Accessible restroom/.test(name) ? 'access' : cat;
   ITEMS[it.id] = it;
 });
 
@@ -129,7 +129,6 @@ for (const it of Object.values(ITEMS))
   it.lvl = it.zone === 'LIFT' ? null : it.kind === 'place' ? (LOWER_V.has(it.node) ? 'lo' : 'up') : AP.amenLevel ? AP.amenLevel(it) : 'up';
 function levelOf(node) {
   if (node === 'me' || node === 'me@') return meLevel;
-  if (/^car\d/.test(node)) return 'lo';   // baggage carousels (see the app)
   if (V[node]) return LOWER_V.has(node) ? 'lo' : 'up';
   const it = ITEMS[node.startsWith('p:') ? node.slice(2) : node];
   return it && it.lvl ? it.lvl : 'up';
