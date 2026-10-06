@@ -185,6 +185,10 @@ const cost = (w, kind) => kind === 'lift' ? w + LIFT_WAIT : kind === 'board' ? w
 // lot, so routes use an open one, but you can still start or end at it
 let closedNodes = new Set();
 const CLOSED_COST = 1e5;
+// Crossing security (a checkpoint ↔ the secure side) weighs a lot when choosing a route, so it never
+// leaves the secure side to screen again somewhere else; route() takes the weight back out of the time.
+const SEC_COST = 1e4;
+const SEC_PAIR = new Set(EDGES.filter(e => e[2] === 'S').flatMap(([a, b]) => [a + '|' + b, b + '|' + a]));
 function dijkstra(src) {
   const D = { [src]: 0 }, prev = {}, done = new Set();
   const ids = Object.keys(G);
@@ -195,7 +199,7 @@ function dijkstra(src) {
     done.add(u);
     for (const { to, w, kind } of G[u]) {
       if (done.has(to) || (stepFree && kind === 'esc')) continue;
-      const nd = D[u] + cost(w, kind) + (u !== src && closedNodes.has(u) ? CLOSED_COST : 0);
+      const nd = D[u] + cost(w, kind) + (u !== src && closedNodes.has(u) ? CLOSED_COST : 0) + (u !== src && SEC_PAIR.has(u + '|' + to) ? SEC_COST : 0);   // starting at a checkpoint, its own lanes are free
       if (D[to] === undefined || nd < D[to]) { D[to] = nd; prev[to] = u; }
     }
   }
@@ -208,7 +212,8 @@ function route(aItem, bItem) {
   const path = [t]; while (path[0] !== s) path.unshift(prev[path[0]]);
   // units: time-equivalent (includes elevator waits); len: metres actually walked
   let len = 0; for (let i = 1; i < path.length; i++) if (EDGE_KIND[path[i - 1] + '|' + path[i]] !== 'train') len += dist(NODE[path[i - 1]], NODE[path[i]]);
-  return { path, units: D[t], len, lift: path.some((n, i) => i && EDGE_KIND[path[i - 1] + '|' + n] === 'lift'), train: path.some((n, i) => i && EDGE_KIND[path[i - 1] + '|' + n] === 'train') };
+  const crossings = path.filter((n, i) => i > 1 && SEC_PAIR.has(path[i - 1] + '|' + n)).length;
+  return { path, units: D[t] - crossings * SEC_COST - (path.slice(1, -1).some(n => closedNodes.has(n)) ? CLOSED_COST : 0), len, lift: path.some((n, i) => i && EDGE_KIND[path[i - 1] + '|' + n] === 'lift'), train: path.some((n, i) => i && EDGE_KIND[path[i - 1] + '|' + n] === 'train') };
 }
 const meters = u => Math.round(u * M_PER_UNIT / 10) * 10;
 const minutes = u => Math.max(1, Math.round(u * M_PER_UNIT / M_PER_MIN));

@@ -3,6 +3,7 @@ Clearway is a calm, clear map of the inside of the airport: where your gate is, 
 AIRPORTS
 • Cleveland Hopkins International (CLE)
 • Hartsfield–Jackson Atlanta International (ATL), including the Plane Train
+• Dallas/Fort Worth International (DFW), all five terminals and the Skylink
 More airports are on the way.
 
 WALKING DIRECTIONS

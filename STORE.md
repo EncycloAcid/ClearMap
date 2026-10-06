@@ -83,7 +83,7 @@ If your developer account is a **personal account created after 13 November 2023
 
 ## Before you submit, check
 
-- [ ] Walk through both airports on a real phone (location, reminders, the Back gesture, dark mode).
+- [ ] Walk through each airport on a real phone (location, reminders, the Back gesture, dark mode).
 - [ ] The **Clearway** name isn't already a registered trademark for apps in your market (search USPTO/EUIPO and the Play Store).
 - [ ] Airline concourses and Cleveland's hours are still current (`airports/*/airport.js`).
 - [ ] Airline marks use only names, two-letter codes and colours, no logos.

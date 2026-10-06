@@ -36,6 +36,15 @@ AIRPORTS = {
                 ramp=['Concourse T', 'Concourse A', 'Concourse B', 'Concourse C', 'Concourse D', 'Concourse E', 'Concourse F'],
                 levels={'2': 'walk1', '1': 'walk1', '0': 'walk1', '-1': 'walk0'},
                 train='The Plane Train'),
+    # Dallas/Fort Worth: five horseshoe terminals (A–E) either side of the spine road, joined past
+    # security by the Skylink train (an elevated people mover)
+    'dfw': dict(origin=(32.8990, -97.0405), crop=(-1300, -1800, 1300, 1800),
+                bboxes=[f'{-97.0530 + i * 0.0085:.4f},32.8820,{-97.0530 + (i + 1) * 0.0085:.4f},32.8990' for i in range(3)]
+                      + [f'{-97.0530 + i * 0.0085:.4f},32.8990,{-97.0530 + (i + 1) * 0.0085:.4f},32.9160' for i in range(3)],
+                terms=[('Terminal A', 'termA'), ('Terminal B', 'termB'), ('Terminal C', 'termC'), ('Terminal D', 'termD'), ('Terminal E', 'termE')],
+                ramp=['Terminal A', 'Terminal B', 'Terminal C', 'Terminal D', 'Terminal E'],
+                levels={'2': 'walk1', '1': 'walk1', '0': 'walk0', '-1': 'walk0', '3': 'walk1'},
+                train='Skylink'),
 }
 CODE = (sys.argv[1] if len(sys.argv) > 1 else 'cle').lower()
 CFG = AIRPORTS[CODE]
@@ -48,7 +57,7 @@ def P(lat, lon):
     return ((lon - LON0) * KX, -(lat - LAT0) * KY)
 
 def load(folder):
-    nodes, ways, seen = {}, [], set()
+    nodes, ways, seen, byid, rels = {}, [], set(), {}, {}
     for i, bbox in enumerate(CFG['bboxes']):
         path = os.path.join(folder, f'{CODE}{i if len(CFG["bboxes"]) > 1 else ""}.osm')
         if not os.path.exists(path):
@@ -59,9 +68,33 @@ def load(folder):
         for n in root.findall('node'):
             nodes[n.get('id')] = (float(n.get('lat')), float(n.get('lon')), {t.get('k'): t.get('v') for t in n.findall('tag')})
         for w in root.findall('way'):
-            if w.get('id') in seen: continue       # ways crossing tile edges come back from each tile
-            seen.add(w.get('id'))
-            ways.append((w.get('id'), [nd.get('ref') for nd in w.findall('nd')], {t.get('k'): t.get('v') for t in w.findall('tag')}))
+            wid = w.get('id'); nds = [nd.get('ref') for nd in w.findall('nd')]
+            byid[wid] = nds
+            if wid in seen: continue       # ways crossing tile edges come back from each tile
+            seen.add(wid)
+            ways.append((wid, nds, {t.get('k'): t.get('v') for t in w.findall('tag')}))
+        for r in root.findall('relation'):
+            t = {x.get('k'): x.get('v') for x in r.findall('tag')}
+            if t.get('type') == 'multipolygon' and (t.get('aeroway') == 'terminal' or t.get('building')):
+                rels[r.get('id')] = (t, [m.get('ref') for m in r.findall('member') if m.get('type') == 'way' and m.get('role') == 'outer'])
+    # multipolygon buildings (DFW's terminals are mapped this way): join their outer ways into closed
+    # rings and treat each ring as a closed way with the relation's tags
+    for rid, (t, members) in rels.items():
+        segs = [list(byid[m]) for m in members if m in byid and len(byid[m]) > 1]
+        n = 0
+        while segs:
+            ring = segs.pop(0)
+            while ring[0] != ring[-1]:
+                for i, sg in enumerate(segs):
+                    if sg[0] == ring[-1]: ring += sg[1:]
+                    elif sg[-1] == ring[-1]: ring += sg[::-1][1:]
+                    elif sg[-1] == ring[0]: ring = sg[:-1] + ring
+                    elif sg[0] == ring[0]: ring = sg[::-1][:-1] + ring
+                    else: continue
+                    segs.pop(i); break
+                else: break
+            if ring[0] == ring[-1] and len(ring) > 3:
+                ways.append(('r%s_%d' % (rid, n), ring, t)); n += 1
     return nodes, ways
 
 def dp(pts, tol):

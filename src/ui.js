@@ -48,6 +48,20 @@ const PLACE_WORDS_OF = () => placeWords || (placeWords = {
 // baggage carousels by number
 const CAROUSEL = {};
 for (const it of Object.values(ITEMS)) { const m = it.kind === 'amen' && /^Carousel (\d+)$/.exec(it.name); if (m) CAROUSEL[+m[1]] = it; }
+// walking from security: from whichever checkpoint is nearest (some airports have one per terminal)
+function secRoute(it) {
+  let best = null;
+  for (const id of CHKS) { const c = ITEMS[id]; if (!c || c === it) continue; const r = route(c, it); if (!best || r.units < best.units) best = r; }
+  return best || route(ITEMS[CHK], it);
+}
+// one of several of the same place (a baggage claim per terminal): the one nearest to `from`
+function nearestOf(id, from) {
+  const list = (AP.ui.nearest || {})[id.replace(/^v:/, '')];
+  if (!list || !from) return ITEMS[id];
+  let best = ITEMS[id], bu = Infinity;
+  for (const n of list) { const it = ITEMS['v:' + n]; if (!it) continue; const r = route(from, it); if (r.units < bu) { bu = r.units; best = it; } }
+  return best;
+}
 const SEC_EDGE = new Set(EDGES.filter(e => e[2] === 'S').flatMap(([a, b]) => [a + '|' + b, b + '|' + a]));
 // every security checkpoint (some airports have several); CHK is the main one
 const CHKS = new Set(Object.keys(AP.CHECKPOINTS || { [ROLE.checkpoint]: 1 }).map(id => 'v:' + id));
@@ -255,7 +269,7 @@ function paintBase(c, cw, ch, tx, ty, k, rot = 0) {
   stroke(lower ? 'walk0' : 'walk1', pal.corridor, 5);
   if (lower) stroke('walkm1', pal.corridor, 5, [5, 4]);
   // an airport train runs on the lower floor: a track with ties
-  if (lower && P2.train) { stroke('train', pal.route, 7 / Math.max(k, .6)); stroke('train', pal.corridor, 3 / Math.max(k, .6), [4, 5]); }
+  if (P2.train && lower === ((AP.ui.trainFloor || 'lo') === 'lo')) { c.globalAlpha = .75; stroke('train', pal.stairs, 6 / Math.max(k, .6)); c.globalAlpha = 1; stroke('train', pal.corridor, 2.4 / Math.max(k, .6), [4, 5]); }   // (DFW's Skylink is up with the gates)
   // stairs and escalators: light, crisp treads (round dashes blur into blobs when you zoom in)
   c.lineCap = 'butt'; c.globalAlpha = .6; stroke('stairs', pal.stairs, 2, [.4, .5]); c.globalAlpha = 1; c.lineCap = 'round';
   if (hp) drawHallDetails(c, k, lower);
@@ -1385,12 +1399,12 @@ function showPlace(it, fromMap) {
   if (it.kind === 'amen' && it.cat !== 'rest' && !/^(Carousel \d+|Escalators|Elevator)$/.test(it.name)) rows.push(['Typical visit', `About ${it.dwell} min`]);
   if (walk && walk.path && !isChk(fromIt.id)) rows.push([`From ${esc(fromIt.label || fromIt.name)}`, `${minutes(walk.units)} min · ${meters(walk.len)} m`]);
   if (it.zone !== 'L' && !isChk(it.id)) {
-    const { units, len } = route(ITEMS[CHK], it);
+    const { units, len } = secRoute(it);
     rows.push(['From security', `${minutes(units)} min · ${meters(len)} m`]);
   }
   if (it.kind === 'gate') rows.push(['Concourse', `${it.con} · ${CON_RANGE[it.con]}`]);
   const chkCfg = it.kind === 'place' && (AP.CHECKPOINTS || {})[it.node];
-  if (chkCfg) rows.push(['Hours', chkCfg.busy ? 'Opens when it’s busy' : `${ampm(chkCfg.open)} – ${ampm(chkCfg.close)}${chkOpen(it.node) ? '' : ' · closed now'}`]);
+  if (chkCfg && (chkCfg.busy || chkCfg.open)) rows.push(['Hours', chkCfg.busy ? 'Opens when it’s busy' : `${ampm(chkCfg.open)} – ${ampm(chkCfg.close)}${chkOpen(it.node) ? '' : ' · closed now'}`]);
   if (rows.length) html += `<div class="group">${rows.map(([k, v]) => `<div class="row"><span class="rl" style="flex:none">${k}</span><span style="flex:1;min-width:0;color:var(--label-2);text-align:right">${v}</span></div>`).join('')}</div>`;
   if (it.kind === 'gate') {
     html += `<div class="group-title">Airlines in Concourse ${it.con}</div><div class="group tags">${AIRLINES.filter(a => a.cons.includes(it.con)).map(a => `<span class="tag air-tag">${airMark(a, 22)}${esc(a.name)}</span>`).join('')}</div>`;
@@ -1605,15 +1619,16 @@ function describe(path, a, b) {
     if (riding && boarding) continue;
     if (boarding) {
       let j = i; while (kindAt(j) === 'train') j++;
-      const to = V[path[j]][2].replace(/^.*· /, ''), stops = j - i;
-      steps.push({ t: V[n][2], n: `Ride ${stops} stop${stops > 1 ? 's' : ''} to ${to}. Trains come every 2 minutes or so.`, node: n, train: true });
+      const to = V[path[j]][2].replace(/^.*· /, ''), stops = path.slice(i + 1, j + 1).filter(x => V[x] && V[x][2]).length;   // (track waypoints aren't stops)
+      steps.push({ t: V[n][2], n: `Ride ${stops} stop${stops > 1 ? 's' : ''} to ${to}. ${/bus/i.test(V[n][2]) ? 'Buses come every 10 minutes or so.' : 'Trains come every 2 minutes or so.'}`, node: n, train: true });
       lastLabel = n; continue;
     }
     if (riding) {
       // up to the gates, or on along the lower level (to baggage claim)
       let j = i + 1; while (j < path.length - 1 && !(V[path[j]] && V[path[j]][2])) j++;
       const up = levelOf(path[j]) === 'up';
-      steps.push({ t: 'Get off at ' + V[n][2].replace(/^.*· /, ''), n: up ? (stepFree ? 'Take the elevator up to the gates' : 'Take the escalators up to the gates') : 'Follow the signs to ' + V[path[j]][2].toLowerCase().replace(/^exit to /, ''), node: n, alight: true });
+      const toGates = AP.ui.trainToGates || 'up';   // (DFW's Skylink runs above the gates)
+      steps.push({ t: 'Get off at ' + V[n][2].replace(/^.*· /, ''), n: up ? (stepFree ? `Take the elevator ${toGates} to the gates` : `Take the escalators ${toGates} to the gates`) : 'Follow the signs to ' + V[path[j]][2].replace(/^Exit to /, '').replace(/^(?!Terminal )\w/, c => c.toLowerCase()), node: n, alight: true });
       lastLabel = n; continue;
     }
     if (V[n] && V[n][2] && n !== lastLabel) {
@@ -1676,7 +1691,7 @@ function updateRoute(fit) {
   setRoute(path, minutes(units));
   const { steps, passed, via } = describe(path, a, b);
   // going through security: add the live wait, and say it on the checkpoint step
-  const ci = path.indexOf(ROLE.checkpoint), sec = ci >= 0 && path.indexOf(ROLE.hub) > ci ? waitMin() : null;
+  const inbound = path.some((n, i) => isChk('v:' + n) && SEC_EDGE.has(n + '|' + path[i + 1])), sec = inbound ? waitMin() : null;
   if (sec != null) { const s = steps.find(x => isChk('v:' + x.node)); if (s) s.n = `Security wait about ${sec} min right now${s.n && s.n !== 'Start' ? '. ' + s.n : ''}`; }
   const total = minutes(units) + (sec || 0);
   $('#hero').className = 'hero';
@@ -1708,7 +1723,12 @@ buildOptions($('#arrGate'), false, true);
 $('#arrGate').value = AP.ui.defaults.arrGate;
 $('#arrDest').innerHTML = ARR_DEST.map(([v, label]) => `<option value="${v}">${esc(label)}</option>`).join('');
 function updateArrival(fit) {
-  const gate = ITEMS[$('#arrGate').value], dest = ITEMS[$('#arrDest').value], bag = ITEMS['v:' + ROLE.baggage];
+  // at an airport with a baggage claim and curb per terminal (DFW), use the ones where you land
+  // (a pickup at your terminal: its baggage claim; a fixed place like a train station: the baggage claim
+  // nearest it, so you ride the train between terminals before leaving security)
+  // (checked bags come out at the terminal you land at; without them, ride between terminals first)
+  const gate = ITEMS[$('#arrGate').value], pick = ITEMS[$('#arrDest').value], local = !!(AP.ui.nearest || {})[pick.id.slice(2)];
+  const bag = nearestOf('v:' + ROLE.baggage, local || $('#arrBags').checked ? gate : pick), dest = nearestOf(pick.id, bag);
   const bags = $('#arrBags').checked, car = parseInt($('#arrCarousel').value, 10);
   $('#carRow').hidden = !bags;
   // a known carousel: walk to it rather than to the middle of baggage claim
@@ -1723,19 +1743,19 @@ function updateArrival(fit) {
   if (carNode) {
     const ci = path.indexOf(carNode), carStep = { t: 'Carousel ' + car, n: 'Bags usually arrive 15–25 min after landing.', node: carNode };
     // your carousel stands in for "Baggage claim" along the way
-    for (let j = steps.length - 2; j > 0; j--) if (steps[j].node === ROLE.baggage) steps.splice(j, 1);
+    for (let j = steps.length - 2; j > 0; j--) if (steps[j].node === bag.node) steps.splice(j, 1);
     if (toBag) Object.assign(steps[steps.length - 1], { t: 'Baggage claim · carousel ' + car, node: carNode });
     else { let k = steps.findIndex((s, j) => j && path.indexOf(s.node) > ci); if (k < 0) k = steps.length - 1; steps.splice(k, 0, carStep); }
   }
   for (const s of steps) {
-    if (isChk('v:' + s.node)) { s.t = 'Exit lane by the ' + V[s.node][2].replace(/^TSA /, ''); s.n = (stepFree ? '' : 'Then take the escalators down to baggage claim. ') + 'Once you’re through, you can’t go back to the gates.'; }
-    if (s.node === ROLE.baggage && !s.end && !carNode) {
+    if (isChk('v:' + s.node)) { s.t = 'Exit lane by ' + (/^TSA checkpoint /.test(V[s.node][2]) ? '' : 'the ') + V[s.node][2].replace(/^TSA /, ''); s.n = (stepFree ? '' : 'Then take the escalators down to baggage claim. ') + 'Once you’re through, you can’t go back to the gates.'; }
+    if (s.node === bag.node && !s.end && !carNode) {
       s.n = !bags ? 'No bags? Walk straight through.'
         : car > 0 ? `Carousel ${car}. Bags usually arrive 15–25 min after landing.`
         : 'Your carousel is on the arrival screens by the escalators. Bags usually arrive 15–25 min after landing.';
     }
   }
-  const info = ARR_DEST.find(x => x[0] === dest.id);
+  const info = ARR_DEST.find(x => x[0] === pick.id);
   if (steps.length && info) steps[steps.length - 1].n = info[2];
   if (toBag) { const last = steps[steps.length - 1]; last.n = bags ? (car > 0 ? (carNode ? 'Bags usually arrive 15–25 min after landing. ' : `Carousel ${car}. `) : '') + info[2] : info[2]; }
   const walk = minutes(units), total = walk + (bags ? BAG_WAIT : 0);
@@ -1895,7 +1915,7 @@ function pushWidget() {
 const hm = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
 const ampm = t => { const [h, m] = t.split(':').map(Number); return `${(h + 11) % 12 + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`; };
 function chkOpen(id, t = Date.now()) {
-  const c = (AP.CHECKPOINTS || {})[id]; if (!c) return true; if (c.busy) return false;
+  const c = (AP.CHECKPOINTS || {})[id]; if (!c) return true; if (c.busy) return false; if (!c.open) return true;   // no published hours
   const [H, M] = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: AP.tz }).format(t).split(':').map(Number);
   const now = H * 60 + M; return now >= hm(c.open) && now < hm(c.close);
 }
@@ -2010,7 +2030,7 @@ const airMark = (a, size = 30) => `<span class="air-mark" style="--ac:${esc(a.co
 const CON_WALK = {};
 for (const con of CONS) {
   const gates = Object.values(ITEMS).filter(it => it.kind === 'gate' && it.con === con);
-  const legs = gates.map(g => ({ g, m: minutes(route(ITEMS[CHK], g).units) })).sort((x, y) => x.m - y.m);
+  const legs = gates.map(g => ({ g, m: minutes(secRoute(g).units) })).sort((x, y) => x.m - y.m);
   if (legs.length) CON_WALK[con] = { min: legs[0].m, max: legs[legs.length - 1].m, near: legs[0].g, gates: gates.sort((x, y) => gnumOf(x.code) - gnumOf(y.code)) };
 }
 const walkRange = con => { const w = CON_WALK[con]; return !w ? '' : w.min === w.max ? `${w.min} min` : `${w.min}–${w.max} min`; };
