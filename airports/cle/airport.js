@@ -31,11 +31,14 @@ AIRPORTS.CLE = (() => {
     tix:  [146, -190, 'Ticketing (upper level)'],
     bag:  [100, -95, 'Baggage claim (lower level)'],
     rta:  [111, -125, 'RTA Red Line to downtown'],
-    gtc:  [172, -60, 'Ground Transportation Center'],
+    // ground transportation: the Ground Transportation Center is at the north end of the baggage claim
+    // level (the airport's map; rental car and hotel shuttles leave from its curb); rideshare and taxis pick
+    // up at the curb outside baggage claim
+    gtc:  [196, -222, 'Ground Transportation Center'],
     taxi: [128, -12, 'Taxi stand'],
-    rent: [182, -12, 'Rental car shuttle'],
-    hotel:[184, 24, 'Hotel & parking shuttles'],
-    ride: [178, -44, 'Rideshare pickup'],
+    rent: [214, -221, 'Rental car shuttle'],
+    hotel:[210, -237, 'Hotel & parking shuttles'],
+    ride: [137, -99, 'Rideshare pickup'],
     curb: [124, -44, 'Arrivals curb (Lower Drive)'],
     lift_t: [191, -202, 'Elevator by ticketing'],
     lift_c: [108, -130, 'Elevator beside the checkpoint'],
@@ -54,7 +57,7 @@ AIRPORTS.CLE = (() => {
     // and down to the RTA platform
     ['tix','bg1','X','esc'], ['th3','bg3','X','esc'], ['th6','bag_s','X','esc'], ['bg3','rta','X','esc'],
     // out to ground transportation, the arrivals curb and the taxi stand (by carousel 11)
-    ['bg5','gtc','L'], ['bag_s','curb','L'], ['bg7','taxi','L'], ['gtc','rent','L'], ['gtc','hotel','L'], ['gtc','ride','L'],
+    ['bg0','gtc','L'], ['bag_s','curb','L'], ['bg7','taxi','L'], ['gtc','rent','L'], ['gtc','hotel','L'], ['bag','ride','L'],
     // elevators (step-free) beside each set of escalators, and to the RTA platform
     ['th0','lift_t','L'], ['lift_t','bg0','X','lift'], ['th3','lift_c','L'], ['lift_c','bg3','X','lift'],
     ['th6','lift_s','L'], ['lift_s','bag_s','X','lift'], ['bg3','lift_r','L'], ['lift_r','rta','X','lift'],
@@ -208,16 +211,17 @@ AIRPORTS.CLE = (() => {
       // arrivals destinations: [place id, label, tip]
       arrivals: [
         ['v:rta', 'RTA Red Line to downtown', 'Red Line trains run to downtown (Tower City) in about 25 minutes. Buy a fare at the machines before you board.'],
-        ['v:ride', 'Rideshare (Uber, Lyft)', 'Follow the Ground Transportation signs. Your app shows the exact pickup spot, so request once you have your bags.'],
+        ['v:ride', 'Rideshare (Uber, Lyft)', 'Pickups are at the curb outside baggage claim; your app shows the exact spot, so request once you have your bags.'],
         ['v:taxi', 'Taxi', 'Taxis wait at the stand on Lower Drive.'],
         ['v:curb', 'Someone picking me up', 'Arrivals pickup is on Lower Drive. Drivers can wait in the free cell phone lot until you’re outside.'],
-        ['v:rent', 'Rental car shuttle', 'Shuttles run to the off-airport Rental Car Center.'],
-        ['v:hotel', 'Hotel or parking shuttle', 'Hotel and off-airport parking shuttles stop by the Ground Transportation Center.'],
+        ['v:rent', 'Rental car shuttle', 'Free shuttles to the Rental Car Center leave from the Ground Transportation Center, at the north end of baggage claim, around the clock (5–7 min ride).'],
+        ['v:hotel', 'Hotel or parking shuttle', 'Hotel and off-airport parking shuttles stop at the Ground Transportation Center, at the north end of baggage claim.'],
         ['v:bag', 'Meeting someone at baggage claim', 'Baggage claim is on the lower level, past the escalators.'],
       ],
       // extra notes for particular route steps at this airport
       stepNote(n, path, i) {
         if (n === 'c4') return 'Gates C17–C29 ring the rotunda';
+        if (n === 'gtc') return 'North end of baggage claim, past carousel 1';
         if (n === 'fc' && path.includes('c0')) return 'Follow the purple C signs';
         if (n === 'lift_r') return path[i + 1] === 'rta' ? 'Take the elevator down to the RTA platform' : 'Take the elevator up to baggage claim';
         return '';
