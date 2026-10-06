@@ -22,6 +22,9 @@ Either key can be left out; that endpoint answers `503` and the app hides that p
    npx wrangler deploy
    ```
    It prints your URL, e.g. `https://clearway-live.<you>.workers.dev`.
+   **Or from GitHub, no computer needed:** add repository secrets `CLOUDFLARE_API_TOKEN` (Cloudflare's
+   "Edit Cloudflare Workers" token template), `CLOUDFLARE_ACCOUNT_ID`, `AERODATABOX_KEY` and optionally
+   `TSAWAITTIMES_KEY`, then run **Actions → Live server → Run workflow**. The run's summary shows the URL.
 4. **Point the app at it** and rebuild:
    ```sh
    CLEARWAY_LIVE_API=https://clearway-live.<you>.workers.dev python3 tools/build.py

@@ -1,0 +1,62 @@
+name: Live server
+
+# Deploys Clearway Live (server/) to Cloudflare Workers, so the app gets live flight status and
+# security wait times. Run it from the Actions tab once these repository secrets are set
+# (Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN   a Cloudflare API token from the "Edit Cloudflare Workers" template
+#   CLOUDFLARE_ACCOUNT_ID  your Cloudflare account ID (Workers & Pages → Overview, right-hand side)
+#   AERODATABOX_KEY        your RapidAPI key for AeroDataBox (flight status)
+#   TSAWAITTIMES_KEY       optional: your tsawaittimes.com key (security waits)
+# Then copy the URL it prints into a repository *variable* named CLEARWAY_LIVE_API, and the
+# Android build connects the app to it.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["server/**", ".github/workflows/live-server.yml"]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - name: Check the Cloudflare secrets are set
+        if: env.CLOUDFLARE_API_TOKEN == ''
+        run: |
+          echo "::warning::CLOUDFLARE_API_TOKEN isn't set, so nothing was deployed (see the top of this workflow)."
+      - uses: actions/checkout@v4
+        if: env.CLOUDFLARE_API_TOKEN != ''
+      - name: Deploy
+        id: deploy
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: server
+          # only the keys that are set are uploaded; a missing one leaves that endpoint off (503)
+          secrets: |
+            ${{ secrets.AERODATABOX_KEY != '' && 'AERODATABOX_KEY' || '' }}
+            ${{ secrets.TSAWAITTIMES_KEY != '' && 'TSAWAITTIMES_KEY' || '' }}
+        env:
+          AERODATABOX_KEY: ${{ secrets.AERODATABOX_KEY }}
+          TSAWAITTIMES_KEY: ${{ secrets.TSAWAITTIMES_KEY }}
+      - name: Check it answers
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        env:
+          URL: ${{ steps.deploy.outputs.deployment-url }}
+        run: |
+          echo "Deployed to $URL"
+          # 200 = live waits on; 503 = no wait-time key (fine); anything else is a problem
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$URL/wait?airport=CLE")
+          echo "/wait answered $code"
+          test "$code" = 200 -o "$code" = 503
+          {
+            echo "### Clearway Live is running"
+            echo
+            echo "URL: \`$URL\`"
+            echo
+            echo "Next: add a repository **variable** named \`CLEARWAY_LIVE_API\` with this URL, then run the Android workflow."
+          } >> "$GITHUB_STEP_SUMMARY"
