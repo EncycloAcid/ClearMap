@@ -23,6 +23,10 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.window.OnBackInvokedDispatcher
 import androidx.webkit.WebViewAssetLoader
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
+import org.json.JSONObject
 
 class MainActivity : Activity() {
     private lateinit var web: WebView
@@ -170,6 +174,33 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun updateWidget(json: String) {
             if (json.length < 2000) TripWidget.save(this@MainActivity, json)
+        }
+
+        /** Turns the lock-screen gate countdown on or off (asking for notifications if needed). */
+        @JavascriptInterface
+        fun setCountdown(on: Boolean) {
+            if (on && Build.VERSION.SDK_INT >= 33 &&
+                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            ) runOnUiThread { requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), REQ_NOTIFY) }
+            GateCountdown.setEnabled(this@MainActivity, on)
+        }
+
+        /**
+         * Scans a boarding pass with Google's code scanner (Play services shows the camera, so the app
+         * needs no camera permission) and hands the barcode's text to window.cleBoardingPass. The page
+         * reads it; nothing is stored here.
+         */
+        @JavascriptInterface
+        fun scanBoardingPass() = runOnUiThread {
+            val send = { js: String -> web.evaluateJavascript(js, null) }
+            val options = GmsBarcodeScannerOptions.Builder()
+                .setBarcodeFormats(Barcode.FORMAT_PDF417, Barcode.FORMAT_AZTEC, Barcode.FORMAT_QR_CODE, Barcode.FORMAT_DATA_MATRIX)
+                .enableAutoZoom()
+                .build()
+            GmsBarcodeScanning.getClient(this@MainActivity, options).startScan()
+                .addOnSuccessListener { code -> send("window.cleBoardingPass && cleBoardingPass(${JSONObject.quote(code.rawValue ?: "")})") }
+                .addOnCanceledListener { send("window.cleBoardingPassError && cleBoardingPassError('cancel')") }
+                .addOnFailureListener { send("window.cleBoardingPassError && cleBoardingPassError('error')") }
         }
 
         @JavascriptInterface

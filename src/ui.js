@@ -38,6 +38,13 @@ const wide = () => matchMedia('(min-width: 760px)').matches;
 const svg = $('#map'), world = $('#world');
 const CHK = 'v:' + ROLE.checkpoint;
 // walkway links that cross security (checkpoint ↔ airside), both ways
+// everyday words for places, beyond their names
+let placeWords = null;
+const PLACE_WORDS_OF = () => placeWords || (placeWords = {
+  ...Object.fromEntries([...CHKS].map(id => [id.slice(2), ['Security', 'Security checkpoint', 'TSA', 'Screening']])),
+  [ROLE.ticketing]: ['Check-in', 'Check in', 'Ticket counter', 'Departures'],
+  [ROLE.baggage]: ['Bags', 'Luggage', 'Arrivals', 'Carousels'],
+});
 // baggage carousels by number
 const CAROUSEL = {};
 for (const it of Object.values(ITEMS)) { const m = it.kind === 'amen' && /^Carousel (\d+)$/.exec(it.name); if (m) CAROUSEL[+m[1]] = it; }
@@ -2162,7 +2169,8 @@ function runSearch() {
   for (const it of Object.values(ITEMS)) {
     if (it.id === 'v:me') continue;
     if (it.kind === 'gate') { if (code && it.code.toLowerCase().startsWith(code)) gates.push(it); continue; }
-    const sc = Math.max(score(it.name, s), it.cat && cats.includes(it.cat) ? 1.5 : 0);
+    // places also answer to everyday words for them ("security" finds the checkpoints)
+    const sc = Math.max(score(it.name, s), it.cat && cats.includes(it.cat) ? 1.5 : 0, ...(PLACE_WORDS_OF()[it.node] || []).map(w => score(w, s) * 1.25));
     if (!sc) continue;
     const key = it.name + '|' + (it.gate || it.zone); if (seen.has(key)) continue; seen.add(key);
     places.push({ it, sc, w: walk(it) });
@@ -2302,9 +2310,10 @@ function flightHtml() {
   if (!f) {
     const msg = live.busy ? 'Looking up your flight…' : live.err || (LIVE_API ? 'Fills in your gate, boarding time and baggage carousel, and tells you if the gate changes.' : 'Live flight status isn’t connected in this version.');
     return `<form class="group flight-form" data-fform><span class="tile" style="background:var(--brand)">${icon('plane')}</span>
-      <input name="no" autocomplete="off" autocapitalize="characters" enterkeyhint="go" maxlength="9" placeholder="Flight number, e.g. DL 1234" aria-label="Flight number" value="${esc(live.track ? live.track.number : '')}"${LIVE_API ? '' : ' disabled'}>
+      <input name="no" autocomplete="off" autocapitalize="characters" enterkeyhint="go" maxlength="9" placeholder="${scanKind ? 'Flight, e.g. DL 1234' : 'Flight number, e.g. DL 1234'}" aria-label="Flight number" value="${esc(live.track ? live.track.number : '')}"${LIVE_API ? '' : ' disabled'}>
+      ${scanKind ? `<button type="button" class="scan" data-fscan aria-label="Scan your boarding pass"${LIVE_API && !live.busy ? '' : ' disabled'}>${icon('scan')}</button>` : ''}
       <button type="submit"${LIVE_API && !live.busy ? '' : ' disabled'}>Track</button></form>
-      <p class="flight-msg${live.err ? ' err' : ''}">${esc(msg)}</p>`;
+      <p class="flight-msg${live.err ? ' err' : ''}">${esc(msg)}${scanKind && LIVE_API && !live.err && !live.busy ? ' Or scan your boarding pass.' : ''}</p>`;
   }
   const side = flightSide(f), a = AIRLINES.find(x => x.code === (f.airline && f.airline.iata));
   const route = `${esc((f.departure && (f.departure.city || f.departure.airport)) || '')} → ${esc((f.arrival && (f.arrival.city || f.arrival.airport)) || '')}`;
@@ -2318,8 +2327,12 @@ function flightHtml() {
   const cells = side === 'departure'
     ? gateCell + time('Departs', e.estimated || e.actual, e.scheduled) + `<div class="fc-cell"><small>Boarding</small><b>${(e.estimated || e.scheduled) ? tclock(new Date(new Date(e.estimated || e.scheduled) - BOARD_BEFORE * 60000).toISOString()) : '–'}</b><em>about</em></div>`
     : gateCell + time('Lands', e.actual || e.estimated, e.scheduled) + `<div class="fc-cell"><small>Bags</small><b>${esc(e.baggage || '–')}</b><em>${e.baggage ? 'carousel' : 'not yet'}</em></div>`;
+  const pass = live.track && live.track.pass, chips = pass ? [pass.seat && `Seat ${esc(pass.seat)}`, pass.group && `Group ${esc(pass.group)}`, pass.precheck && 'TSA PreCheck'].filter(Boolean) : [];
+  const countdown = side === 'departure' && window.CLEApp && CLEApp.setCountdown
+    ? `<label class="fc-cd"><span class="grow"><b>Gate countdown</b><small>Boarding time and when to leave, on your lock screen</small></span><input type="checkbox" class="switch" data-fcd${countdownOn ? ' checked' : ''}></label>` : '';
   return `<div class="group flight-card"><div class="fc-top">${lead}<span class="grow"><span class="t">${esc(f.flight)}</span><span class="s">${route}</span></span><span class="status ${cls}">${esc(text)}</span></div>
-    <div class="fc-grid">${cells}</div>
+    ${chips.length ? `<div class="fc-chips">${chips.map(c => `<span>${c}</span>`).join('')}</div>` : ''}
+    <div class="fc-grid">${cells}</div>${countdown}
     <div class="fc-foot"><span>${live.busy ? 'Updating…' : live.err ? esc(live.err) : 'Updated ' + ago(live.fetched ? new Date(live.fetched).toISOString() : f.updated)}</span><button data-fstop>Stop tracking</button></div></div>`;
 }
 function renderFlight() {
@@ -2329,26 +2342,126 @@ function renderFlight() {
     if (form) form.onsubmit = ev => { ev.preventDefault(); buzz(); trackFlight(form.elements.no.value); };
     const stop = box.querySelector('[data-fstop]');
     if (stop) stop.onclick = () => { buzz(5); live.flight = null; live.track = null; live.err = ''; store.set(FLIGHT_KEY, null); renderFlight(); };
+    const scan = box.querySelector('[data-fscan]');
+    if (scan) scan.onclick = () => { buzz(); scanPass(); };
+    const cd = box.querySelector('[data-fcd]');
+    if (cd) cd.onchange = () => setCountdown(cd.checked, true);
     const gate = box.querySelector('[data-fgate]');
     if (gate) gate.onclick = () => { buzz(5); showPlace(ITEMS[gate.dataset.fgate], false); };
   }
 }
-async function trackFlight(no, quiet) {
+async function trackFlight(no, quiet, forDate, pass) {
   no = normFlightNo(no);
   if (!/^[A-Z0-9]{2}\d{1,4}[A-Z]?$/.test(no)) { live.err = 'Enter a flight number like DL 1234.'; renderFlight(); return; }
-  const date = live.track && live.track.number === no ? live.track.date : localDate();
+  const same = live.track && live.track.number === no;
+  const date = forDate || (same ? live.track.date : localDate());
+  pass = pass || (same ? live.track.pass : null);
   live.busy = true; live.err = ''; renderFlight();
   try {
     const f = await liveGet(`/flight?number=${no}&date=${date}&airport=${AP.code}`), prev = live.flight;
-    live.flight = f; live.track = { number: no, date }; live.fetched = Date.now();
+    live.flight = f; live.track = { number: no, date, pass }; live.fetched = Date.now();
     store.set(FLIGHT_KEY, live.track);
     applyFlight(f, prev);
   } catch (e) {
-    live.err = e.off ? 'Live flight status isn’t connected in this version.' : e.status === 404 ? `Couldn’t find ${no} today. Check the number on your boarding pass.` : 'Couldn’t reach flight status. Check your connection.';
+    live.err = e.off ? 'Live flight status isn’t connected in this version.' : e.status === 404 ? `Couldn’t find ${no} ${date === localDate() ? 'today' : 'on ' + date}. Check the number on your boarding pass.` : 'Couldn’t reach flight status. Check your connection.';
     if (!quiet) buzz(30);
   }
   live.busy = false; renderFlight();
 }
+// ---------- Boarding pass ----------
+// The barcode on a boarding pass follows IATA's Bar Coded Boarding Pass standard (BCBP, "M1…"):
+// fixed-width fields for each flight leg (record locator, from, to, airline, flight number, day of the
+// year, cabin, seat, check-in number), then optional data. It's read here on the phone; only the
+// flight number and date go to flight status, as when you type them. Names and booking codes are dropped.
+function parseBCBP(raw) {
+  const s = String(raw || '').replace(/[\r\n]/g, '');
+  if (!/^M[1-4]/.test(s) || s.length < 60) return null;
+  const n = +s[1], legs = [];
+  let pos = 23;
+  for (let i = 0; i < n; i++) {
+    const L = s.slice(pos, pos + 37); if (L.length < 37) break;
+    const condLen = parseInt(L.slice(35, 37), 16) || 0, cond = s.slice(pos + 37, pos + 37 + condLen);
+    const fl = L.slice(16, 21).trim(), m = /^0*(\d{1,4})([A-Z]?)$/.exec(fl);
+    const leg = { from: L.slice(7, 10).trim(), to: L.slice(10, 13).trim(), carrier: L.slice(13, 16).trim(), flight: m ? m[1] + m[2] : fl.replace(/^0+/, ''),
+      day: parseInt(L.slice(21, 24), 10), cabin: L.slice(24, 25).trim(), seat: L.slice(25, 29).trim().replace(/^0+/, ''), seq: L.slice(29, 34).trim() };
+    // the repeated optional block for each leg ends with the "fast track" flag
+    let rep = cond;
+    if (i === 0 && cond[0] === '>') rep = cond.slice(4 + (parseInt(cond.slice(2, 4), 16) || 0));
+    const rs = parseInt(rep.slice(0, 2), 16) || 0, r = rep.slice(2, 2 + rs);
+    leg.fastTrack = r.length >= 42 && r[41] === 'Y';
+    pos += 37 + condLen; legs.push(leg);
+  }
+  if (!legs.length || !/^[A-Z]{3}$/.test(legs[0].from)) return null;
+  // PreCheck: printed in the airline's free-form data on most US passes
+  const precheck = /TSA ?PRE|PRECHK|TSAPRECHECK/i.test(s) || legs.some(l => l.fastTrack);
+  // boarding group or zone, when the airline prints it in its data ("GRP3", "GROUP B", "ZONE 2")
+  const group = (/GRP ?(\d{1,2}|[A-F])(?![A-Z0-9])|GROUP ?(\d{1,2}|[A-F])(?![A-Z0-9])|ZONE ?(\d)(?!\d)/.exec(s.slice(60)) || []).slice(1).find(Boolean);
+  return { legs, precheck, group: group || '' };
+}
+// day of the year → the date it most likely means (the nearest one, from a month ago onwards)
+function passDate(day) {
+  const now = new Date(), y = now.getFullYear();
+  const cands = [y - 1, y, y + 1].map(yr => new Date(Date.UTC(yr, 0, day)));
+  const best = cands.filter(d => d - now > -31 * 86400000).sort((a, b) => Math.abs(a - now) - Math.abs(b - now))[0] || cands[1];
+  return best.toISOString().slice(0, 10);
+}
+function usePass(p, legIx) {
+  const leg = p.legs[legIx];
+  const pass = { seat: leg.seat, precheck: p.precheck, group: p.group, from: leg.from, to: leg.to };
+  const arr = leg.to === AP.code && leg.from !== AP.code;
+  if (arr !== (mode === 'arr')) setMode(arr ? 'arr' : 'dep', true);
+  if (!arr) setTab('kill', true);
+  toast(`${leg.carrier} ${leg.flight} · ${leg.from} → ${leg.to}${leg.seat ? ' · seat ' + leg.seat : ''}`);
+  trackFlight(leg.carrier + leg.flight, false, passDate(leg.day), pass);
+}
+function onPassScanned(raw) {
+  const p = parseBCBP(raw);
+  if (!p) { buzz(30); toast('That doesn’t look like a boarding pass barcode. Try the one on your pass or in your airline’s app.'); return; }
+  // the leg that leaves from here, else lands here, else one at another airport Clearway has
+  const at = code => p.legs.findIndex(l => l.from === code), to = code => p.legs.findIndex(l => l.to === code);
+  let i = at(AP.code); if (i < 0) i = to(AP.code);
+  if (i >= 0) { buzz(); return usePass(p, i); }
+  for (const code of Object.keys(AIRPORTS)) {
+    let j = at(code); if (j < 0) j = to(code);
+    if (j >= 0) {
+      store.set('pass.pending', { ap: code, pass: p, leg: j, at: Date.now() });
+      try { localStorage.setItem('cw.airport', code); } catch (e) {}
+      toast(`Opening ${AIRPORTS[code].short || code} for ${p.legs[j].carrier} ${p.legs[j].flight}…`);
+      return setTimeout(() => location.reload(), 900);
+    }
+  }
+  const l = p.legs[0];
+  toast(`${l.carrier} ${l.flight} flies ${l.from} → ${l.to}. Clearway has maps for ${Object.keys(AIRPORTS).join(' and ')} so far.`);
+}
+window.cleBoardingPass = raw => onPassScanned(raw);
+window.cleBoardingPassError = why => { if (why !== 'cancel') toast('Couldn’t open the scanner. You can type the flight number instead.'); };
+// which scanner: the Android app's (Google code scanner), else the browser's barcode reader on a photo
+let scanKind = window.CLEApp && CLEApp.scanBoardingPass ? 'native' : null;
+if (!scanKind && 'BarcodeDetector' in window) BarcodeDetector.getSupportedFormats().then(f => {
+  if (f.includes('pdf417') || f.includes('aztec')) { scanKind = 'photo'; renderFlight(); }
+}).catch(() => {});
+function scanPass() {
+  if (scanKind === 'native') { try { CLEApp.scanBoardingPass(); } catch (e) { cleBoardingPassError('error'); } return; }
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.capture = 'environment';
+  inp.onchange = async () => {
+    const file = inp.files && inp.files[0]; if (!file) return;
+    try {
+      const codes = await new BarcodeDetector({ formats: ['pdf417', 'aztec', 'qr_code', 'data_matrix'] }).detect(await createImageBitmap(file));
+      if (codes.length) onPassScanned(codes[0].rawValue);
+      else toast('No barcode found in that photo. Try again, closer and flat on.');
+    } catch (e) { toast('Couldn’t read that photo.'); }
+  };
+  inp.click();
+}
+// the lock-screen gate countdown (Android): off until you turn it on
+let countdownOn = store.get('countdown', false);
+function setCountdown(on, ask) {
+  countdownOn = on; store.set('countdown', on);
+  try { CLEApp.setCountdown(on); } catch (e) {}
+  if (ask && on) toast('Gate countdown is on. It updates as your flight does.');
+}
+if (countdownOn && window.CLEApp && CLEApp.setCountdown) try { CLEApp.setCountdown(true); } catch (e) {}
+
 // refresh a tracked flight every 2 minutes while the app is open, until it has landed
 setInterval(() => {
   const f = live.flight;
@@ -2409,7 +2522,9 @@ addEventListener('resize', () => {
   if (wide() !== lastWide) { lastWide = wide(); fitAll(true); } else render();
 });
 renderFlight();
-{ const t = store.get(FLIGHT_KEY, null); if (t && t.date === localDate() && LIVE_API) { live.track = t; trackFlight(t.number, true); } }
+{ const t = store.get(FLIGHT_KEY, null); if (t && t.date >= localDate() && LIVE_API) { live.track = t; trackFlight(t.number, true); } }
+// a boarding pass scanned at the other airport's map: it switched here and picks it up
+{ const p = store.get('pass.pending', null); store.set('pass.pending', null); if (p && p.ap === AP.code && Date.now() - p.at < 60000) usePass(p.pass, p.leg); }
 loadWait();
 if (mode === 'arr') setMode('arr', true);
 updateRoute(false);

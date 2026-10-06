@@ -1,0 +1,5 @@
+Clearway 9.0
+• Scan your boarding pass: flight, date, seat, boarding group and TSA PreCheck in one tap, and live tracking starts by itself
+• Gate countdown on your lock screen: gate, boarding time and when to leave (a Live Update on Android 16)
+• Cleveland: new ticketing and baggage claim maps, three TSA checkpoints, shuttles at the right curb
+• Search "security", "TSA" or "check in" to find them

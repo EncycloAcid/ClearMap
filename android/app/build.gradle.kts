@@ -22,8 +22,8 @@ android {
         applicationId = "io.github.encycloacid.clearmap"
         minSdk = 26
         targetSdk = 36
-        versionCode = 49
-        versionName = "8.2"
+        versionCode = 50
+        versionName = "9.0"
     }
 
     signingConfigs {
@@ -68,6 +68,9 @@ android {
 
 dependencies {
     implementation("androidx.webkit:webkit:1.12.1")
+    // Google code scanner: a ready-made barcode scanning screen from Play services, with no camera
+    // permission needed (the scan happens in Play services). Reads boarding-pass PDF417, Aztec and QR codes.
+    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
 }
 
 // Copy the shared web map (../../index.html) into the APK's assets, swapping the

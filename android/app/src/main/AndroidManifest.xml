@@ -10,6 +10,8 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <!-- "Time to head to your gate" reminders -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- lets the gate countdown show as a Live Update on Android 16 (a normal permission, no prompt) -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
 
     <application
         android:allowBackup="true"
@@ -31,6 +33,7 @@
             <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity>
         <receiver android:name=".ReminderReceiver" android:exported="false" />
+        <receiver android:name=".CountdownReceiver" android:exported="false" />
         <!-- Home-screen widget: gate, boarding, walk, nearest restroom and coffee -->
         <receiver android:name=".TripWidget" android:exported="false">
             <intent-filter>

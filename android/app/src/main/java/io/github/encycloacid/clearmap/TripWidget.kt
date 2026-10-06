@@ -35,6 +35,7 @@ class TripWidget : AppWidgetProvider() {
             if (prefs.getString(KEY, null) == json) return
             prefs.edit().putString(KEY, json).apply()
             refresh(context)
+            GateCountdown.refresh(context)
         }
 
         fun refresh(context: Context) {

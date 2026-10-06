@@ -1,5 +1,0 @@
-• Live flight status, security wait times and a home-screen widget
-• Faster, steadier location; routes start from you and the map follows as you walk
-• Turn the map with two fingers or let it turn with you; icons stay put while zooming
-• Regional airlines: United Express, American Eagle, Delta Connection, and who flies them
-• Cleveland: new ticketing and baggage claim maps, shuttles at the right curb, three TSA checkpoints
