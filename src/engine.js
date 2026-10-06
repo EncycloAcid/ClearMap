@@ -127,6 +127,7 @@ const LOWER_V = new Set(AP.LOWER_V);
 for (const it of Object.values(ITEMS))
   it.lvl = it.zone === 'LIFT' ? null : it.kind === 'place' ? (LOWER_V.has(it.node) ? 'lo' : 'up') : AP.amenLevel ? AP.amenLevel(it) : 'up';
 function levelOf(node) {
+  if (node === 'me' || node === 'me@') return meLevel;
   if (V[node]) return LOWER_V.has(node) ? 'lo' : 'up';
   const it = ITEMS[node.startsWith('p:') ? node.slice(2) : node];
   return it && it.lvl ? it.lvl : 'up';
@@ -134,6 +135,7 @@ function levelOf(node) {
 
 // ---------- Graph with every item attached to its nearest walkway ----------
 const G = {};   // node -> [{to, w}]
+let meLevel = 'up';   // the floor of your location's node (see attachMe in the app)
 const NODE = {}; // node -> {x,y}
 const addNode = (id, p) => { NODE[id] = p; G[id] = G[id] || []; };
 const link = (a, b, kind) => { const w = dist(NODE[a], NODE[b]); G[a].push({ to: b, w, kind }); G[b].push({ to: a, w, kind }); };

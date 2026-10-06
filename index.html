@@ -141,8 +141,9 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 .bridge { stroke: var(--bridge); }
 .plane { fill: var(--plane); }
 .garage { fill: var(--garage); stroke: var(--road); stroke-width: 1; }
-.route-start circle { fill: var(--route-case); stroke: var(--route); stroke-width: 2.6; }
-.route-start .core { fill: var(--route); stroke: none; }
+/* where a route starts: an open ring, so it can't be mistaken for your (solid) location dot */
+.route-start circle { fill: var(--route-case); stroke: var(--route); stroke-width: 2.2; }
+.route-start .core { display: none; }
 .route-endpt circle { fill: var(--route); stroke: var(--route-case); stroke-width: 2.4; }
 .route-endpt .core { fill: var(--route-case); stroke: none; }
 .eta rect, .eta path { fill: var(--route); }
@@ -191,7 +192,7 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 #map .gate.sel .pop, #map .gate.dest .pop { transform: translate(0, -13px) scale(1.45); }
 #map .gate.sel .drop, #map .gate.dest .drop { fill: rgba(20, 30, 50, .3); }
 #map .gate.dest { opacity: 1 !important; }
-#map.gate-end .route-endpt, #map.gate-start .route-start { display: none; }
+#map.gate-end .route-endpt, #map.gate-start .route-start, #map.me-start .route-start, #map.me-end .route-endpt { display: none; }
 .gate[data-dot] .pop { transform: scale(.42); }
 .gate[data-dot] text { opacity: 0; }
 .gate[data-dot] .pill { x: -5.5px; width: 11px; }
@@ -233,8 +234,10 @@ svg#map { overflow: visible; transform-origin: 0 0; will-change: transform; touc
 #map .gate.sel text { font-size: 6.6px; }
 .route-case { stroke: var(--route-case); fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 0 11; }
 .route { stroke: var(--route); fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 0 11; }
-.puck-halo { fill: var(--route); opacity: .22; }
-.puck { fill: var(--route); stroke: var(--route-case); stroke-width: 2.5; }
+/* the preview walker that travels the route: a small white bead on the line, never a second "you" */
+.puck-halo { display: none; }
+.puck { fill: var(--route-case); stroke: var(--route); stroke-width: 2; }
+#map.me-start .puck { display: none; }
 
 /* ---------- Top bar ---------- */
 .topbar {
@@ -1675,6 +1678,7 @@ const LOWER_V = new Set(AP.LOWER_V);
 for (const it of Object.values(ITEMS))
   it.lvl = it.zone === 'LIFT' ? null : it.kind === 'place' ? (LOWER_V.has(it.node) ? 'lo' : 'up') : AP.amenLevel ? AP.amenLevel(it) : 'up';
 function levelOf(node) {
+  if (node === 'me' || node === 'me@') return meLevel;
   if (V[node]) return LOWER_V.has(node) ? 'lo' : 'up';
   const it = ITEMS[node.startsWith('p:') ? node.slice(2) : node];
   return it && it.lvl ? it.lvl : 'up';
@@ -1682,6 +1686,7 @@ function levelOf(node) {
 
 // ---------- Graph with every item attached to its nearest walkway ----------
 const G = {};   // node -> [{to, w}]
+let meLevel = 'up';   // the floor of your location's node (see attachMe in the app)
 const NODE = {}; // node -> {x,y}
 const addNode = (id, p) => { NODE[id] = p; G[id] = G[id] || []; };
 const link = (a, b, kind) => { const w = dist(NODE[a], NODE[b]); G[a].push({ to: b, w, kind }); G[b].push({ to: a, w, kind }); };
@@ -2065,7 +2070,7 @@ const escLayer = el('g', {});
 let escBadges = [];
 const puckG = el('g', { style: 'pointer-events:none', opacity: 0 });
 el('circle', { class: 'puck-halo', r: 9 }, puckG);
-el('circle', { class: 'puck', r: 4.6 }, puckG);
+el('circle', { class: 'puck', r: 3.4 }, puckG);
 // (the location mark's beam points along the map, so it only keeps its size)
 for (const g of [pinG, routeStart, routeEnd, eta, puckG]) zsWrap(g);
 zsWrap(meMark, 'zs-s');
@@ -2493,6 +2498,7 @@ function setRoute(nodes, mins) {
   const g0 = nodes.length > 1 && endGate(nodes[0]), g1 = nodes.length > 1 && endGate(nodes[nodes.length - 1]);
   if (g0) g0.el.classList.add('dest'); if (g1) g1.el.classList.add('dest');
   svg.classList.toggle('gate-start', !!g0); svg.classList.toggle('gate-end', !!g1);
+  svg.classList.toggle('me-start', nodes[0] === 'me'); svg.classList.toggle('me-end', nodes[nodes.length - 1] === 'me');
   routeNodes = nodes.slice();
   routePts = nodes.map(n => NODE[n]);
   routeLens = [0];
@@ -2614,6 +2620,35 @@ function setLocState(state) {
   if (following) kickCam();
 }
 const compassFresh = () => heading != null && Date.now() - headingAt < 5000;
+// Your location joins the walking graph like any place does: a 'me' node at the dot, linked to the
+// closest point on the nearest walkway of the floor you're on ('me@'), which joins that walkway's two
+// ends. Routes then start from where you are and head the right way along the corridor, instead of
+// from the nearest junction (on a long concourse that could be behind you).
+let meAttach = null;
+function detachMe() {
+  for (const id of ['me', 'me@']) {
+    for (const { to } of G[id] || []) G[to] = G[to].filter(e => e.to !== id);
+    delete G[id]; delete NODE[id];
+  }
+}
+function attachMe(p) {
+  let best = null;
+  for (const a in G) {
+    if (/^(m|g|v):|^me/.test(a) || levelOf(a) !== floor) continue;
+    for (const { to: b, kind } of G[a]) {
+      if (kind || a > b || /^(m|g|v):|^me/.test(b) || levelOf(b) !== floor) continue;
+      const q = project(p, NODE[a], NODE[b]), d = dist(q, p);
+      if (!best || d < best.d) best = { d, a, b, q };
+    }
+  }
+  if (!best) return null;
+  detachMe();
+  addNode('me', { x: p.x, y: p.y }); addNode('me@', { x: best.q.x, y: best.q.y });
+  link('me', 'me@'); link('me@', best.a); link('me@', best.b);
+  for (const k in dCache) delete dCache[k];     // distances from anywhere may now pass through you
+  meLevel = floor;
+  return { seg: best.a + '|' + best.b, x: p.x, y: p.y };
+}
 function nearestWalkNode(p) {
   let best = null, bd = Infinity;
   for (const id in NODE) {
@@ -2758,13 +2793,16 @@ function onFix(pos) {
   if (appearing) pingMe(true);
   if (!warnedAcc && acc > 50 && !firstFix) { warnedAcc = true; toast(`Indoors your location is approximate (±${Math.round(acc / 5) * 5} m). Use it as a guide.`); }
   // "My location" can start a route once we're at the airport
-  const node = nearestWalkNode(p);
+  // re-attach after a few metres, or when you're on a different walkway: then the route redraws from you
+  const moved = !meAttach || Math.hypot(p.x - meAttach.x, p.y - meAttach.y) > 4 || meAttach.floor !== floor;
+  if (moved) { const at = attachMe(p); if (at) meAttach = { ...at, floor }; }
+  const node = meAttach ? 'me' : nearestWalkNode(p);
   ITEMS['v:me'] = { id: 'v:me', kind: 'place', name: 'My location', node, zone: 'L', x: p.x, y: p.y, el: meG };
   navFix(p);
   if (pendingMe) { $('#' + pendingMe).value = 'v:me'; pendingMe = null; meNode = null; if (tab === 'dir' && !placeMode) updateRoute(true); }
-  if (node !== meNode) {
+  if (moved && !nav) {
     meNode = node;
-    if ($('#from').value === 'v:me' && tab === 'dir' && !placeMode) updateRoute(false);
+    if (($('#from').value === 'v:me' || $('#to').value === 'v:me') && tab === 'dir' && !placeMode) updateRoute(false);
   }
   if (firstFix) {
     const r = Math.max(acc, 40);
@@ -2807,7 +2845,7 @@ function stopLocating(keepDot) {
   if (watchId != null && navigator.geolocation && watchId !== 'native') navigator.geolocation.clearWatch(watchId);
   if (watchId === 'native' && window.CLEApp && CLEApp.stopLocation) CLEApp.stopLocation();
   watchId = null; browserCompass(false); cancelAnimationFrame(glideRAF);
-  if (!keepDot) { me = null; shown = null; kf.t = 0; heading = null; coneAngle = null; meG.setAttribute('opacity', 0); meG.classList.remove('stale'); delete ITEMS['v:me']; }
+  if (!keepDot) { detachMe(); meAttach = null; me = null; shown = null; kf.t = 0; heading = null; coneAngle = null; meG.setAttribute('opacity', 0); meG.classList.remove('stale'); delete ITEMS['v:me']; }
 }
 function startLocating() {
   setLocState('busy'); firstFix = true; warnedSlow = false;

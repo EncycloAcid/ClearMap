@@ -310,7 +310,7 @@ const escLayer = el('g', {});
 let escBadges = [];
 const puckG = el('g', { style: 'pointer-events:none', opacity: 0 });
 el('circle', { class: 'puck-halo', r: 9 }, puckG);
-el('circle', { class: 'puck', r: 4.6 }, puckG);
+el('circle', { class: 'puck', r: 3.4 }, puckG);
 // (the location mark's beam points along the map, so it only keeps its size)
 for (const g of [pinG, routeStart, routeEnd, eta, puckG]) zsWrap(g);
 zsWrap(meMark, 'zs-s');
@@ -738,6 +738,7 @@ function setRoute(nodes, mins) {
   const g0 = nodes.length > 1 && endGate(nodes[0]), g1 = nodes.length > 1 && endGate(nodes[nodes.length - 1]);
   if (g0) g0.el.classList.add('dest'); if (g1) g1.el.classList.add('dest');
   svg.classList.toggle('gate-start', !!g0); svg.classList.toggle('gate-end', !!g1);
+  svg.classList.toggle('me-start', nodes[0] === 'me'); svg.classList.toggle('me-end', nodes[nodes.length - 1] === 'me');
   routeNodes = nodes.slice();
   routePts = nodes.map(n => NODE[n]);
   routeLens = [0];
@@ -859,6 +860,35 @@ function setLocState(state) {
   if (following) kickCam();
 }
 const compassFresh = () => heading != null && Date.now() - headingAt < 5000;
+// Your location joins the walking graph like any place does: a 'me' node at the dot, linked to the
+// closest point on the nearest walkway of the floor you're on ('me@'), which joins that walkway's two
+// ends. Routes then start from where you are and head the right way along the corridor, instead of
+// from the nearest junction (on a long concourse that could be behind you).
+let meAttach = null;
+function detachMe() {
+  for (const id of ['me', 'me@']) {
+    for (const { to } of G[id] || []) G[to] = G[to].filter(e => e.to !== id);
+    delete G[id]; delete NODE[id];
+  }
+}
+function attachMe(p) {
+  let best = null;
+  for (const a in G) {
+    if (/^(m|g|v):|^me/.test(a) || levelOf(a) !== floor) continue;
+    for (const { to: b, kind } of G[a]) {
+      if (kind || a > b || /^(m|g|v):|^me/.test(b) || levelOf(b) !== floor) continue;
+      const q = project(p, NODE[a], NODE[b]), d = dist(q, p);
+      if (!best || d < best.d) best = { d, a, b, q };
+    }
+  }
+  if (!best) return null;
+  detachMe();
+  addNode('me', { x: p.x, y: p.y }); addNode('me@', { x: best.q.x, y: best.q.y });
+  link('me', 'me@'); link('me@', best.a); link('me@', best.b);
+  for (const k in dCache) delete dCache[k];     // distances from anywhere may now pass through you
+  meLevel = floor;
+  return { seg: best.a + '|' + best.b, x: p.x, y: p.y };
+}
 function nearestWalkNode(p) {
   let best = null, bd = Infinity;
   for (const id in NODE) {
@@ -1003,13 +1033,16 @@ function onFix(pos) {
   if (appearing) pingMe(true);
   if (!warnedAcc && acc > 50 && !firstFix) { warnedAcc = true; toast(`Indoors your location is approximate (±${Math.round(acc / 5) * 5} m). Use it as a guide.`); }
   // "My location" can start a route once we're at the airport
-  const node = nearestWalkNode(p);
+  // re-attach after a few metres, or when you're on a different walkway: then the route redraws from you
+  const moved = !meAttach || Math.hypot(p.x - meAttach.x, p.y - meAttach.y) > 4 || meAttach.floor !== floor;
+  if (moved) { const at = attachMe(p); if (at) meAttach = { ...at, floor }; }
+  const node = meAttach ? 'me' : nearestWalkNode(p);
   ITEMS['v:me'] = { id: 'v:me', kind: 'place', name: 'My location', node, zone: 'L', x: p.x, y: p.y, el: meG };
   navFix(p);
   if (pendingMe) { $('#' + pendingMe).value = 'v:me'; pendingMe = null; meNode = null; if (tab === 'dir' && !placeMode) updateRoute(true); }
-  if (node !== meNode) {
+  if (moved && !nav) {
     meNode = node;
-    if ($('#from').value === 'v:me' && tab === 'dir' && !placeMode) updateRoute(false);
+    if (($('#from').value === 'v:me' || $('#to').value === 'v:me') && tab === 'dir' && !placeMode) updateRoute(false);
   }
   if (firstFix) {
     const r = Math.max(acc, 40);
@@ -1052,7 +1085,7 @@ function stopLocating(keepDot) {
   if (watchId != null && navigator.geolocation && watchId !== 'native') navigator.geolocation.clearWatch(watchId);
   if (watchId === 'native' && window.CLEApp && CLEApp.stopLocation) CLEApp.stopLocation();
   watchId = null; browserCompass(false); cancelAnimationFrame(glideRAF);
-  if (!keepDot) { me = null; shown = null; kf.t = 0; heading = null; coneAngle = null; meG.setAttribute('opacity', 0); meG.classList.remove('stale'); delete ITEMS['v:me']; }
+  if (!keepDot) { detachMe(); meAttach = null; me = null; shown = null; kf.t = 0; heading = null; coneAngle = null; meG.setAttribute('opacity', 0); meG.classList.remove('stale'); delete ITEMS['v:me']; }
 }
 function startLocating() {
   setLocState('busy'); firstFix = true; warnedSlow = false;
