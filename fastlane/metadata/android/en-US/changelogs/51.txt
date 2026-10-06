@@ -1,5 +1,0 @@
-Clearway 9.1
-• New airport: Dallas/Fort Worth (DFW), all five terminals, 13 security checkpoints, the Skylink and the Terminal Link bus
-• Scan your boarding pass: flight, seat, boarding group and PreCheck in one tap
-• Gate countdown on your lock screen
-• Train lines drawn in grey, so only your route is blue

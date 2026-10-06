@@ -1,0 +1,5 @@
+Clearway 9.2
+• Cleveland: routes to gates C17–C29 now walk round the rotunda's ring corridor instead of cutting across its middle
+• Cleveland: from the Central checkpoint, routes follow the corridor west into the main terminal
+• Dallas/Fort Worth (DFW): all five terminals, the Skylink and the Terminal Link bus
+• Scan your boarding pass; gate countdown on your lock screen

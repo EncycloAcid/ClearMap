@@ -20,12 +20,16 @@ AIRPORTS.CLE = (() => {
     th3: [94, -133, 'Central escalators (upper level)'], th6: [70, -25, 'South escalators (upper level)'],
     bg0: [183, -203], bg1: [158, -180], bg2: [122, -145], bg5: [94, -69], bg7: [82, -6],
     bg3: [106, -121, 'Central escalators (lower level)'], bag_s: [87, -30, 'South escalators (lower level)'],
+    // past the Central checkpoint the corridor turns west to the main terminal (OpenStreetMap)
+    cw:   [90, -117],
     hub:  [61, -121, 'Main terminal, past security'],
     fc:   [50, -70, 'Main terminal food court'],
     c0:   [40, -21, 'Concourse C'],
     c1:   [28, 34], c2: [-60, 124], c3: [-140, 206],
     c4:   [-163, 229, 'Concourse C rotunda'],
-    crot: [-184, 266],
+    // the rotunda's walkway: a ring round the central shops, from c4 and back (OpenStreetMap's indoor footway);
+    // the gates are off its outer side
+    r0: [-178, 243], r1: [-192, 238], r2: [-204, 242], r3: [-211, 253], r4: [-211, 263], r5: [-207, 272], r6: [-209, 292], r7: [-199, 296], r8: [-187, 296], r9: [-175, 293], r10: [-165, 287], r11: [-156, 273], r12: [-153, 260], r13: [-153, 250], r14: [-156, 241],
     b0:   [20, -129, 'Concourse B'], b1: [-36, -140], b2: [-186, -169],
     a0:   [78, -212, 'Concourse A'], a1: [98, -319], a2: [114, -410],
     tix:  [146, -190, 'Ticketing (upper level)'],
@@ -46,12 +50,13 @@ AIRPORTS.CLE = (() => {
     lift_s: [77, -23, 'Elevator by the south escalators'],
   };
   const EDGES = [
-    ['chk','hub','S'], ['hub','fc','M'], ['fc','sj','M'], ['sj','c0','M'],
+    ['chk','cw','S'], ['cw','hub','M'], ['hub','fc','M'], ['fc','sj','M'], ['sj','c0','M'],
     // ticketing hall, north to south, and the three checkpoints off it
     ['th0','th1','L'], ['th1','tix','L'], ['tix','th2','L'], ['th2','th3','L'], ['th3','th4','L'], ['th4','tix_s','L'], ['tix_s','th6','L'],
     ['th2','chk','L'], ['th1','chk_n','L'], ['chk_n','a0','S'], ['tix_s','chk_s','L'], ['chk_s','sj','S'],
     // baggage claim, north to south
-    ['bg0','bg1','L'], ['bg1','bg2','L'], ['bg2','bg3','L'], ['bg3','bag','L'], ['bag','bg5','L'], ['bg5','bag_s','L'], ['bag_s','bg7','L'], ['c0','c1','C'], ['c1','c2','C'], ['c2','c3','C'], ['c3','c4','C'], ['c4','crot','R'],
+    ['bg0','bg1','L'], ['bg1','bg2','L'], ['bg2','bg3','L'], ['bg3','bag','L'], ['bag','bg5','L'], ['bg5','bag_s','L'], ['bag_s','bg7','L'], ['c0','c1','C'], ['c1','c2','C'], ['c2','c3','C'], ['c3','c4','C'],
+    ['c4','r0','R'], ['r0','r1','R'], ['r1','r2','R'], ['r2','r3','R'], ['r3','r4','R'], ['r4','r5','R'], ['r5','r6','R'], ['r6','r7','R'], ['r7','r8','R'], ['r8','r9','R'], ['r9','r10','R'], ['r10','r11','R'], ['r11','r12','R'], ['r12','r13','R'], ['r13','r14','R'], ['r14','c4','R'],
     ['hub','b0','M'], ['b0','b1','B'], ['b1','b2','B'], ['hub','a0','M'], ['a0','a1','A'], ['a1','a2','A'],
     // escalators between the floors at the north end, the middle (by the Central checkpoint) and the south end,
     // and down to the RTA platform

@@ -150,7 +150,6 @@ function project(p, a, b) {
 for (const it of Object.values(ITEMS)) {
   if (it.kind === 'place') continue;
   addNode(it.id, { x: it.x, y: it.y });
-  if (it.zone === 'R') { link(it.id, 'crot'); continue; }
   if (it.zone === 'LIFT') { link(it.id, it.lift); continue; }
   let best = null;
   EDGES.forEach(([a, b, z], ei) => {
