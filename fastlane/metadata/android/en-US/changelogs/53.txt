@@ -1,0 +1,4 @@
+Clearway 9.3
+• Dallas/Fort Worth: walkways now follow the terminals' real corridors (OpenStreetMap), with check-in and baggage claim along the curb-side wall
+• DFW shops and restaurants are shown past security, where they are, including Terminal D's marketplace
+• Cleveland: routes round the C rotunda's ring and along the Central checkpoint corridor
