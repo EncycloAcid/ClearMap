@@ -1,0 +1,6 @@
+Clearway 10.3 · bug fixes
+• Atlanta: routes from the International Terminal now go through its security checkpoint
+• Directions from a place card now work in Arrive and Connect modes
+• Overnight, routes say when security opens and time your arrival from then
+• The gate countdown appears as soon as you allow notifications
+• Searching "coffee" lists cafés before vending machines

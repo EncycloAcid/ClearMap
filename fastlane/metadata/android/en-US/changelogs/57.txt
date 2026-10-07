@@ -1,3 +1,0 @@
-Clearway 10.2
-• Dallas/Fort Worth Terminal B: the check-in hall now runs along the curb past the north-west corner instead of cutting across the building; checkpoint B30 sits at the end of a short branch
-• Smoother DFW concourse routes (10.1) and Connect mode for connecting flights (10.0)

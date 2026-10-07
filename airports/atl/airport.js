@@ -55,7 +55,7 @@ AIRPORTS.ATL = (() => {
     ['eC', 'eW', 'E'], ['eN', 'eBr', 'E'],
     ['tC', 'tWe', 'T'], ['aC', 'aWw', 'A'], ['aC', 'aWe', 'A'], ['bC', 'bWw', 'B'], ['bC', 'bWe', 'B'],
     ['cC', 'cWw', 'C'], ['cC', 'cWe', 'C'], ['dC', 'dWw', 'D'], ['dC', 'dWe', 'D'],
-    ['fC', 'chkI', 'I'], ['chkI', 'tixI', 'IL'],
+    ['fC', 'chkI', 'S'], ['chkI', 'tixI', 'IL'],
     // the Transportation Mall, the Plane Train, and getting on and off it
     ...MALL.slice(1).map((m, i) => [MALL[i], m, 'M']),
     ...TRAIN.slice(1).map((s, i) => [TRAIN[i], s, 'X', 'train']),
@@ -348,6 +348,8 @@ AIRPORTS.ATL = (() => {
     // places snap to these walkways: landside, the atrium past security, the concourses
     AMEN_ZONES: ['L', 'H', 'T', 'A', 'B', 'C', 'D', 'E', 'F', 'IL'],
     LOWER_V: [...MALL, ...TRAIN, 'exit', 'bag', 'marta', 'rent', 'taxi', 'ride', 'curb'],
+    // both checkpoints screen into the concourses (no published hours, so both count as open)
+    CHECKPOINTS: { chk: {}, chkI: {} },
     PLACES: ['chk', 'tix', 'bag', 'marta', 'rent', 'taxi', 'ride', 'curb', 'chkI', 'tixI'],
     PLACE_STYLE: { chk: ['shield', 'terminal'], tix: ['ticket', 'terminal'], bag: ['bag', 'bags'], marta: ['train', 'transit'],
       rent: ['key', 'ground'], taxi: ['taxi', 'ground'], ride: ['phone', 'ground'], curb: ['car', 'ground'], chkI: ['shield', 'terminal'], tixI: ['ticket', 'terminal'] },

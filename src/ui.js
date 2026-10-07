@@ -1426,9 +1426,9 @@ function showPlace(it, fromMap) {
     return `<button data-near="${o.id}">${tileFor(o)}<b>${esc(o.name)}</b><small>${s && s.state === 'closed' ? 'Closed' : m + ' min walk'}</small></button>`;
   }).join('')}</div>`;
   pane.innerHTML = html;
-  pane.querySelector('[data-act="to"]').onclick = () => { buzz(); $('#to').value = it.id; if ($('#from').value === it.id) $('#from').value = CHK; setTab('dir', true); if (!wide()) setDetent('peek'); updateRoute(true); };
+  pane.querySelector('[data-act="to"]').onclick = () => { buzz(); $('#to').value = it.id; if ($('#from').value === it.id) $('#from').value = CHK; setTab('dir', true); if (!wide()) setDetent('peek'); routeNow(); };
   pane.querySelectorAll('[data-near]').forEach(b => b.onclick = () => { buzz(5); showPlace(ITEMS[b.dataset.near], false); });
-  pane.querySelector('[data-act="from"]').onclick = () => { buzz(); $('#from').value = it.id; if ($('#to').value === it.id) $('#to').value = CHK; setTab('dir', true); if (!wide()) setDetent('peek'); updateRoute(true); };
+  pane.querySelector('[data-act="from"]').onclick = () => { buzz(); $('#from').value = it.id; if ($('#to').value === it.id) $('#to').value = CHK; setTab('dir', true); if (!wide()) setDetent('peek'); routeNow(); };
   sheetBody.scrollTop = 0;
   if (!wide()) setDetent(detent === 'full' || detent === 'peek' ? 'half' : detent);
   if (!fromMap) fitItems([it], 60, 3.5);
@@ -1664,6 +1664,9 @@ function highlight(ids) {
   for (const id of ids) if (ITEMS[id]) ITEMS[id].el.classList.add('hl');
   cullLabels();
 }
+// a from/to route someone asked for (a place card, an idea, an airline): show it in Depart mode, since
+// Arrive and Connect draw their own routes
+function routeNow() { if (mode !== 'dep') setMode('dep', true); updateRoute(true); saveTrip(); }
 function updateRoute(fit) {
   if (mode === 'arr') return updateArrival(fit);
   if (mode === 'con') return updateConnection(fit);
@@ -1694,10 +1697,14 @@ function updateRoute(fit) {
   // going through security: add the live wait, and say it on the checkpoint step
   const inbound = path.some((n, i) => isChk('v:' + n) && SEC_EDGE.has(n + '|' + path[i + 1])), sec = inbound ? waitMin() : null;
   if (sec != null) { const s = steps.find(x => isChk('v:' + x.node)); if (s) s.n = `Security wait about ${sec} min right now${s.n && s.n !== 'Start' ? '. ' + s.n : ''}`; }
-  const total = minutes(units) + (sec || 0);
+  // screening at a checkpoint that hasn't opened yet (overnight): say when, and count the wait
+  const shut = inbound ? path.find((n, i) => isChk('v:' + n) && SEC_EDGE.has(n + '|' + path[i + 1]) && !chkOpen(n)) : null;
+  const shutC = shut && (AP.CHECKPOINTS || {})[shut], opensIn = shutC && shutC.open ? untilOpen(shutC.open) : null;
+  if (opensIn != null) { const s = steps.find(x => x.node === shut); if (s) s.n = `Opens at ${fmt12(shutC.open)}; the line forms before then. ${s.n || ''}`.trim(); }
+  const total = minutes(units) + (opensIn != null ? Math.max(opensIn, sec || 0) : sec || 0);
   $('#hero').className = 'hero';
   $('#hero').innerHTML = `<button class="hero-x" id="clearRoute" aria-label="Clear route">${icon('x')}</button><span class="num">${total}<small>min</small></span>
-    <span class="m1">${meters(len)} m walk${lift ? ' · elevator' : ''}${sec != null ? ` + ~${sec} min security` : ''}</span>
+    <span class="m1">${meters(len)} m walk${lift ? ' · elevator' : ''}${opensIn != null ? ` · security opens ${fmt12(shutC.open)}` : sec != null ? ` + ~${sec} min security` : ''}</span>
     <span class="m2">Arrive ${clock(Date.now() + total * 60000)}${via.length ? ' via ' + listJoin(via.slice(0, 3).map(esc)) : ''}</span>
     <button class="go" data-go>${icon('walk')}Go</button>`;
   renderSteps(steps, passed);
@@ -1986,6 +1993,8 @@ function pushWidget() {
 // which checkpoints are open right now, from their posted hours at the airport's local time
 const hm = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
 const ampm = t => { const [h, m] = t.split(':').map(Number); return `${(h + 11) % 12 + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`; };
+// minutes from now until a checkpoint's opening time (airport time)
+function untilOpen(open) { return ((hm(open) - cleNow().min) % 1440 + 1440) % 1440; }
 function chkOpen(id, t = Date.now()) {
   const c = (AP.CHECKPOINTS || {})[id]; if (!c) return true; if (c.busy) return false; if (!c.open) return true;   // no published hours
   const [H, M] = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: AP.tz }).format(t).split(':').map(Number);
@@ -2082,7 +2091,7 @@ function updateIdeas() {
 }
 function showIdea(it) {
   $('#from').value = $('#ktGate').value; $('#to').value = it.id;
-  updateRoute(true); showPlace(it, true);
+  routeNow(); showPlace(it, true);
 }
 $('#ktGate').onchange = updateIdeas;
 $('#ktMin').oninput = () => { boardAt = Date.now() + +$('#ktMin').value * 60000; updateIdeas(); };
@@ -2167,7 +2176,7 @@ function showAirline(a) {
   html += `<p class="foot" style="margin:-6px 16px 0">Gates change, so check your boarding pass and the departure screens.</p>`;
   pane.innerHTML = html;
   pane.querySelector('[data-act="walk"]').onclick = () => {
-    if (!nearest) return; buzz(); $('#from').value = CHK; $('#to').value = nearest.near.id; setTab('dir', true); if (!wide()) setDetent('peek'); updateRoute(true);
+    if (!nearest) return; buzz(); $('#from').value = CHK; $('#to').value = nearest.near.id; setTab('dir', true); if (!wide()) setDetent('peek'); routeNow();
   };
   pane.querySelector('[data-act="show"]').onclick = () => { buzz(5); if (!wide()) setDetent('peek'); fitAirline(a); };
   pane.querySelectorAll('[data-gate]').forEach(b => b.onclick = () => { buzz(5); showPlace(ITEMS[b.dataset.gate], false); });
@@ -2271,7 +2280,9 @@ function runSearch() {
   gates.sort((x, y) => (x.code.toLowerCase() === code ? -1 : 0) - (y.code.toLowerCase() === code ? -1 : 0) || gnum(x) - gnum(y));
   // strong name matches first, then by walk; within a category search, purely by walk
   const strong = p => cats.length ? p.sc >= 3 && !CATS[p.it.cat]?.label.toLowerCase().startsWith(s) : p.sc >= 2;
-  places.sort((x, y) => strong(y) - strong(x) || (x.w ?? 999) - (y.w ?? 999) || y.sc - x.sc);
+  // vending machines after real places, unless that's what you're after ("coffee" finds cafés first)
+  const vend = p => /vending/i.test(p.it.name) && !/vend/.test(s);
+  places.sort((x, y) => vend(x) - vend(y) || strong(y) - strong(x) || (x.w ?? 999) - (y.w ?? 999) || y.sc - x.sc);
   const hitFor = ({ it, w }) => ({ ...itemHit(it), kind: (w != null && it !== from ? `<b>${w} min</b> · ` : '') + esc(kindOf(it)), html: true });
   const typo = places.length && places.every(p => p.sc < 1) && !gates.length && !air.length;
   const placeTitle = cats.length === 1 && places.every(p => p.sc < 2) ? `${CATS[cats[0]].label} · nearest first` : places.length > 1 ? 'Places · nearest first' : '';

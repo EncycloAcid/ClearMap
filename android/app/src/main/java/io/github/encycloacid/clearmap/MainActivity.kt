@@ -134,6 +134,11 @@ class MainActivity : Activity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        // notifications just allowed: show the gate countdown now (it couldn't post while waiting)
+        if (requestCode == REQ_NOTIFY) {
+            if (grantResults.any { it == PackageManager.PERMISSION_GRANTED }) GateCountdown.refresh(this)
+            return
+        }
         if (requestCode != REQ_LOCATION) return
         val granted = grantResults.any { it == PackageManager.PERMISSION_GRANTED }
         if (pendingNativeLoc) {
