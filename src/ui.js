@@ -616,7 +616,8 @@ function cullLabels() {
   }
 }
 // how far out you can zoom: enough to see the whole airport (a big one like ATL needs more)
-const kMin = () => Math.min(0.25, (vw - 24) / (MAP_BOUNDS.x1 - MAP_BOUNDS.x0) * .9);
+// (floored: before layout, or while the page is hidden, the width can read 0 and zoom would collapse)
+const kMin = () => Math.max(0.02, Math.min(0.25, (vw - 24) / (MAP_BOUNDS.x1 - MAP_BOUNDS.x0) * .9));
 const clampK = k => Math.max(kMin(), Math.min(10, k));
 function zoomAt(px, py, f) {
   const nk = clampK(view.k * f), r = nk / view.k;

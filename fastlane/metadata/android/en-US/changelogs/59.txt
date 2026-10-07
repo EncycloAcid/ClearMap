@@ -1,0 +1,6 @@
+Clearway 10.4 · bug fixes
+• Fixed the map's icons breaking if the app was laid out before it had its full width
+• Atlanta: International Terminal routes go through its security checkpoint
+• Directions from a place card work in Arrive and Connect modes
+• Overnight routes say when security opens
+• The gate countdown appears as soon as you allow notifications
